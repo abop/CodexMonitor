@@ -70,25 +70,11 @@ const baseProps = {
 };
 
 describe("Sidebar", () => {
-  it("toggles the search bar from the header icon", () => {
+  it("does not render the removed sidebar search controls", () => {
     render(<Sidebar {...baseProps} />);
 
-    const toggleButton = screen.getByRole("button", { name: "Toggle search" });
+    expect(screen.queryByRole("button", { name: "Toggle search" })).toBeNull();
     expect(screen.queryByLabelText("Search projects")).toBeNull();
-
-    fireEvent.click(toggleButton);
-    const input = screen.getByLabelText("Search projects") as HTMLInputElement;
-    expect(input).toBeTruthy();
-
-    fireEvent.change(input, { target: { value: "alpha" } });
-    expect(input.value).toBe("alpha");
-
-    fireEvent.click(toggleButton);
-    expect(screen.queryByLabelText("Search projects")).toBeNull();
-
-    fireEvent.click(toggleButton);
-    const reopened = screen.getByLabelText("Search projects") as HTMLInputElement;
-    expect(reopened.value).toBe("");
   });
 
   it("opens thread sort menu from the header filter button", () => {

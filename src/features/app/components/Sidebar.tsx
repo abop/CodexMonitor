@@ -14,7 +14,6 @@ import { FolderOpen } from "lucide-react";
 import Copy from "lucide-react/dist/esm/icons/copy";
 import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import Plus from "lucide-react/dist/esm/icons/plus";
-import X from "lucide-react/dist/esm/icons/x";
 import {
   PopoverMenuItem,
   PopoverSurface,
@@ -33,7 +32,6 @@ import { useMenuController } from "../hooks/useMenuController";
 import { useSidebarMenus } from "../hooks/useSidebarMenus";
 import { useSidebarScrollFade } from "../hooks/useSidebarScrollFade";
 import { useThreadRows } from "../hooks/useThreadRows";
-import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { getUsageLabels } from "../utils/usageLabels";
 import { formatRelativeTimeShort } from "../../../utils/time";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
@@ -180,8 +178,6 @@ export const Sidebar = memo(function Sidebar({
   const [expandedWorkspaces, setExpandedWorkspaces] = useState(
     new Set<string>(),
   );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [addMenuAnchor, setAddMenuAnchor] = useState<{
     workspaceId: string;
     top: number;
@@ -228,8 +224,6 @@ export const Sidebar = memo(function Sidebar({
     creditsLabel,
     showWeekly,
   } = getUsageLabels(accountRateLimits, usageShowRemaining);
-  const debouncedQuery = useDebouncedValue(searchQuery, 150);
-  const normalizedQuery = debouncedQuery.trim().toLowerCase();
   const pendingUserInputKeys = useMemo(
     () =>
       new Set(
@@ -242,48 +236,6 @@ export const Sidebar = memo(function Sidebar({
           .filter(Boolean),
       ),
     [userInputRequests],
-  );
-
-  const isWorkspaceMatch = useCallback(
-    (workspace: WorkspaceInfo) => {
-      if (!normalizedQuery) {
-        return true;
-      }
-      return workspace.name.toLowerCase().includes(normalizedQuery);
-    },
-    [normalizedQuery],
-  );
-
-  const renderHighlightedName = useCallback(
-    (name: string) => {
-      if (!normalizedQuery) {
-        return name;
-      }
-      const lower = name.toLowerCase();
-      const parts: React.ReactNode[] = [];
-      let cursor = 0;
-      let matchIndex = lower.indexOf(normalizedQuery, cursor);
-
-      while (matchIndex !== -1) {
-        if (matchIndex > cursor) {
-          parts.push(name.slice(cursor, matchIndex));
-        }
-        parts.push(
-          <span key={`${matchIndex}-${cursor}`} className="workspace-name-match">
-            {name.slice(matchIndex, matchIndex + normalizedQuery.length)}
-          </span>,
-        );
-        cursor = matchIndex + normalizedQuery.length;
-        matchIndex = lower.indexOf(normalizedQuery, cursor);
-      }
-
-      if (cursor < name.length) {
-        parts.push(name.slice(cursor));
-      }
-
-      return parts.length ? parts : name;
-    },
-    [normalizedQuery],
   );
 
   const accountEmail = accountInfo?.email?.trim() ?? "";
@@ -310,9 +262,6 @@ export const Sidebar = memo(function Sidebar({
     }> = [];
 
     workspaces.forEach((workspace) => {
-      if (!isWorkspaceMatch(workspace)) {
-        return;
-      }
       const threads = threadsByWorkspace[workspace.id] ?? [];
       if (!threads.length) {
         return;
@@ -369,40 +318,7 @@ export const Sidebar = memo(function Sidebar({
     getThreadRows,
     getPinTimestamp,
     pinnedThreadsVersion,
-    isWorkspaceMatch,
   ]);
-
-  const cloneSourceIdsMatchingQuery = useMemo(() => {
-    if (!normalizedQuery) {
-      return new Set<string>();
-    }
-    const ids = new Set<string>();
-    workspaces.forEach((workspace) => {
-      const sourceId = workspace.settings.cloneSourceWorkspaceId?.trim();
-      if (!sourceId) {
-        return;
-      }
-      if (isWorkspaceMatch(workspace)) {
-        ids.add(sourceId);
-      }
-    });
-    return ids;
-  }, [isWorkspaceMatch, normalizedQuery, workspaces]);
-
-  const filteredGroupedWorkspaces = useMemo(
-    () =>
-      groupedWorkspaces
-        .map((group) => ({
-          ...group,
-          workspaces: group.workspaces.filter(
-            (workspace) =>
-              isWorkspaceMatch(workspace) ||
-              cloneSourceIdsMatchingQuery.has(workspace.id),
-          ),
-        }))
-        .filter((group) => group.workspaces.length > 0),
-    [cloneSourceIdsMatchingQuery, groupedWorkspaces, isWorkspaceMatch],
-  );
 
   const getSortTimestamp = useCallback(
     (thread: ThreadSummary | undefined) => {
@@ -443,15 +359,10 @@ export const Sidebar = memo(function Sidebar({
         cloneWorkspacesBySourceId.set(sourceId, list);
       });
 
-    filteredGroupedWorkspaces.forEach((group) => {
+    groupedWorkspaces.forEach((group) => {
       group.workspaces.forEach((workspace) => {
         const rootThreads = threadsByWorkspace[workspace.id] ?? [];
-        const visibleClones =
-          normalizedQuery && !isWorkspaceMatch(workspace)
-            ? (cloneWorkspacesBySourceId.get(workspace.id) ?? []).filter((clone) =>
-                isWorkspaceMatch(clone),
-              )
-            : (cloneWorkspacesBySourceId.get(workspace.id) ?? []);
+        const visibleClones = cloneWorkspacesBySourceId.get(workspace.id) ?? [];
         let hasThreads = rootThreads.length > 0;
         let timestamp = getSortTimestamp(rootThreads[0]);
 
@@ -472,19 +383,17 @@ export const Sidebar = memo(function Sidebar({
     });
     return activityById;
   }, [
-    filteredGroupedWorkspaces,
     getSortTimestamp,
-    isWorkspaceMatch,
-    normalizedQuery,
+    groupedWorkspaces,
     threadsByWorkspace,
     workspaces,
   ]);
 
   const sortedGroupedWorkspaces = useMemo(() => {
     if (threadListOrganizeMode !== "by_project_activity") {
-      return filteredGroupedWorkspaces;
+      return groupedWorkspaces;
     }
-    return filteredGroupedWorkspaces.map((group) => ({
+    return groupedWorkspaces.map((group) => ({
       ...group,
       workspaces: group.workspaces.slice().sort((a, b) => {
         const aActivity = workspaceActivityById.get(a.id) ?? {
@@ -505,7 +414,7 @@ export const Sidebar = memo(function Sidebar({
         return a.name.localeCompare(b.name);
       }),
     }));
-  }, [filteredGroupedWorkspaces, threadListOrganizeMode, workspaceActivityById]);
+  }, [groupedWorkspaces, threadListOrganizeMode, workspaceActivityById]);
 
   const flatThreadRows = useMemo(() => {
     if (threadListOrganizeMode !== "threads_only") {
@@ -519,7 +428,7 @@ export const Sidebar = memo(function Sidebar({
       rows: FlatThreadRow[];
     }> = [];
 
-    filteredGroupedWorkspaces.forEach((group) => {
+    groupedWorkspaces.forEach((group) => {
       group.workspaces.forEach((workspace) => {
         const threads = threadsByWorkspace[workspace.id] ?? [];
         if (!threads.length) {
@@ -591,10 +500,10 @@ export const Sidebar = memo(function Sidebar({
       })
       .flatMap((group) => group.rows);
   }, [
-    filteredGroupedWorkspaces,
     getPinTimestamp,
     getSortTimestamp,
     getThreadRows,
+    groupedWorkspaces,
     pinnedThreadsVersion,
     threadListOrganizeMode,
     threadsByWorkspace,
@@ -606,7 +515,6 @@ export const Sidebar = memo(function Sidebar({
       flatThreadRows,
       threadsByWorkspace,
       expandedWorkspaces,
-      normalizedQuery,
       threadListOrganizeMode,
     ],
     [
@@ -614,7 +522,6 @@ export const Sidebar = memo(function Sidebar({
       flatThreadRows,
       threadsByWorkspace,
       expandedWorkspaces,
-      normalizedQuery,
       threadListOrganizeMode,
     ],
   );
@@ -636,7 +543,7 @@ export const Sidebar = memo(function Sidebar({
   const groupedWorkspacesForRender =
     threadListOrganizeMode === "by_project_activity"
       ? sortedGroupedWorkspaces
-      : filteredGroupedWorkspaces;
+      : groupedWorkspaces;
   const isThreadsOnlyMode = threadListOrganizeMode === "threads_only";
 
   const handleAllThreadsAddMenuToggle = useCallback(
@@ -669,7 +576,6 @@ export const Sidebar = memo(function Sidebar({
     },
     [onAddAgent],
   );
-  const isSearchActive = Boolean(normalizedQuery);
 
   const worktreesByParent = useMemo(() => {
     const worktrees = new Map<string, WorkspaceInfo[]>();
@@ -779,15 +685,9 @@ export const Sidebar = memo(function Sidebar({
     };
   }, [allThreadsAddMenuAnchor]);
 
-  useEffect(() => {
-    if (!isSearchOpen && searchQuery) {
-      setSearchQuery("");
-    }
-  }, [isSearchOpen, searchQuery]);
-
   return (
     <aside
-      className={`sidebar${isSearchOpen ? " search-open" : ""}`}
+      className="sidebar"
       ref={workspaceDropTargetRef}
       onDragOver={onWorkspaceDragOver}
       onDragEnter={onWorkspaceDragEnter}
@@ -798,8 +698,6 @@ export const Sidebar = memo(function Sidebar({
       <SidebarHeader
         onSelectHome={onSelectHome}
         onAddWorkspace={onAddWorkspace}
-        onToggleSearch={() => setIsSearchOpen((prev) => !prev)}
-        isSearchOpen={isSearchOpen}
         threadListSortKey={threadListSortKey}
         onSetThreadListSortKey={onSetThreadListSortKey}
         threadListOrganizeMode={threadListOrganizeMode}
@@ -808,30 +706,6 @@ export const Sidebar = memo(function Sidebar({
         refreshDisabled={refreshDisabled || refreshInProgress}
         refreshInProgress={refreshInProgress}
       />
-      <div className={`sidebar-search${isSearchOpen ? " is-open" : ""}`}>
-        {isSearchOpen && (
-          <input
-            className="sidebar-search-input"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search projects"
-            aria-label="Search projects"
-            data-tauri-drag-region="false"
-            autoFocus
-          />
-        )}
-        {isSearchOpen && searchQuery.length > 0 && (
-          <button
-            type="button"
-            className="sidebar-search-clear"
-            onClick={() => setSearchQuery("")}
-            aria-label="Clear search"
-            data-tauri-drag-region="false"
-          >
-            <X size={12} aria-hidden />
-          </button>
-        )}
-      </div>
       <div
         className={`workspace-drop-overlay${
           isWorkspaceDropActive ? " is-active" : ""
@@ -981,10 +855,6 @@ export const Sidebar = memo(function Sidebar({
                         isLoadingThreads && threads.length === 0;
                       const isPaging = threadListPagingByWorkspace[entry.id] ?? false;
                       const clones = clonesBySource.get(entry.id) ?? [];
-                      const visibleClones =
-                        isSearchActive && !isWorkspaceMatch(entry)
-                          ? clones.filter((clone) => isWorkspaceMatch(clone))
-                          : clones;
                       const worktrees = worktreesByParent.get(entry.id) ?? [];
                       const addMenuOpen = addMenuAnchor?.workspaceId === entry.id;
                       const isDraftNewAgent = newAgentDraftWorkspaceId === entry.id;
@@ -1001,7 +871,7 @@ export const Sidebar = memo(function Sidebar({
                         <WorkspaceCard
                           key={entry.id}
                           workspace={entry}
-                          workspaceName={renderHighlightedName(entry.name)}
+                          workspaceName={entry.name}
                           isActive={entry.id === activeWorkspaceId}
                           isCollapsed={isCollapsed}
                           addMenuOpen={addMenuOpen}
@@ -1078,9 +948,9 @@ export const Sidebar = memo(function Sidebar({
                               <span className="thread-name">New Agent</span>
                             </div>
                           )}
-                          {visibleClones.length > 0 && (
+                          {clones.length > 0 && (
                             <WorktreeSection
-                              worktrees={visibleClones}
+                              worktrees={clones}
                               deletingWorktreeIds={deletingWorktreeIds}
                               threadsByWorkspace={threadsByWorkspace}
                               threadStatusById={threadStatusById}
@@ -1171,11 +1041,7 @@ export const Sidebar = memo(function Sidebar({
                 );
               })}
           {!groupedWorkspacesForRender.length && (
-            <div className="empty">
-              {isSearchActive
-                ? "No projects match your search."
-                : "Add a workspace to start."}
-            </div>
+            <div className="empty">Add a workspace to start.</div>
           )}
           {isThreadsOnlyMode &&
             groupedWorkspacesForRender.length > 0 &&
