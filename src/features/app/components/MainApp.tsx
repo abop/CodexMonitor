@@ -929,6 +929,7 @@ export default function MainApp() {
     chooseWorkspaceFromUrlDestinationPath,
     submitWorkspaceFromUrlPrompt,
     updateWorkspaceFromUrlUrl,
+    updateWorkspaceFromUrlDestinationPath,
     updateWorkspaceFromUrlTargetFolderName,
     clearWorkspaceFromUrlDestinationPath,
     canSubmitWorkspaceFromUrlPrompt,
@@ -989,6 +990,8 @@ export default function MainApp() {
         workspaceFromUrlPrompt,
         workspaceFromUrlCanSubmit: canSubmitWorkspaceFromUrlPrompt,
         onWorkspaceFromUrlPromptUrlChange: updateWorkspaceFromUrlUrl,
+        onWorkspaceFromUrlPromptDestinationPathChange:
+          updateWorkspaceFromUrlDestinationPath,
         onWorkspaceFromUrlPromptTargetFolderNameChange:
           updateWorkspaceFromUrlTargetFolderName,
         onWorkspaceFromUrlPromptChooseDestinationPath:

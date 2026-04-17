@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { isWebRuntime } from "@services/runtime";
 import { ModalShell } from "../../design-system/components/modal/ModalShell";
 
 type WorkspaceFromUrlPromptProps = {
@@ -9,6 +10,7 @@ type WorkspaceFromUrlPromptProps = {
   isBusy: boolean;
   canSubmit: boolean;
   onUrlChange: (value: string) => void;
+  onDestinationPathChange: (value: string) => void;
   onTargetFolderNameChange: (value: string) => void;
   onChooseDestinationPath: () => void;
   onClearDestinationPath: () => void;
@@ -24,6 +26,7 @@ export function WorkspaceFromUrlPrompt({
   isBusy,
   canSubmit,
   onUrlChange,
+  onDestinationPathChange,
   onTargetFolderNameChange,
   onChooseDestinationPath,
   onClearDestinationPath,
@@ -31,6 +34,7 @@ export function WorkspaceFromUrlPrompt({
   onConfirm,
 }: WorkspaceFromUrlPromptProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const webRuntime = isWebRuntime();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -78,14 +82,21 @@ export function WorkspaceFromUrlPrompt({
             id="workspace-url-destination"
             className="ds-modal-input"
             value={destinationPath}
-            placeholder="Not set"
-            readOnly
+            placeholder={webRuntime ? "/srv/repos" : "Not set"}
+            readOnly={!webRuntime}
+            onChange={(event) => onDestinationPathChange(event.target.value)}
             rows={1}
             wrap="off"
           />
-          <button type="button" className="ghost ds-modal-button" onClick={onChooseDestinationPath}>
-            Choose…
-          </button>
+          {!webRuntime && (
+            <button
+              type="button"
+              className="ghost ds-modal-button"
+              onClick={onChooseDestinationPath}
+            >
+              Choose…
+            </button>
+          )}
           <button
             type="button"
             className="ghost ds-modal-button"

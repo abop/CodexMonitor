@@ -13,7 +13,14 @@ use serde_json::Value;
 const ALLOWED_RPC_METHODS: &[&str] = &[
     "list_workspaces",
     "add_workspace",
+    "add_workspace_from_git_url",
     "connect_workspace",
+    "remove_workspace",
+    "remove_worktree",
+    "rename_worktree",
+    "rename_worktree_upstream",
+    "apply_worktree_changes",
+    "set_workspace_runtime_codex_args",
     "list_threads",
     "start_thread",
     "read_thread",
@@ -496,6 +503,74 @@ mod tests {
                                         }
                                     })
                                     .to_string(),
+                                ))
+                                .unwrap(),
+                        )
+                        .await
+                        .unwrap();
+
+                    assert_eq!(response.status(), StatusCode::OK, "{method} should be allowed");
+                    assert_eq!(server.last_method().await, method);
+                }
+            });
+    }
+
+    #[test]
+    fn forwards_workspace_maintenance_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let requests = [
+                    (
+                        "add_workspace_from_git_url",
+                        json!({
+                            "url": "https://example.com/org/repo.git",
+                            "destinationPath": "/srv/repos",
+                            "targetFolderName": "repo"
+                        }),
+                    ),
+                    ("remove_workspace", json!({ "id": "ws-1" })),
+                    ("remove_worktree", json!({ "id": "wt-1" })),
+                    (
+                        "rename_worktree",
+                        json!({ "id": "wt-1", "branch": "feature/new" }),
+                    ),
+                    (
+                        "rename_worktree_upstream",
+                        json!({
+                            "id": "wt-1",
+                            "oldBranch": "feature/old",
+                            "newBranch": "feature/new"
+                        }),
+                    ),
+                    (
+                        "apply_worktree_changes",
+                        json!({ "workspaceId": "wt-1" }),
+                    ),
+                    (
+                        "set_workspace_runtime_codex_args",
+                        json!({
+                            "workspaceId": "ws-1",
+                            "codexArgs": "--model gpt-5.4"
+                        }),
+                    ),
+                ];
+
+                for (method, params) in requests {
+                    let (client, mut server) = test_client_pair().await;
+                    server.enqueue_result(1, json!({})).await;
+                    let app = build_router(test_state_with_client(client));
+                    let response = app
+                        .oneshot(
+                            Request::builder()
+                                .method("POST")
+                                .uri("/api/rpc")
+                                .header("content-type", "application/json")
+                                .header("cf-access-jwt-assertion", "present")
+                                .body(Body::from(
+                                    json!({ "method": method, "params": params }).to_string(),
                                 ))
                                 .unwrap(),
                         )

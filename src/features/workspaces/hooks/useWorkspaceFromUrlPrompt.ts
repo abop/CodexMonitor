@@ -84,6 +84,8 @@ export function useWorkspaceFromUrlPrompt({ onSubmit }: UseWorkspaceFromUrlPromp
     submitWorkspaceFromUrlPrompt: submitPrompt,
     updateWorkspaceFromUrlUrl: (url: string) =>
       setPrompt((prev) => (prev ? { ...prev, url, error: null } : prev)),
+    updateWorkspaceFromUrlDestinationPath: (destinationPath: string) =>
+      setPrompt((prev) => (prev ? { ...prev, destinationPath, error: null } : prev)),
     updateWorkspaceFromUrlTargetFolderName: (targetFolderName: string) =>
       setPrompt((prev) => (prev ? { ...prev, targetFolderName, error: null } : prev)),
     clearWorkspaceFromUrlDestinationPath: () =>

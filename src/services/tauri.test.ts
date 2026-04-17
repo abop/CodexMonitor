@@ -70,6 +70,11 @@ import {
   writeAgentMd,
   addWorkspaceFromGitUrl,
   removeWorkspace,
+  removeWorktree,
+  renameWorktree,
+  renameWorktreeUpstream,
+  applyWorktreeChanges,
+  setWorkspaceRuntimeCodexArgs,
 } from "./tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -421,15 +426,129 @@ describe("tauri invoke wrappers", () => {
     expect(invoke).not.toHaveBeenCalledWith("open_workspace_in", expect.anything());
   });
 
+  it("routes workspace maintenance actions through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: {
+            id: "ws-1",
+            path: "/srv/repos/repo",
+            connected: true,
+            settings: {},
+          },
+        }),
+      }),
+    );
+
+    await addWorkspaceFromGitUrl("https://example.com/repo.git", "/srv/repos", "repo");
+    await removeWorkspace("ws-1");
+    await removeWorktree("wt-1");
+    await renameWorktree("wt-1", "feature/new");
+    await renameWorktreeUpstream("wt-1", "feature/old", "feature/new");
+    await applyWorktreeChanges("wt-1");
+    await setWorkspaceRuntimeCodexArgs("ws-1", "--model gpt-5.4");
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "add_workspace_from_git_url",
+          params: {
+            url: "https://example.com/repo.git",
+            destinationPath: "/srv/repos",
+            targetFolderName: "repo",
+          },
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "remove_workspace",
+          params: { id: "ws-1" },
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      3,
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "remove_worktree",
+          params: { id: "wt-1" },
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      4,
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "rename_worktree",
+          params: { id: "wt-1", branch: "feature/new" },
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      5,
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "rename_worktree_upstream",
+          params: {
+            id: "wt-1",
+            oldBranch: "feature/old",
+            newBranch: "feature/new",
+          },
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      6,
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "apply_worktree_changes",
+          params: { workspaceId: "wt-1" },
+        }),
+      }),
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      7,
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "set_workspace_runtime_codex_args",
+          params: {
+            workspaceId: "ws-1",
+            codexArgs: "--model gpt-5.4",
+          },
+        }),
+      }),
+    );
+
+    expect(invoke).not.toHaveBeenCalledWith("add_workspace_from_git_url", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("remove_workspace", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("remove_worktree", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("rename_worktree", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("rename_worktree_upstream", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("apply_worktree_changes", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith(
+      "set_workspace_runtime_codex_args",
+      expect.anything(),
+    );
+  });
+
   it("fails clearly for other desktop-only actions in web runtime", async () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
 
-    await expect(
-      addWorkspaceFromGitUrl("https://example.com/repo.git", "/srv/repos", null),
-    ).rejects.toThrow("Add workspace from Git URL is unavailable in the web build.");
-    await expect(removeWorkspace("ws-1")).rejects.toThrow(
-      "Remove workspace is unavailable in the web build.",
-    );
     await expect(setTrayRecentThreads([])).rejects.toThrow(
       "Tray integration is unavailable in the web build.",
     );
@@ -437,8 +556,6 @@ describe("tauri invoke wrappers", () => {
       "Notification delivery is unavailable in the web build.",
     );
 
-    expect(invoke).not.toHaveBeenCalledWith("add_workspace_from_git_url", expect.anything());
-    expect(invoke).not.toHaveBeenCalledWith("remove_workspace", expect.anything());
     expect(invoke).not.toHaveBeenCalledWith("set_tray_recent_threads", expect.anything());
     expect(invoke).not.toHaveBeenCalledWith("is_macos_debug_build");
   });

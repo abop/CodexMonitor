@@ -43,7 +43,14 @@ function isMissingTauriInvokeError(error: unknown) {
 const WEB_SUPPORTED_RPC_METHODS = new Set([
   "list_workspaces",
   "add_workspace",
+  "add_workspace_from_git_url",
   "connect_workspace",
+  "remove_workspace",
+  "remove_worktree",
+  "rename_worktree",
+  "rename_worktree_upstream",
+  "apply_worktree_changes",
+  "set_workspace_runtime_codex_args",
   "list_threads",
   "start_thread",
   "read_thread",
@@ -386,8 +393,7 @@ export async function addWorkspaceFromGitUrl(
   destinationPath: string,
   targetFolderName: string | null,
 ): Promise<WorkspaceInfo> {
-  requireDesktopRuntime("Add workspace from Git URL");
-  return invoke<WorkspaceInfo>("add_workspace_from_git_url", {
+  return invokeSupportedRpc<WorkspaceInfo>("add_workspace_from_git_url", {
     url,
     destinationPath,
     targetFolderName,
@@ -448,21 +454,18 @@ export async function updateWorkspaceSettings(
 }
 
 export async function removeWorkspace(id: string): Promise<void> {
-  requireDesktopRuntime("Remove workspace");
-  return invoke("remove_workspace", { id });
+  return invokeSupportedRpc("remove_workspace", { id });
 }
 
 export async function removeWorktree(id: string): Promise<void> {
-  requireDesktopRuntime("Remove worktree");
-  return invoke("remove_worktree", { id });
+  return invokeSupportedRpc("remove_worktree", { id });
 }
 
 export async function renameWorktree(
   id: string,
   branch: string,
 ): Promise<WorkspaceInfo> {
-  requireDesktopRuntime("Rename worktree");
-  return invoke<WorkspaceInfo>("rename_worktree", { id, branch });
+  return invokeSupportedRpc<WorkspaceInfo>("rename_worktree", { id, branch });
 }
 
 export async function renameWorktreeUpstream(
@@ -470,13 +473,15 @@ export async function renameWorktreeUpstream(
   oldBranch: string,
   newBranch: string,
 ): Promise<void> {
-  requireDesktopRuntime("Rename worktree");
-  return invoke("rename_worktree_upstream", { id, oldBranch, newBranch });
+  return invokeSupportedRpc("rename_worktree_upstream", {
+    id,
+    oldBranch,
+    newBranch,
+  });
 }
 
 export async function applyWorktreeChanges(workspaceId: string): Promise<void> {
-  requireDesktopRuntime("Apply worktree changes");
-  return invoke("apply_worktree_changes", { workspaceId });
+  return invokeSupportedRpc("apply_worktree_changes", { workspaceId });
 }
 
 export async function openWorkspaceIn(
@@ -515,8 +520,7 @@ export async function setWorkspaceRuntimeCodexArgs(
   workspaceId: string,
   codexArgs: string | null,
 ): Promise<{ appliedCodexArgs: string | null; respawned: boolean }> {
-  requireDesktopRuntime("Workspace runtime settings");
-  return invoke("set_workspace_runtime_codex_args", {
+  return invokeSupportedRpc("set_workspace_runtime_codex_args", {
     workspaceId,
     codexArgs,
   });
