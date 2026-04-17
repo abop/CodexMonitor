@@ -37,11 +37,12 @@ function normalizeUrlTrailingSlashes(value: string): string {
 }
 
 function isLocalHost(hostname: string): boolean {
+  const normalizedHostname = hostname.replace(/^\[(.*)\]$/u, "$1");
   return (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1" ||
-    hostname.endsWith(".local")
+    normalizedHostname === "localhost" ||
+    normalizedHostname === "127.0.0.1" ||
+    normalizedHostname === "::1" ||
+    normalizedHostname.endsWith(".local")
   );
 }
 

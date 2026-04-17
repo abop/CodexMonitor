@@ -47,6 +47,14 @@ describe("webBridgeStorage", () => {
     });
   });
 
+  it("does not warn for ipv6 localhost on plain http", () => {
+    expect(normalizeWebBridgeUrl("http://[::1]:8787/")).toEqual({
+      ok: true,
+      value: "http://[::1]:8787",
+      warning: null,
+    });
+  });
+
   it("derives a display name from the URL hostname", () => {
     expect(deriveBridgeName("", "https://bridge.example.com")).toBe(
       "bridge.example.com",
