@@ -103,7 +103,7 @@ export function WebBridgeSwitcher() {
 
         {menu.isOpen ? (
           mobileSheet ? (
-            <div className="web-bridge-sheet" role="dialog" aria-label="Select Bridge">
+            <div className="web-bridge-sheet" role="dialog" aria-modal="true" aria-label="Select Bridge">
               <div className="web-bridge-sheet-backdrop" onClick={menu.close} />
               <div className="web-bridge-sheet-card">
                 {error ? <div className="web-bridge-error">{error}</div> : null}

@@ -13,14 +13,20 @@ import { addWebBridgeTarget, saveWebBridgeSettings } from "./webBridgeStorage";
 
 afterEach(() => {
   cleanup();
+  restoreMatchMedia?.();
+  restoreMatchMedia = null;
   vi.unstubAllEnvs();
 });
 
 type MatchMediaMock = {
   setMatches: (matches: boolean) => void;
+  restore: () => void;
 };
 
+let restoreMatchMedia: (() => void) | null = null;
+
 function installControllableMatchMedia(initialMatches = false): MatchMediaMock {
+  const originalMatchMedia = window.matchMedia;
   let matches = initialMatches;
   const listeners = new Set<(event: MediaQueryListEvent) => void>();
 
@@ -49,12 +55,18 @@ function installControllableMatchMedia(initialMatches = false): MatchMediaMock {
     return mediaQueryList;
   });
 
+  const restore = () => {
+    window.matchMedia = originalMatchMedia;
+  };
+  restoreMatchMedia = restore;
+
   return {
     setMatches(nextMatches: boolean) {
       matches = nextMatches;
       const event = { matches: nextMatches, media: "(max-width: 700px)" } as MediaQueryListEvent;
       listeners.forEach((listener) => listener(event));
     },
+    restore,
   };
 }
 
@@ -200,7 +212,20 @@ describe("WebBridgeSwitcher", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Current Bridge: dev/ }));
 
-    expect(container.querySelector(".web-bridge-sheet")).toBeTruthy();
+    const sheet = container.querySelector(".web-bridge-sheet");
+    expect(sheet).toBeTruthy();
+    expect(sheet?.getAttribute("aria-modal")).toBe("true");
+  });
+
+  it("restores matchMedia after the mobile helper is used", () => {
+    const originalMatchMedia = window.matchMedia;
+    const matchMedia = installControllableMatchMedia(true);
+
+    expect(window.matchMedia).not.toBe(originalMatchMedia);
+
+    matchMedia.restore();
+
+    expect(window.matchMedia).toBe(originalMatchMedia);
   });
 
   it("keeps the trigger status visible in the mobile styles", () => {
