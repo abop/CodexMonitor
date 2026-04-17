@@ -102,7 +102,9 @@ export function WebBridgeProvider({
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(() => {
     const activeBridge = getActiveWebBridge(initialSettings);
-    return activeBridge ? normalizeWarning(activeBridge.baseUrl) : null;
+    return activeBridge
+      ? normalizeWarning(activeBridge.baseUrl)
+      : normalizeWarning(initialSettings.seedBridgeUrl);
   });
   const [syncVersion, setSyncVersion] = useState(0);
   const pendingReloadRef = useRef(false);
@@ -125,7 +127,6 @@ export function WebBridgeProvider({
     activeBridge?.baseUrl,
     activeBridge?.id,
     reloadApp,
-    status,
     syncVersion,
   ]);
 

@@ -2,10 +2,8 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  readRuntimeConfig,
-  resetRuntimeBridgeBaseUrlForTests,
-} from "@services/runtime";
+import * as eventsService from "@services/events";
+import * as runtimeService from "@services/runtime";
 import { WebBridgeProvider, useWebBridge } from "./WebBridgeProvider";
 import { WEB_BRIDGE_STORAGE_KEY } from "./webBridgeStorage";
 
@@ -13,7 +11,7 @@ describe("WebBridgeProvider", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.unstubAllEnvs();
-    resetRuntimeBridgeBaseUrlForTests();
+    runtimeService.resetRuntimeBridgeBaseUrlForTests();
   });
 
   function wrapper(options: {
@@ -57,6 +55,18 @@ describe("WebBridgeProvider", () => {
     expect(localStorage.getItem(WEB_BRIDGE_STORAGE_KEY)).toBeNull();
   });
 
+  it("exposes a warning for a seeded plain-http bridge url", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "http://bridge.example.com");
+
+    const { result } = renderHook(() => useWebBridge(), { wrapper: wrapper() });
+
+    expect(result.current.seedBridgeUrl).toBe("http://bridge.example.com");
+    expect(result.current.warning).toBe(
+      "Plain HTTP should only be used for trusted development hosts.",
+    );
+  });
+
   it("saves first bridge after a successful test", async () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     const testConnection = vi.fn().mockResolvedValue(undefined);
@@ -75,7 +85,9 @@ describe("WebBridgeProvider", () => {
     expect(testConnection).toHaveBeenCalledWith("https://dev.example.com");
     expect(result.current.setupRequired).toBe(false);
     expect(result.current.activeBridge?.name).toBe("dev");
-    expect(readRuntimeConfig().bridgeBaseUrl).toBe("https://dev.example.com");
+    expect(runtimeService.readRuntimeConfig().bridgeBaseUrl).toBe(
+      "https://dev.example.com",
+    );
   });
 
   it("keeps setup open when the first bridge test fails", async () => {
@@ -126,13 +138,24 @@ describe("WebBridgeProvider", () => {
       await result.current.switchBridge(build.id);
     });
 
-    expect(readRuntimeConfig().bridgeBaseUrl).toBe("https://build.example.com");
+    expect(runtimeService.readRuntimeConfig().bridgeBaseUrl).toBe(
+      "https://build.example.com",
+    );
     expect(reloadApp).toHaveBeenCalledTimes(1);
   });
 
   it("does not switch or reload when switch test fails", async () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     const reloadApp = vi.fn();
+    const runtimeBridgeListener = vi.fn();
+    const runtimeBridgeUrlSpy = vi.spyOn(
+      runtimeService,
+      "setRuntimeBridgeBaseUrl",
+    );
+    const resetBridgeRealtimeClientSpy = vi.spyOn(
+      eventsService,
+      "resetBridgeRealtimeClient",
+    );
     const testConnection = vi
       .fn()
       .mockResolvedValueOnce(undefined)
@@ -158,12 +181,21 @@ describe("WebBridgeProvider", () => {
       throw new Error("Expected build bridge");
     }
 
+    const unsubscribe = runtimeService.subscribeRuntimeBridgeBaseUrl(
+      runtimeBridgeListener,
+    );
+    runtimeBridgeUrlSpy.mockClear();
+    resetBridgeRealtimeClientSpy.mockClear();
     await act(async () => {
       await result.current.switchBridge(build.id);
     });
+    unsubscribe();
 
     expect(result.current.activeBridge?.name).toBe("dev");
     expect(result.current.error).toBe("offline");
     expect(reloadApp).not.toHaveBeenCalled();
+    expect(runtimeBridgeListener).not.toHaveBeenCalled();
+    expect(runtimeBridgeUrlSpy).not.toHaveBeenCalled();
+    expect(resetBridgeRealtimeClientSpy).not.toHaveBeenCalled();
   });
 });
