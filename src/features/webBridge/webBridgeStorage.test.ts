@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   WEB_BRIDGE_STORAGE_KEY,
   addWebBridgeTarget,
@@ -13,6 +13,10 @@ import {
 describe("webBridgeStorage", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("normalizes http and https bridge URLs", () => {
@@ -157,6 +161,46 @@ describe("webBridgeStorage", () => {
 
   it("ignores malformed storage and keeps valid seed data available", () => {
     localStorage.setItem(WEB_BRIDGE_STORAGE_KEY, "{bad json");
+
+    expect(loadWebBridgeSettings({ seedUrl: "https://seed.example.com" })).toEqual({
+      version: 1,
+      activeBridgeId: null,
+      bridges: [],
+      seedBridgeUrl: "https://seed.example.com",
+    });
+  });
+
+  it("ignores stored settings with invalid bridge URLs", () => {
+    localStorage.setItem(
+      WEB_BRIDGE_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        activeBridgeId: "bridge-1",
+        bridges: [
+          {
+            id: "bridge-1",
+            name: "dev",
+            baseUrl: "ws://dev.example.com",
+            createdAtMs: 100,
+            updatedAtMs: 100,
+            lastUsedAtMs: null,
+          },
+        ],
+      }),
+    );
+
+    expect(loadWebBridgeSettings({ seedUrl: "https://seed.example.com" })).toEqual({
+      version: 1,
+      activeBridgeId: null,
+      bridges: [],
+      seedBridgeUrl: "https://seed.example.com",
+    });
+  });
+
+  it("falls back to empty settings when storage reads are blocked", () => {
+    vi.spyOn(localStorage, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
 
     expect(loadWebBridgeSettings({ seedUrl: "https://seed.example.com" })).toEqual({
       version: 1,

@@ -23,11 +23,15 @@ type EditWebBridgeTargetOptions = WebBridgeDraft & {
 };
 
 function getLocalStorage(): Storage | null {
-  if ("localStorage" in globalThis) {
-    return (globalThis as { localStorage?: Storage }).localStorage ?? null;
-  }
-  if (typeof window !== "undefined") {
-    return window.localStorage;
+  try {
+    if ("localStorage" in globalThis) {
+      return (globalThis as { localStorage?: Storage }).localStorage ?? null;
+    }
+    if (typeof window !== "undefined") {
+      return window.localStorage;
+    }
+  } catch {
+    return null;
   }
   return null;
 }
@@ -62,22 +66,30 @@ function parseStoredSettings(raw: string | null): WebBridgeSettings | null {
     if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.bridges)) {
       return null;
     }
-    const bridges = parsed.bridges.filter((item): item is WebBridgeTarget => {
+    const bridges: WebBridgeTarget[] = [];
+    for (const item of parsed.bridges) {
       if (!item || typeof item !== "object") {
-        return false;
+        return null;
       }
       const candidate = item as WebBridgeTarget;
-      return (
+      const hasValidShape =
         typeof candidate.id === "string" &&
         typeof candidate.name === "string" &&
         typeof candidate.baseUrl === "string" &&
-        typeof candidate.createdAtMs === "number" &&
-        typeof candidate.updatedAtMs === "number" &&
-        (candidate.lastUsedAtMs === null || typeof candidate.lastUsedAtMs === "number")
-      );
-    });
-    if (bridges.length !== parsed.bridges.length) {
-      return null;
+        Number.isFinite(candidate.createdAtMs) &&
+        Number.isFinite(candidate.updatedAtMs) &&
+        (candidate.lastUsedAtMs === null || Number.isFinite(candidate.lastUsedAtMs));
+      if (!hasValidShape) {
+        return null;
+      }
+      const normalized = normalizeWebBridgeUrl(candidate.baseUrl);
+      if (!normalized.ok) {
+        return null;
+      }
+      bridges.push({
+        ...candidate,
+        baseUrl: normalized.value,
+      });
     }
     if (
       typeof parsed.activeBridgeId !== "string" &&
@@ -170,7 +182,13 @@ export function loadWebBridgeSettings(
     };
   }
 
-  const stored = parseStoredSettings(storage.getItem(WEB_BRIDGE_STORAGE_KEY));
+  let raw: string | null;
+  try {
+    raw = storage.getItem(WEB_BRIDGE_STORAGE_KEY);
+  } catch {
+    raw = null;
+  }
+  const stored = parseStoredSettings(raw);
   if (!stored) {
     return {
       version: 1,
