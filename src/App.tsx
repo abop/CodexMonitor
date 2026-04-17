@@ -41,6 +41,8 @@ import "./styles/compact-base.css";
 import "./styles/compact-phone.css";
 import "./styles/compact-tablet.css";
 import { useWindowLabel } from "@/features/layout/hooks/useWindowLabel";
+import { WebBridgeGate, WebBridgeProvider } from "@/features/webBridge";
+import { isWebRuntime } from "@services/runtime";
 import MainApp from "@app/components/MainApp";
 
 const AboutView = lazy(() =>
@@ -57,6 +59,16 @@ export default function App() {
       <Suspense fallback={null}>
         <AboutView />
       </Suspense>
+    );
+  }
+
+  if (isWebRuntime()) {
+    return (
+      <WebBridgeProvider>
+        <WebBridgeGate>
+          <MainApp />
+        </WebBridgeGate>
+      </WebBridgeProvider>
     );
   }
 

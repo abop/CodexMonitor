@@ -4,6 +4,10 @@ import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MainAppShell } from "./MainAppShell";
 
+vi.mock("@/features/webBridge", () => ({
+  WebBridgeSwitcher: () => <div data-testid="web-bridge-switcher" />,
+}));
+
 vi.mock("@app/components/AppLayout", () => ({
   AppLayout: () => <div data-testid="app-layout" />,
 }));
@@ -230,5 +234,24 @@ describe("MainAppShell", () => {
     expect(container.querySelector("[data-testid='window-caption-controls']")).toBeNull();
     expect(screen.getByTestId("app-layout")).toBeTruthy();
     expect(screen.getByTestId("app-modals")).toBeTruthy();
+  });
+
+  it("renders the web bridge switcher in web runtime", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    render(<MainAppShell {...buildProps()} />);
+
+    const chrome = document.querySelector(".web-bridge-chrome");
+    expect(chrome).toBeTruthy();
+    expect(screen.getByTestId("web-bridge-switcher")).toBeTruthy();
+  });
+
+  it("does not render the web bridge switcher in desktop runtime", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
+
+    render(<MainAppShell {...buildProps()} />);
+
+    expect(document.querySelector(".web-bridge-chrome")).toBeNull();
+    expect(screen.queryByTestId("web-bridge-switcher")).toBeNull();
   });
 });
