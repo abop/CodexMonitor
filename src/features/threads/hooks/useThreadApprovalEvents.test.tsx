@@ -24,6 +24,7 @@ describe("useThreadApprovalEvents", () => {
   });
 
   it("auto-accepts allowlisted approvals", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     const dispatch = vi.fn();
     const approvalAllowlistRef = {
       current: { "ws-1": [["git", "status"]] },
@@ -54,6 +55,7 @@ describe("useThreadApprovalEvents", () => {
   });
 
   it("dispatches approvals that do not match the allowlist", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     const dispatch = vi.fn();
     const approvalAllowlistRef = {
       current: { "ws-1": [["git", "status"]] },

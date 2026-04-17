@@ -70,6 +70,8 @@ const WEB_SUPPORTED_RPC_METHODS = new Set([
   "prompts_list",
   "account_rate_limits",
   "account_read",
+  "respond_to_server_request",
+  "remember_approval_rule",
 ]);
 
 type RpcParams = Record<string, unknown>;
@@ -653,8 +655,7 @@ export async function respondToServerRequest(
   requestId: number | string,
   decision: "accept" | "decline",
 ) {
-  requireDesktopRuntime("Server request responses");
-  return invoke("respond_to_server_request", {
+  return invokeSupportedRpc("respond_to_server_request", {
     workspaceId,
     requestId,
     result: { decision },
@@ -666,8 +667,7 @@ export async function respondToUserInputRequest(
   requestId: number | string,
   answers: Record<string, { answers: string[] }>,
 ) {
-  requireDesktopRuntime("Server request responses");
-  return invoke("respond_to_server_request", {
+  return invokeSupportedRpc("respond_to_server_request", {
     workspaceId,
     requestId,
     result: { answers },
@@ -678,8 +678,7 @@ export async function rememberApprovalRule(
   workspaceId: string,
   command: string[],
 ) {
-  requireDesktopRuntime("Approval rules");
-  return invoke("remember_approval_rule", { workspaceId, command });
+  return invokeSupportedRpc("remember_approval_rule", { workspaceId, command });
 }
 
 export async function getGitStatus(workspace_id: string): Promise<{

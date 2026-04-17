@@ -10,6 +10,7 @@ vi.mock("@services/tauri", () => ({
 
 describe("useThreadUserInput", () => {
   it("submits request-user-input answers and appends an answered item", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     const dispatch = vi.fn();
     const { result } = renderHook(() => useThreadUserInput({ dispatch }));
     const request = {

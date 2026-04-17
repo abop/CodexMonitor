@@ -40,6 +40,8 @@ const ALLOWED_RPC_METHODS: &[&str] = &[
     "prompts_list",
     "account_rate_limits",
     "account_read",
+    "respond_to_server_request",
+    "remember_approval_rule",
 ];
 
 #[derive(Deserialize)]
@@ -237,9 +239,27 @@ pub(crate) fn test_state() -> BridgeState {
 #[cfg(test)]
 mod tests {
     use super::{build_router, test_state};
+    use crate::config::BridgeConfig;
+    use crate::daemon_client::test_client_pair;
+    use crate::state::BridgeState;
     use axum::body::Body;
     use axum::http::{header, HeaderValue, Request, StatusCode};
+    use serde_json::json;
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use tower::ServiceExt;
+
+    fn test_state_with_client(daemon_client: crate::daemon_client::DaemonClient) -> BridgeState {
+        BridgeState {
+            config: BridgeConfig {
+                listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8787),
+                daemon_host: "127.0.0.1:4732".to_string(),
+                daemon_token: None,
+                require_cf_access_header: true,
+                allowed_origins: vec![],
+            },
+            daemon_client,
+        }
+    }
 
     #[test]
     fn rejects_methods_outside_the_allowlist() {
@@ -353,6 +373,66 @@ mod tests {
                     response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
                     Some(&HeaderValue::from_static("http://127.0.0.1:1424"))
                 );
+            });
+    }
+
+    #[test]
+    fn forwards_approval_reply_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                server.enqueue_result(1, json!({})).await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                r#"{"method":"respond_to_server_request","params":{"workspaceId":"ws-1","requestId":7,"result":{"decision":"accept"}}}"#,
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "respond_to_server_request");
+            });
+    }
+
+    #[test]
+    fn forwards_approval_rule_remember_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                server.enqueue_result(1, json!({})).await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                r#"{"method":"remember_approval_rule","params":{"workspaceId":"ws-1","command":["git","status"]}}"#,
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "remember_approval_rule");
             });
     }
 }

@@ -27,6 +27,7 @@ import {
   stageGitAll,
   respondToServerRequest,
   respondToUserInputRequest,
+  rememberApprovalRule,
   sendUserMessage,
   steerTurn,
   sendNotification,
@@ -159,6 +160,106 @@ describe("tauri invoke wrappers", () => {
       }),
     );
     expect(invoke).not.toHaveBeenCalledWith("send_user_message", expect.anything());
+  });
+
+  it("routes approval replies through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: {} }),
+      }),
+    );
+
+    await respondToServerRequest("ws-2", 17, "accept");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "respond_to_server_request",
+          params: {
+            workspaceId: "ws-2",
+            requestId: 17,
+            result: { decision: "accept" },
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      "respond_to_server_request",
+      expect.anything(),
+    );
+  });
+
+  it("routes user-input replies through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: {} }),
+      }),
+    );
+
+    const answers = {
+      confirm_path: { answers: ["Yes"] },
+      notes: { answers: ["First line", "Second line"] },
+    };
+
+    await respondToUserInputRequest("ws-3", 18, answers);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "respond_to_server_request",
+          params: {
+            workspaceId: "ws-3",
+            requestId: 18,
+            result: { answers },
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      "respond_to_server_request",
+      expect.anything(),
+    );
+  });
+
+  it("routes remembered approval rules through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: {} }),
+      }),
+    );
+
+    await rememberApprovalRule("ws-4", ["git", "status"]);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "remember_approval_rule",
+          params: {
+            workspaceId: "ws-4",
+            command: ["git", "status"],
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      "remember_approval_rule",
+      expect.anything(),
+    );
   });
 
   it("fails clearly for desktop-only actions in web runtime", async () => {
