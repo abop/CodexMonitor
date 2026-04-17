@@ -14,6 +14,24 @@ function isMobileWebBridgeSheet() {
   return window.matchMedia("(max-width: 700px)").matches;
 }
 
+function getBridgeHost(baseUrl: string) {
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return baseUrl;
+  }
+}
+
+function getBridgeStatusLabel(status: "idle" | "testing" | "switching") {
+  if (status === "testing") {
+    return "Testing";
+  }
+  if (status === "switching") {
+    return "Switching";
+  }
+  return "Ready";
+}
+
 export function WebBridgeSwitcher() {
   const {
     isWeb,
@@ -75,7 +93,11 @@ export function WebBridgeSwitcher() {
           aria-expanded={menu.isOpen}
           onClick={menu.toggle}
         >
-          <span className="web-bridge-trigger-label">{activeBridge.name}</span>
+          <span className="web-bridge-trigger-copy">
+            <span className="web-bridge-trigger-label">{activeBridge.name}</span>
+            <span className="web-bridge-trigger-host">{getBridgeHost(activeBridge.baseUrl)}</span>
+          </span>
+          <span className="web-bridge-trigger-status">{getBridgeStatusLabel(status)}</span>
           <ChevronDown className="web-bridge-trigger-icon" aria-hidden size={14} />
         </button>
 

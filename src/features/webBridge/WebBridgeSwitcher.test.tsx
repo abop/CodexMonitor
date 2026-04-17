@@ -100,6 +100,8 @@ describe("WebBridgeSwitcher", () => {
     renderSwitcher();
 
     expect(screen.getByRole("button", { name: /Current Bridge: dev/ })).toBeTruthy();
+    expect(screen.getByText("dev.example.com")).toBeTruthy();
+    expect(screen.getByText("Ready")).toBeTruthy();
   });
 
   it("switches after a successful test", async () => {
@@ -150,6 +152,38 @@ describe("WebBridgeSwitcher", () => {
 
     expect(await screen.findByText("prod")).toBeTruthy();
     expect(testConnection).toHaveBeenCalledWith("https://prod.example.com");
+  });
+
+  it("deletes a bridge from the manager list", async () => {
+    seedTwoBridges();
+
+    renderSwitcher();
+    fireEvent.click(screen.getByRole("button", { name: /Current Bridge: dev/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Manage Bridges" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[1]);
+
+    expect(await screen.findByText("dev")).toBeTruthy();
+    expect(screen.queryByText("build")).toBeNull();
+  });
+
+  it("shows validation error for an invalid bridge url", async () => {
+    seedTwoBridges();
+    const testConnection = vi.fn().mockResolvedValue(undefined);
+
+    renderSwitcher({ testConnection });
+    fireEvent.click(screen.getByRole("button", { name: /Current Bridge: dev/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Manage Bridges" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add Bridge" }));
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "broken" },
+    });
+    fireEvent.change(screen.getByLabelText("Bridge URL"), {
+      target: { value: "not-a-url" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Test and Save" }));
+
+    expect(await screen.findByText("Bridge URL must start with http:// or https://.")).toBeTruthy();
+    expect(testConnection).not.toHaveBeenCalled();
   });
 
   it("renders mobile picker as a bottom sheet", () => {

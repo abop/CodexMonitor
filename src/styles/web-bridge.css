@@ -14,9 +14,17 @@
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   overflow: hidden;
+}
+
+.web-bridge-trigger-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  flex: 1;
 }
 
 .web-bridge-trigger-label {
@@ -24,6 +32,25 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.1;
+}
+
+.web-bridge-trigger-host {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.web-bridge-trigger-status {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
 }
 
 .web-bridge-trigger-icon {
@@ -232,5 +259,9 @@
 
   .web-bridge-trigger {
     max-width: min(280px, calc(100vw - 24px));
+  }
+
+  .web-bridge-trigger-status {
+    display: none;
   }
 }
