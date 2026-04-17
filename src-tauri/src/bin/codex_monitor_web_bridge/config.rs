@@ -10,6 +10,7 @@ pub(crate) struct BridgeConfig {
     pub(crate) daemon_host: String,
     pub(crate) daemon_token: Option<String>,
     pub(crate) require_cf_access_header: bool,
+    pub(crate) allowed_origins: Vec<String>,
 }
 
 pub(crate) fn load_from_env() -> Result<BridgeConfig, String> {
@@ -32,12 +33,24 @@ pub(crate) fn load_from_env() -> Result<BridgeConfig, String> {
             )
         })
         .unwrap_or(false);
+    let allowed_origins = env::var("CODEX_MONITOR_WEB_BRIDGE_ALLOWED_ORIGINS")
+        .ok()
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|entry| !entry.is_empty())
+                .map(ToOwned::to_owned)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
 
     Ok(BridgeConfig {
         listen,
         daemon_host,
         daemon_token,
         require_cf_access_header,
+        allowed_origins,
     })
 }
 
@@ -53,12 +66,14 @@ mod tests {
             daemon_host: "127.0.0.1:4732".to_string(),
             daemon_token: Some("secret".to_string()),
             require_cf_access_header: true,
+            allowed_origins: vec!["https://bridge.example.com".to_string()],
         };
 
         assert_eq!(config.listen.port(), 8080);
         assert_eq!(config.daemon_host, "127.0.0.1:4732");
         assert_eq!(config.daemon_token.as_deref(), Some("secret"));
         assert!(config.require_cf_access_header);
+        assert_eq!(config.allowed_origins, vec!["https://bridge.example.com"]);
     }
 
     #[test]
@@ -67,6 +82,7 @@ mod tests {
         std::env::remove_var("CODEX_MONITOR_WEB_BRIDGE_DAEMON_HOST");
         std::env::remove_var("CODEX_MONITOR_WEB_BRIDGE_DAEMON_TOKEN");
         std::env::remove_var("CODEX_MONITOR_WEB_BRIDGE_REQUIRE_CF_ACCESS_HEADER");
+        std::env::remove_var("CODEX_MONITOR_WEB_BRIDGE_ALLOWED_ORIGINS");
 
         let config = load_from_env().expect("config");
 
@@ -74,5 +90,6 @@ mod tests {
         assert_eq!(config.daemon_host, "127.0.0.1:4732");
         assert_eq!(config.daemon_token, None);
         assert!(!config.require_cf_access_header);
+        assert!(config.allowed_origins.is_empty());
     }
 }

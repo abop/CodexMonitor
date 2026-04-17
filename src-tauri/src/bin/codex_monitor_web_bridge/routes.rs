@@ -2,8 +2,9 @@ use crate::auth::require_bridge_headers;
 use crate::state::BridgeState;
 use axum::extract::ws::{Message, WebSocketUpgrade};
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::IntoResponse;
+use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
@@ -65,21 +66,112 @@ struct RpcErrorBody {
 
 pub(crate) fn build_router(state: BridgeState) -> Router {
     Router::new()
-        .route("/api/rpc", post(rpc_handler))
+        .route("/api/rpc", post(rpc_handler).options(preflight_handler))
         .route("/ws", get(ws_handler))
         .with_state(state)
+}
+
+fn is_local_browser_origin(origin: &str) -> bool {
+    origin.starts_with("http://127.0.0.1:")
+        || origin.starts_with("http://localhost:")
+        || origin.starts_with("https://127.0.0.1:")
+        || origin.starts_with("https://localhost:")
+}
+
+fn resolve_allowed_origin(
+    headers: &HeaderMap,
+    state: &BridgeState,
+) -> Result<Option<HeaderValue>, (StatusCode, String)> {
+    let Some(origin) = headers.get(header::ORIGIN) else {
+        return Ok(None);
+    };
+    let origin_value = origin
+        .to_str()
+        .map_err(|_| (StatusCode::BAD_REQUEST, "invalid origin header".to_string()))?;
+    let allowed = is_local_browser_origin(origin_value)
+        || state
+            .config
+            .allowed_origins
+            .iter()
+            .any(|entry| entry == origin_value);
+    if !allowed {
+        return Err((StatusCode::FORBIDDEN, "bridge denied origin".to_string()));
+    }
+    Ok(Some(origin.clone()))
+}
+
+fn apply_cors_headers(
+    headers: &HeaderMap,
+    allowed_origin: Option<HeaderValue>,
+    response: impl IntoResponse,
+) -> Response {
+    let mut response = response.into_response();
+    if let Some(origin) = allowed_origin {
+        let response_headers = response.headers_mut();
+        response_headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin);
+        response_headers.insert(
+            header::ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            HeaderValue::from_static("true"),
+        );
+        response_headers.insert(
+            header::ACCESS_CONTROL_ALLOW_METHODS,
+            HeaderValue::from_static("POST, OPTIONS"),
+        );
+        if let Some(request_headers) = headers.get(header::ACCESS_CONTROL_REQUEST_HEADERS) {
+            response_headers.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, request_headers.clone());
+        } else {
+            response_headers.insert(
+                header::ACCESS_CONTROL_ALLOW_HEADERS,
+                HeaderValue::from_static("content-type, cf-access-jwt-assertion"),
+            );
+        }
+        response_headers.insert(header::VARY, HeaderValue::from_static("Origin"));
+    }
+    response
+}
+
+fn error_response(
+    headers: &HeaderMap,
+    allowed_origin: Option<HeaderValue>,
+    error: (StatusCode, String),
+) -> Response {
+    apply_cors_headers(
+        headers,
+        allowed_origin,
+        (
+            error.0,
+            Json(RpcErrorResponse {
+                error: RpcErrorBody { message: error.1 },
+            }),
+        ),
+    )
+}
+
+async fn preflight_handler(
+    State(state): State<BridgeState>,
+    headers: HeaderMap,
+) -> Result<Response, Response> {
+    let allowed_origin = resolve_allowed_origin(&headers, &state)
+        .map_err(|error| error_response(&headers, None, error))?;
+    Ok(apply_cors_headers(
+        &headers,
+        allowed_origin,
+        StatusCode::NO_CONTENT,
+    ))
 }
 
 async fn rpc_handler(
     State(state): State<BridgeState>,
     headers: HeaderMap,
     Json(request): Json<RpcRequest>,
-) -> Result<Json<RpcResultResponse>, (StatusCode, Json<RpcErrorResponse>)> {
+) -> Result<Response, Response> {
+    let allowed_origin = resolve_allowed_origin(&headers, &state)
+        .map_err(|error| error_response(&headers, None, error))?;
     require_bridge_headers(&headers, state.config.require_cf_access_header)
-        .map_err(error_response)?;
+        .map_err(|error| error_response(&headers, allowed_origin.clone(), error))?;
 
     if !ALLOWED_RPC_METHODS.contains(&request.method.as_str()) {
-        return Err(error_response((
+        return Err(error_response(&headers, allowed_origin.clone(), (
             StatusCode::FORBIDDEN,
             "bridge denied method".to_string(),
         )));
@@ -89,42 +181,43 @@ async fn rpc_handler(
         .daemon_client
         .call(&request.method, request.params)
         .await
-        .map_err(|message| error_response((StatusCode::BAD_GATEWAY, message)))?;
+        .map_err(|message| error_response(&headers, allowed_origin.clone(), (StatusCode::BAD_GATEWAY, message)))?;
 
-    Ok(Json(RpcResultResponse { result }))
+    Ok(apply_cors_headers(
+        &headers,
+        allowed_origin,
+        Json(RpcResultResponse { result }),
+    ))
 }
 
 async fn ws_handler(
     State(state): State<BridgeState>,
     headers: HeaderMap,
     websocket: WebSocketUpgrade,
-) -> Result<impl IntoResponse, (StatusCode, Json<RpcErrorResponse>)> {
+) -> Result<Response, Response> {
+    let allowed_origin = resolve_allowed_origin(&headers, &state)
+        .map_err(|error| error_response(&headers, None, error))?;
     require_bridge_headers(&headers, state.config.require_cf_access_header)
-        .map_err(error_response)?;
+        .map_err(|error| error_response(&headers, allowed_origin.clone(), error))?;
     let mut events = state.daemon_client.subscribe();
 
-    Ok(websocket.on_upgrade(move |mut socket| async move {
-        loop {
-            let message = match events.recv().await {
-                Ok(message) => message,
-                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
-                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-            };
+    Ok(apply_cors_headers(
+        &headers,
+        allowed_origin,
+        websocket.on_upgrade(move |mut socket| async move {
+            loop {
+                let message = match events.recv().await {
+                    Ok(message) => message,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                };
 
-            if socket.send(Message::Text(message.into())).await.is_err() {
-                break;
+                if socket.send(Message::Text(message.into())).await.is_err() {
+                    break;
+                }
             }
-        }
-    }))
-}
-
-fn error_response(error: (StatusCode, String)) -> (StatusCode, Json<RpcErrorResponse>) {
-    (
-        error.0,
-        Json(RpcErrorResponse {
-            error: RpcErrorBody { message: error.1 },
         }),
-    )
+    ))
 }
 
 #[cfg(test)]
@@ -135,6 +228,7 @@ pub(crate) fn test_state() -> BridgeState {
             daemon_host: "127.0.0.1:4732".to_string(),
             daemon_token: None,
             require_cf_access_header: true,
+            allowed_origins: vec![],
         },
         daemon_client: crate::daemon_client::DaemonClient::test_client(),
     }
@@ -144,7 +238,7 @@ pub(crate) fn test_state() -> BridgeState {
 mod tests {
     use super::{build_router, test_state};
     use axum::body::Body;
-    use axum::http::{Request, StatusCode};
+    use axum::http::{header, HeaderValue, Request, StatusCode};
     use tower::ServiceExt;
 
     #[test]
@@ -193,6 +287,72 @@ mod tests {
                     .unwrap();
 
                 assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            });
+    }
+
+    #[test]
+    fn handles_cors_preflight_for_local_dev_origin() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let app = build_router(test_state());
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("OPTIONS")
+                            .uri("/api/rpc")
+                            .header(header::ORIGIN, "http://127.0.0.1:1424")
+                            .header(header::ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                            .header(header::ACCESS_CONTROL_REQUEST_HEADERS, "content-type")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::NO_CONTENT);
+                assert_eq!(
+                    response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+                    Some(&HeaderValue::from_static("http://127.0.0.1:1424"))
+                );
+                assert_eq!(
+                    response
+                        .headers()
+                        .get(header::ACCESS_CONTROL_ALLOW_CREDENTIALS),
+                    Some(&HeaderValue::from_static("true"))
+                );
+            });
+    }
+
+    #[test]
+    fn includes_cors_headers_on_rpc_errors_for_allowed_origin() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let app = build_router(test_state());
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header(header::ORIGIN, "http://127.0.0.1:1424")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(r#"{"method":"delete_everything","params":{}}"#))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::FORBIDDEN);
+                assert_eq!(
+                    response.headers().get(header::ACCESS_CONTROL_ALLOW_ORIGIN),
+                    Some(&HeaderValue::from_static("http://127.0.0.1:1424"))
+                );
             });
     }
 }
