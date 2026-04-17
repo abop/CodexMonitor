@@ -2,9 +2,8 @@ import { lazy, Suspense, type CSSProperties, type ComponentProps, type RefObject
 import { AppLayout } from "@app/components/AppLayout";
 import { AppModals } from "@app/components/AppModals";
 import type { AppModalsProps } from "@app/components/AppModals";
-import {
-  TitlebarExpandControls,
-} from "@/features/layout/components/SidebarToggleControls";
+import { isWebRuntime } from "@services/runtime";
+import { TitlebarExpandControls } from "@/features/layout/components/SidebarToggleControls";
 import { WindowCaptionControls } from "@/features/layout/components/WindowCaptionControls";
 import { MobileServerSetupWizard } from "@/features/mobile/components/MobileServerSetupWizard";
 
@@ -51,11 +50,13 @@ export function MainAppShell({
   showMobileSetupWizard,
   mobileSetupWizardProps,
 }: MainAppShellProps) {
+  const webRuntime = isWebRuntime();
+
   return (
     <div className={`${appClassName}${isResizing ? " is-resizing" : ""}`} style={appStyle} ref={appRef}>
-      <div className="drag-strip" id="titlebar" />
-      <TitlebarExpandControls {...sidebarToggleProps} />
-      <WindowCaptionControls />
+      {!webRuntime ? <div className="drag-strip" id="titlebar" /> : null}
+      {!webRuntime ? <TitlebarExpandControls {...sidebarToggleProps} /> : null}
+      {!webRuntime ? <WindowCaptionControls /> : null}
       {shouldLoadGitHubPanelData ? (
         <Suspense fallback={null}>
           <GitHubPanelData {...gitHubPanelDataProps} />

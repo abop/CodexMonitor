@@ -46,6 +46,9 @@ pub(crate) fn parse_incoming_line(line: &str) -> Option<IncomingMessage> {
     }
 
     let method = message.get("method").and_then(Value::as_str)?;
+    if method.is_empty() {
+        return None;
+    }
     let params = message.get("params").cloned().unwrap_or(Value::Null);
     Some(IncomingMessage::Notification {
         method: method.to_string(),
@@ -106,5 +109,10 @@ mod tests {
             }
             IncomingMessage::Notification { .. } => panic!("expected response"),
         }
+    }
+
+    #[test]
+    fn ignores_empty_notification_methods() {
+        assert!(parse_incoming_line(r#"{"method":"","params":{}}"#).is_none());
     }
 }

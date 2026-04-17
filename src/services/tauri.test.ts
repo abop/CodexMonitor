@@ -53,6 +53,8 @@ import {
   generateAgentDescription,
   writeAgentConfigToml,
   writeAgentMd,
+  addWorkspaceFromGitUrl,
+  removeWorkspace,
 } from "./tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -166,6 +168,32 @@ describe("tauri invoke wrappers", () => {
       "Open workspace in external app is unavailable in the web build.",
     );
     expect(invoke).not.toHaveBeenCalledWith("open_workspace_in", expect.anything());
+  });
+
+  it("fails clearly for other desktop-only actions in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    await expect(
+      addWorkspaceFromGitUrl("https://example.com/repo.git", "/srv/repos", null),
+    ).rejects.toThrow("Add workspace from Git URL is unavailable in the web build.");
+    await expect(removeWorkspace("ws-1")).rejects.toThrow(
+      "Remove workspace is unavailable in the web build.",
+    );
+    await expect(stageGitAll("ws-1")).rejects.toThrow(
+      "Git staging is unavailable in the web build.",
+    );
+    await expect(setTrayRecentThreads([])).rejects.toThrow(
+      "Tray integration is unavailable in the web build.",
+    );
+    await expect(sendNotification("Hello", "World")).rejects.toThrow(
+      "Notification delivery is unavailable in the web build.",
+    );
+
+    expect(invoke).not.toHaveBeenCalledWith("add_workspace_from_git_url", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("remove_workspace", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("stage_git_all", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("set_tray_recent_threads", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("is_macos_debug_build");
   });
 
   it("returns an empty list when workspace picker is cancelled", async () => {

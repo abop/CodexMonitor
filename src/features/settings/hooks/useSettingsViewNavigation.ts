@@ -5,12 +5,33 @@ import { isNarrowSettingsViewport } from "@settings/components/settingsViewHelpe
 
 type UseSettingsViewNavigationParams = {
   initialSection?: CodexSection;
+  visibleSections?: readonly CodexSection[];
 };
+
+function isSectionVisible(
+  section: CodexSection,
+  visibleSections?: readonly CodexSection[],
+) {
+  return visibleSections ? visibleSections.includes(section) : true;
+}
+
+function resolveInitialSection(
+  initialSection: CodexSection | undefined,
+  visibleSections?: readonly CodexSection[],
+) {
+  if (initialSection && isSectionVisible(initialSection, visibleSections)) {
+    return initialSection;
+  }
+  return visibleSections?.[0] ?? "projects";
+}
 
 export const useSettingsViewNavigation = ({
   initialSection,
+  visibleSections,
 }: UseSettingsViewNavigationParams) => {
-  const [activeSection, setActiveSection] = useState<CodexSection>("projects");
+  const [activeSection, setActiveSection] = useState<CodexSection>(() =>
+    resolveInitialSection(initialSection, visibleSections),
+  );
   const [isNarrowViewport, setIsNarrowViewport] = useState(() =>
     isNarrowSettingsViewport(),
   );
@@ -47,22 +68,29 @@ export const useSettingsViewNavigation = ({
   }, [useMobileMasterDetail]);
 
   useEffect(() => {
+    if (visibleSections && !visibleSections.includes(activeSection)) {
+      setActiveSection(visibleSections[0] ?? "projects");
+      return;
+    }
     if (initialSection) {
-      setActiveSection(initialSection);
+      setActiveSection(resolveInitialSection(initialSection, visibleSections));
       if (useMobileMasterDetail) {
         setShowMobileDetail(true);
       }
     }
-  }, [initialSection, useMobileMasterDetail]);
+  }, [activeSection, initialSection, useMobileMasterDetail, visibleSections]);
 
   const handleSelectSection = useCallback(
     (section: CodexSection) => {
+      if (!isSectionVisible(section, visibleSections)) {
+        return;
+      }
       setActiveSection(section);
       if (useMobileMasterDetail) {
         setShowMobileDetail(true);
       }
     },
-    [useMobileMasterDetail],
+    [useMobileMasterDetail, visibleSections],
   );
 
   return {

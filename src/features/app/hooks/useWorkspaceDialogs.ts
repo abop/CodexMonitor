@@ -211,6 +211,45 @@ export function useWorkspaceDialogs() {
     return pickWorkspacePaths();
   }, [requestMobileRemoteWorkspacePaths]);
 
+  const showDialogMessage = useCallback(
+    async (
+      body: string,
+      options: { title: string; kind?: "info" | "warning" | "error" },
+    ) => {
+      if (isWebRuntime()) {
+        if (typeof window !== "undefined") {
+          const prefix = options.title.trim();
+          window.alert(prefix ? `${prefix}\n\n${body}` : body);
+        }
+        return;
+      }
+      await message(body, options);
+    },
+    [],
+  );
+
+  const confirmDialog = useCallback(
+    async (
+      body: string,
+      options: {
+        title: string;
+        kind?: "info" | "warning" | "error";
+        okLabel?: string;
+        cancelLabel?: string;
+      },
+    ) => {
+      if (isWebRuntime()) {
+        if (typeof window === "undefined") {
+          return false;
+        }
+        const prefix = options.title.trim();
+        return window.confirm(prefix ? `${prefix}\n\n${body}` : body);
+      }
+      return ask(body, options);
+    },
+    [],
+  );
+
   const showAddWorkspacesResult = useCallback(
     async (result: AddWorkspacesFromPathsResult) => {
       const hasIssues =
@@ -260,12 +299,12 @@ export function useWorkspaceDialogs() {
         result.failures.length > 0
           ? "Some workspaces failed to add"
           : "Some workspaces were skipped";
-      await message(lines.join("\n"), {
+      await showDialogMessage(lines.join("\n"), {
         title,
         kind: result.failures.length > 0 ? "error" : "warning",
       });
     },
-    [],
+    [showDialogMessage],
   );
 
   const confirmWorkspaceRemoval = useCallback(
@@ -282,7 +321,7 @@ export function useWorkspaceDialogs() {
             } on disk.`
           : "";
 
-      return ask(
+      return confirmDialog(
         `Are you sure you want to delete "${workspaceName}"?\n\nThis will remove the workspace from CodexMonitor.${detail}`,
         {
           title: "Delete Workspace",
@@ -292,14 +331,14 @@ export function useWorkspaceDialogs() {
         },
       );
     },
-    [],
+    [confirmDialog],
   );
 
   const confirmWorktreeRemoval = useCallback(
     async (workspaces: WorkspaceInfo[], workspaceId: string) => {
       const workspace = workspaces.find((entry) => entry.id === workspaceId);
       const workspaceName = workspace?.name || "this worktree";
-      return ask(
+      return confirmDialog(
         `Are you sure you want to delete "${workspaceName}"?\n\nThis will close the agent, remove its worktree, and delete it from CodexMonitor.`,
         {
           title: "Delete Worktree",
@@ -309,24 +348,24 @@ export function useWorkspaceDialogs() {
         },
       );
     },
-    [],
+    [confirmDialog],
   );
 
   const showWorkspaceRemovalError = useCallback(async (error: unknown) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    await message(errorMessage, {
+    await showDialogMessage(errorMessage, {
       title: "Delete workspace failed",
       kind: "error",
     });
-  }, []);
+  }, [showDialogMessage]);
 
   const showWorktreeRemovalError = useCallback(async (error: unknown) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    await message(errorMessage, {
+    await showDialogMessage(errorMessage, {
       title: "Delete worktree failed",
       kind: "error",
     });
-  }, []);
+  }, [showDialogMessage]);
 
   return {
     requestWorkspacePaths,

@@ -72,6 +72,13 @@ export const COMPOSER_PRESET_CONFIGS: Record<
 
 export const SETTINGS_MOBILE_BREAKPOINT_PX = 720;
 export const DEFAULT_REMOTE_HOST = "127.0.0.1:4732";
+export const SETTINGS_WEB_SECTION_IDS = [
+  "projects",
+  "display",
+  "composer",
+  "git",
+  "about",
+] as const satisfies readonly CodexSection[];
 
 export const SETTINGS_SECTION_LABELS: Record<CodexSection, string> = {
   projects: "Projects",

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
+import { isWebRuntime } from "@services/runtime";
 import { subscribeWindowDragDrop } from "../../../services/dragDrop";
 
 function isDragFileTransfer(types: readonly string[] | undefined) {
@@ -48,6 +49,7 @@ export function useWorkspaceDropZone({
   disabled = false,
   onDropPaths,
 }: UseWorkspaceDropZoneArgs) {
+  const webRuntime = isWebRuntime();
   const [isDragOver, setIsDragOver] = useState(false);
   const dropTargetRef = useRef<HTMLElement | null>(null);
   const dragDepthRef = useRef(0);
@@ -87,7 +89,7 @@ export function useWorkspaceDropZone({
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
-    if (disabled) {
+    if (disabled || webRuntime) {
       return undefined;
     }
     unlisten = subscribeWindowDragDrop((event) => {
@@ -139,10 +141,10 @@ export function useWorkspaceDropZone({
         unlisten();
       }
     };
-  }, [disabled, emitPaths]);
+  }, [disabled, emitPaths, webRuntime]);
 
   const handleDragOver = (event: DragEvent<HTMLElement>) => {
-    if (disabled) {
+    if (disabled || webRuntime) {
       return;
     }
     if (isDragFileTransfer(event.dataTransfer?.types)) {
@@ -153,7 +155,7 @@ export function useWorkspaceDropZone({
   };
 
   const handleDragEnter = (event: DragEvent<HTMLElement>) => {
-    if (disabled) {
+    if (disabled || webRuntime) {
       return;
     }
     dragDepthRef.current += 1;
@@ -161,7 +163,7 @@ export function useWorkspaceDropZone({
   };
 
   const handleDragLeave = (event: DragEvent<HTMLElement>) => {
-    if (disabled) {
+    if (disabled || webRuntime) {
       return;
     }
     const relatedTarget = event.relatedTarget as Node | null;
@@ -176,7 +178,7 @@ export function useWorkspaceDropZone({
   };
 
   const handleDrop = (event: DragEvent<HTMLElement>) => {
-    if (disabled) {
+    if (disabled || webRuntime) {
       return;
     }
     dragDepthRef.current = 0;

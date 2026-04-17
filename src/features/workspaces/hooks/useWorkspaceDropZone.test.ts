@@ -66,6 +66,7 @@ function renderDropHook(options: {
 describe("useWorkspaceDropZone", () => {
   beforeEach(() => {
     mockOnDragDropEvent = null;
+    vi.unstubAllEnvs();
   });
 
   it("tracks drag over state for file transfers", () => {
@@ -105,6 +106,26 @@ describe("useWorkspaceDropZone", () => {
     });
 
     expect(onDropPaths).toHaveBeenCalledWith(["/tmp/project"]);
+
+    hook.unmount();
+  });
+
+  it("ignores drag handling in web runtime", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    const onDropPaths = vi.fn();
+    const hook = renderDropHook({ onDropPaths });
+    const preventDefault = vi.fn();
+
+    act(() => {
+      hook.result.handleDragOver({
+        dataTransfer: { types: ["Files"], items: [] },
+        preventDefault,
+      } as unknown as React.DragEvent<HTMLElement>);
+    });
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(hook.result.isDragOver).toBe(false);
+    expect(mockOnDragDropEvent).toBeNull();
 
     hook.unmount();
   });

@@ -5,6 +5,7 @@ import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import * as Sentry from "@sentry/react";
+import { isWebRuntime } from "@services/runtime";
 import { openWorkspaceIn } from "../../../services/tauri";
 import { pushErrorToast } from "../../../services/toasts";
 import type { OpenAppTarget } from "../../../types";
@@ -97,6 +98,8 @@ export function useFileLinkOpener(
   openTargets: OpenAppTarget[],
   selectedOpenAppId: string,
 ) {
+  const webRuntime = isWebRuntime();
+
   const reportOpenError = useCallback(
     (error: unknown, context: Record<string, string | null>) => {
       const message = error instanceof Error ? error.message : String(error);
@@ -120,6 +123,10 @@ export function useFileLinkOpener(
 
   const openFileLink = useCallback(
     async (targetLocation: ParsedFileLocation) => {
+      if (webRuntime) {
+        return;
+      }
+
       const target = resolveOpenTarget(openTargets, selectedOpenAppId);
       const { fileLocation, rawPathLabel, resolvedPath } = resolveFileLinkContext(
         targetLocation,
@@ -173,11 +180,15 @@ export function useFileLinkOpener(
         });
       }
     },
-    [openTargets, reportOpenError, selectedOpenAppId, workspacePath],
+    [openTargets, reportOpenError, selectedOpenAppId, webRuntime, workspacePath],
   );
 
   const showFileLinkMenu = useCallback(
     async (event: MouseEvent, targetLocation: ParsedFileLocation) => {
+      if (webRuntime) {
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
       const target = resolveOpenTarget(openTargets, selectedOpenAppId);
@@ -252,7 +263,7 @@ export function useFileLinkOpener(
       const position = new LogicalPosition(event.clientX, event.clientY);
       await menu.popup(position, window);
     },
-    [openFileLink, openTargets, reportOpenError, selectedOpenAppId, workspacePath],
+    [openFileLink, openTargets, reportOpenError, selectedOpenAppId, webRuntime, workspacePath],
   );
 
   return { openFileLink, showFileLinkMenu };

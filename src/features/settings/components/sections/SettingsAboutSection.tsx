@@ -5,6 +5,7 @@ import {
   isMobileRuntime,
   type AppBuildType,
 } from "@services/tauri";
+import { isWebRuntime } from "@services/runtime";
 import { useUpdater } from "@/features/update/hooks/useUpdater";
 import {
   SettingsSection,
@@ -35,8 +36,10 @@ export function SettingsAboutSection({
   appSettings,
   onToggleAutomaticAppUpdateChecks,
 }: SettingsAboutSectionProps) {
+  const webRuntime = isWebRuntime();
   const [appBuildType, setAppBuildType] = useState<AppBuildType | "unknown">("unknown");
-  const [updaterEnabled, setUpdaterEnabled] = useState(false);
+  const [desktopUpdaterEnabled, setDesktopUpdaterEnabled] = useState(false);
+  const updaterEnabled = !webRuntime && desktopUpdaterEnabled;
   const { state: updaterState, checkForUpdates, startUpdate } = useUpdater({
     enabled: updaterEnabled,
     autoCheckOnMount: false,
@@ -64,16 +67,22 @@ export function SettingsAboutSection({
 
   useEffect(() => {
     let active = true;
+    if (webRuntime) {
+      setDesktopUpdaterEnabled(false);
+      return () => {
+        active = false;
+      };
+    }
     const detectRuntime = async () => {
       try {
         const mobileRuntime = await isMobileRuntime();
         if (active) {
-          setUpdaterEnabled(!mobileRuntime);
+          setDesktopUpdaterEnabled(!mobileRuntime);
         }
       } catch {
         if (active) {
           // In non-Tauri previews we still want local desktop-like behavior.
-          setUpdaterEnabled(true);
+          setDesktopUpdaterEnabled(true);
         }
       }
     };
@@ -108,87 +117,89 @@ export function SettingsAboutSection({
           Build date: <code>{buildDateLabel}</code>
         </div>
       </div>
-      <div className="settings-field">
-        <div className="settings-label">App Updates</div>
-        <SettingsToggleRow
-          title="Automatically check for app updates"
-          subtitle="When enabled, CodexMonitor checks for new app versions on launch."
-        >
-          <SettingsToggleSwitch
-            pressed={appSettings.automaticAppUpdateChecksEnabled}
-            onClick={() => {
-              onToggleAutomaticAppUpdateChecks?.();
-            }}
-          />
-        </SettingsToggleRow>
-        <div className="settings-help">
-          Currently running version <code>{__APP_VERSION__}</code>
-        </div>
-        {!updaterEnabled && (
+      {!webRuntime && (
+        <div className="settings-field">
+          <div className="settings-label">App Updates</div>
+          <SettingsToggleRow
+            title="Automatically check for app updates"
+            subtitle="When enabled, CodexMonitor checks for new app versions on launch."
+          >
+            <SettingsToggleSwitch
+              pressed={appSettings.automaticAppUpdateChecksEnabled}
+              onClick={() => {
+                onToggleAutomaticAppUpdateChecks?.();
+              }}
+            />
+          </SettingsToggleRow>
           <div className="settings-help">
-            Updates are unavailable in this runtime.
+            Currently running version <code>{__APP_VERSION__}</code>
           </div>
-        )}
+          {!updaterEnabled && (
+            <div className="settings-help">
+              Updates are unavailable in this runtime.
+            </div>
+          )}
 
-        {updaterState.stage === "error" && (
-          <div className="settings-help ds-text-danger">
-            Update failed: {updaterState.error}
-          </div>
-        )}
+          {updaterState.stage === "error" && (
+            <div className="settings-help ds-text-danger">
+              Update failed: {updaterState.error}
+            </div>
+          )}
 
-        {updaterState.stage === "downloading" ||
-        updaterState.stage === "installing" ||
-        updaterState.stage === "restarting" ? (
-          <div className="settings-help">
-            {updaterState.stage === "downloading" ? (
-              <>
-                Downloading update...{" "}
-                {updaterState.progress?.totalBytes
-                  ? `${Math.round((updaterState.progress.downloadedBytes / updaterState.progress.totalBytes) * 100)}%`
-                  : formatBytes(updaterState.progress?.downloadedBytes ?? 0)}
-              </>
-            ) : updaterState.stage === "installing" ? (
-              "Installing update..."
+          {updaterState.stage === "downloading" ||
+          updaterState.stage === "installing" ||
+          updaterState.stage === "restarting" ? (
+            <div className="settings-help">
+              {updaterState.stage === "downloading" ? (
+                <>
+                  Downloading update...{" "}
+                  {updaterState.progress?.totalBytes
+                    ? `${Math.round((updaterState.progress.downloadedBytes / updaterState.progress.totalBytes) * 100)}%`
+                    : formatBytes(updaterState.progress?.downloadedBytes ?? 0)}
+                </>
+              ) : updaterState.stage === "installing" ? (
+                "Installing update..."
+              ) : (
+                "Restarting..."
+              )}
+            </div>
+          ) : updaterState.stage === "available" ? (
+            <div className="settings-help">
+              Version <code>{updaterState.version}</code> is available.
+            </div>
+          ) : updaterState.stage === "latest" ? (
+            <div className="settings-help">You are on the latest version.</div>
+          ) : null}
+
+          <div className="settings-controls">
+            {updaterState.stage === "available" ? (
+              <button
+                type="button"
+                className="primary"
+                disabled={!updaterEnabled}
+                onClick={() => void startUpdate()}
+              >
+                Download & Install
+              </button>
             ) : (
-              "Restarting..."
+              <button
+                type="button"
+                className="ghost"
+                disabled={
+                  !updaterEnabled ||
+                  updaterState.stage === "checking" ||
+                  updaterState.stage === "downloading" ||
+                  updaterState.stage === "installing" ||
+                  updaterState.stage === "restarting"
+                }
+                onClick={() => void checkForUpdates({ announceNoUpdate: true })}
+              >
+                {updaterState.stage === "checking" ? "Checking..." : "Check for updates"}
+              </button>
             )}
           </div>
-        ) : updaterState.stage === "available" ? (
-          <div className="settings-help">
-            Version <code>{updaterState.version}</code> is available.
-          </div>
-        ) : updaterState.stage === "latest" ? (
-          <div className="settings-help">You are on the latest version.</div>
-        ) : null}
-
-        <div className="settings-controls">
-          {updaterState.stage === "available" ? (
-            <button
-              type="button"
-              className="primary"
-              disabled={!updaterEnabled}
-              onClick={() => void startUpdate()}
-            >
-              Download & Install
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="ghost"
-              disabled={
-                !updaterEnabled ||
-                updaterState.stage === "checking" ||
-                updaterState.stage === "downloading" ||
-                updaterState.stage === "installing" ||
-                updaterState.stage === "restarting"
-              }
-              onClick={() => void checkForUpdates({ announceNoUpdate: true })}
-            >
-              {updaterState.stage === "checking" ? "Checking..." : "Check for updates"}
-            </button>
-          )}
         </div>
-      </div>
+      )}
     </SettingsSection>
   );
 }

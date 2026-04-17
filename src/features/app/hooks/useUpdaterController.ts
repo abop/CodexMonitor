@@ -7,6 +7,7 @@ import { useTauriEvent } from "./useTauriEvent";
 import { playNotificationSound } from "../../../utils/notificationSounds";
 import { subscribeUpdaterCheck } from "../../../services/events";
 import { sendNotification } from "../../../services/tauri";
+import { isWebRuntime } from "@services/runtime";
 import type { DebugEntry } from "../../../types";
 
 type Params = {
@@ -36,6 +37,8 @@ export function useUpdaterController({
   successSoundUrl,
   errorSoundUrl,
 }: Params) {
+  const webRuntime = isWebRuntime();
+  const updaterEnabled = enabled && !webRuntime;
   const {
     state: updaterState,
     startUpdate,
@@ -44,7 +47,7 @@ export function useUpdaterController({
     postUpdateNotice,
     dismissPostUpdateNotice,
   } = useUpdater({
-    enabled,
+    enabled: updaterEnabled,
     autoCheckOnMount,
     onDebug,
   });
@@ -72,17 +75,17 @@ export function useUpdaterController({
     () => {
       void checkForUpdates({ announceNoUpdate: true });
     },
-    { enabled },
+    { enabled: updaterEnabled },
   );
 
   useAgentSoundNotifications({
-    enabled: notificationSoundsEnabled,
+    enabled: notificationSoundsEnabled && !webRuntime,
     isWindowFocused,
     onDebug,
   });
 
   useAgentSystemNotifications({
-    enabled: systemNotificationsEnabled,
+    enabled: systemNotificationsEnabled && !webRuntime,
     subagentNotificationsEnabled: subagentSystemNotificationsEnabled,
     isSubagentThread,
     isWindowFocused,
@@ -92,15 +95,18 @@ export function useUpdaterController({
   });
 
   const handleTestNotificationSound = useCallback(() => {
+    if (webRuntime) {
+      return;
+    }
     const useError = nextTestSoundIsError.current;
     nextTestSoundIsError.current = !useError;
     const type = useError ? "error" : "success";
     const url = useError ? errorSoundUrl : successSoundUrl;
     playNotificationSound(url, type, onDebug);
-  }, [errorSoundUrl, onDebug, successSoundUrl]);
+  }, [errorSoundUrl, onDebug, successSoundUrl, webRuntime]);
 
   const handleTestSystemNotification = useCallback(() => {
-    if (!systemNotificationsEnabled) {
+    if (webRuntime || !systemNotificationsEnabled) {
       return;
     }
     void sendNotification(
@@ -115,7 +121,7 @@ export function useUpdaterController({
         payload: error instanceof Error ? error.message : String(error),
       });
     });
-  }, [onDebug, systemNotificationsEnabled]);
+  }, [onDebug, systemNotificationsEnabled, webRuntime]);
 
   return {
     updaterState,

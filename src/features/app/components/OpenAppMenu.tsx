@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import * as Sentry from "@sentry/react";
+import { isWebRuntime } from "@services/runtime";
 import { openWorkspaceIn } from "../../../services/tauri";
 import { pushErrorToast } from "../../../services/toasts";
 import type { OpenAppTarget } from "../../../types";
@@ -39,6 +40,10 @@ export function OpenAppMenu({
   onSelectOpenAppId,
   iconById = {},
 }: OpenAppMenuProps) {
+  if (isWebRuntime()) {
+    return null;
+  }
+
   const openMenu = useMenuController();
   const { isOpen: openMenuOpen, containerRef: openMenuRef } = openMenu;
   const availableTargets =

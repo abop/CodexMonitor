@@ -40,6 +40,7 @@ describe("WindowCaptionControls", () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
   });
 
   it("renders controls on Windows in Tauri and wires actions", () => {
@@ -66,6 +67,14 @@ describe("WindowCaptionControls", () => {
 
   it("does not render when not running in Tauri", () => {
     isTauriMock.mockReturnValue(false);
+
+    render(<WindowCaptionControls />);
+
+    expect(screen.queryByRole("group", { name: "Window controls" })).toBeNull();
+  });
+
+  it("does not render in the web build", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
 
     render(<WindowCaptionControls />);
 

@@ -73,6 +73,8 @@ describe("useWorkspaceController dialogs", () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
     vi.mocked(isMobilePlatform).mockReturnValue(false);
     window.localStorage.clear();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    vi.stubGlobal("alert", vi.fn());
   });
 
   it("shows add-workspaces summary in controller layer", async () => {
@@ -319,5 +321,58 @@ describe("useWorkspaceController dialogs", () => {
     expect(window.localStorage.getItem("mobile-remote-workspace-recent-paths")).toBe(
       JSON.stringify(["/tmp/ws-1"]),
     );
+  });
+
+  it("does not use Tauri dialogs for add workspace summaries in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.mocked(listWorkspaces).mockResolvedValue([workspaceOne]);
+
+    const { result } = renderHook(() =>
+      useWorkspaceController({
+        appSettings: baseAppSettings,
+        addDebugEntry: vi.fn(),
+        queueSaveSettings: vi.fn(async (next) => next),
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    let added: WorkspaceInfo | null = null;
+    await act(async () => {
+      added = await result.current.addWorkspacesFromPaths([workspaceOne.path]);
+    });
+
+    expect(added).toBeNull();
+    expect(message).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not use Tauri dialogs for remove workspace flows in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.mocked(listWorkspaces).mockResolvedValue([workspaceOne]);
+    vi.mocked(removeWorkspace).mockRejectedValue(new Error("delete failed"));
+
+    const { result } = renderHook(() =>
+      useWorkspaceController({
+        appSettings: baseAppSettings,
+        addDebugEntry: vi.fn(),
+        queueSaveSettings: vi.fn(async (next) => next),
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await result.current.removeWorkspace(workspaceOne.id);
+    });
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(ask).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledTimes(1);
+    expect(message).not.toHaveBeenCalled();
   });
 });

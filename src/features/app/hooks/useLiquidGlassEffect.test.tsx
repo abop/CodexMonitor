@@ -41,6 +41,7 @@ describe("useLiquidGlassEffect", () => {
       value: originalUserAgent,
       configurable: true,
     });
+    vi.unstubAllEnvs();
   });
 
   const setUserAgent = (ua: string) => {
@@ -127,5 +128,16 @@ describe("useLiquidGlassEffect", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(mockSetEffects).not.toHaveBeenCalled();
+  });
+
+  it("does nothing in the web build", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    renderHook(() => useLiquidGlassEffect({ reduceTransparency: false }));
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mockSetEffects).not.toHaveBeenCalled();
+    expect(isGlassSupported).not.toHaveBeenCalled();
+    expect(setLiquidGlassEffect).not.toHaveBeenCalled();
   });
 });

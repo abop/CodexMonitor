@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openWorkspaceIn } from "../../../services/tauri";
 import { fileTarget } from "../test/fileLinkAssertions";
 import { useFileLinkOpener } from "./useFileLinkOpener";
@@ -50,8 +50,13 @@ vi.mock("../../../services/toasts", () => ({
 }));
 
 describe("useFileLinkOpener", () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
   });
 
   async function copyLinkFor(rawPath: string) {
@@ -248,5 +253,34 @@ describe("useFileLinkOpener", () => {
         line: 366,
       }),
     );
+  });
+
+  it("does nothing in the web build", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    const openWorkspaceInMock = vi.mocked(openWorkspaceIn);
+    const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
+    const revealItemInDirMock = vi.mocked(revealItemInDir);
+    const { result } = renderHook(() =>
+      useFileLinkOpener("/workspace", [], "vscode"),
+    );
+
+    await act(async () => {
+      await result.current.openFileLink(fileTarget("/workspace/src/App.tsx"));
+      await result.current.showFileLinkMenu(
+        {
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          clientX: 12,
+          clientY: 24,
+        } as never,
+        fileTarget("/workspace/src/App.tsx"),
+      );
+    });
+
+    expect(openWorkspaceInMock).not.toHaveBeenCalled();
+    expect(revealItemInDirMock).not.toHaveBeenCalled();
+    expect(menuNewMock).not.toHaveBeenCalled();
+    expect(getCurrentWindowMock).not.toHaveBeenCalled();
   });
 });

@@ -9,7 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings, WorkspaceInfo } from "@/types";
 import {
   connectWorkspace,
@@ -65,6 +65,14 @@ getAgentsSettingsMock.mockResolvedValue({
   maxThreads: 6,
   maxDepth: 1,
   agents: [],
+});
+
+beforeEach(() => {
+  vi.unstubAllEnvs();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 const baseSettings: AppSettings = {
@@ -770,6 +778,74 @@ describe("SettingsView About", () => {
     await waitFor(() => {
       expect(onToggleAutomaticAppUpdateChecks).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("hides app update controls in the web build", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    renderAboutSection();
+
+    expect(screen.queryByRole("button", { name: "Check for updates" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Automatically check for app updates" }),
+    ).toBeNull();
+    expect(screen.getByText("Version:")).toBeTruthy();
+  });
+});
+
+describe("SettingsView web build", () => {
+  it("shows only web-safe sections and falls back from a hidden initial section", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+
+    render(
+      <SettingsView
+        workspaceGroups={[]}
+        groupedWorkspaces={[]}
+        ungroupedLabel="Ungrouped"
+        onClose={vi.fn()}
+        onMoveWorkspace={vi.fn()}
+        onDeleteWorkspace={vi.fn()}
+        onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        reduceTransparency={false}
+        onToggleTransparency={vi.fn()}
+        appSettings={baseSettings}
+        openAppIconById={{}}
+        onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
+        onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
+        onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+        scaleShortcutTitle="Scale shortcut"
+        scaleShortcutText="Use Command +/-"
+        onTestNotificationSound={vi.fn()}
+        onTestSystemNotification={vi.fn()}
+        dictationModelStatus={null}
+        onDownloadDictationModel={vi.fn()}
+        onCancelDictationDownload={vi.fn()}
+        onRemoveDictationModel={vi.fn()}
+        initialSection="server"
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Projects" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Display & Sound" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Composer" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Git" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "About" })).toBeTruthy();
+
+    expect(screen.queryByRole("button", { name: "Environments" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Dictation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Shortcuts" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open in" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Server" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Agents" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Codex" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Features" })).toBeNull();
+    expect(screen.getByText("Projects", { selector: ".settings-section-title" })).toBeTruthy();
+    expect(screen.queryByText("Server", { selector: ".settings-section-title" })).toBeNull();
   });
 });
 

@@ -17,6 +17,35 @@ CodexMonitor is a Tauri app for orchestrating multiple Codex agents across local
 - Optional remote backend (daemon) mode for running Codex on another machine.
 - Remote setup helpers for self-hosted connectivity (Tailscale detection/host bootstrap for TCP mode).
 
+## Web Bridge V1
+
+CodexMonitor now has a browser build that can sit behind Cloudflare while a bridge process relays requests to the daemon on your server.
+
+Build the browser app:
+
+```bash
+npm run build:web
+```
+
+Run the bridge on the server side:
+
+```bash
+cd src-tauri
+cargo run --bin codex_monitor_web_bridge
+```
+
+Useful environment variables:
+
+```bash
+VITE_CODEXMONITOR_RUNTIME=web
+VITE_CODEXMONITOR_BRIDGE_URL=https://bridge.example.com
+CODEX_MONITOR_WEB_BRIDGE_LISTEN=127.0.0.1:8787
+CODEX_MONITOR_WEB_BRIDGE_DAEMON_HOST=127.0.0.1:4732
+CODEX_MONITOR_WEB_BRIDGE_REQUIRE_CF_ACCESS_HEADER=true
+```
+
+Keep Cloudflare in front of the bridge and keep the daemon private to the server.
+
 ### Composer & Agent Controls
 
 - Compose with image attachments (picker, drag/drop, paste) and configurable follow-up behavior (`Queue` vs `Steer` while a run is active).

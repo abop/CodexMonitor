@@ -23,7 +23,7 @@ export function resolveAppRuntime(options: {
   if (options.runtimeEnv === "web") {
     return "web";
   }
-  return options.hasTauri ? "desktop" : "web";
+  return "desktop";
 }
 
 export function readRuntimeConfig(): RuntimeConfig {

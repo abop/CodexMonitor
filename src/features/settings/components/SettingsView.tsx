@@ -13,9 +13,13 @@ import { useSettingsViewCloseShortcuts } from "@settings/hooks/useSettingsViewCl
 import { useSettingsViewNavigation } from "@settings/hooks/useSettingsViewNavigation";
 import { useSettingsViewOrchestration } from "@settings/hooks/useSettingsViewOrchestration";
 import { ModalShell } from "@/features/design-system/components/modal/ModalShell";
+import { isWebRuntime } from "@services/runtime";
 import { SettingsNav } from "./SettingsNav";
 import type { CodexSection } from "./settingsTypes";
-import { SETTINGS_SECTION_LABELS } from "./settingsViewConstants";
+import {
+  SETTINGS_SECTION_LABELS,
+  SETTINGS_WEB_SECTION_IDS,
+} from "./settingsViewConstants";
 import { SettingsSectionContainers } from "./sections/SettingsSectionContainers";
 
 export type SettingsViewProps = {
@@ -99,13 +103,15 @@ export function SettingsView({
   onRemoveDictationModel,
   initialSection,
 }: SettingsViewProps) {
+  const webRuntime = isWebRuntime();
+  const visibleSections = webRuntime ? SETTINGS_WEB_SECTION_IDS : undefined;
   const {
     activeSection,
     showMobileDetail,
     setShowMobileDetail,
     useMobileMasterDetail,
     handleSelectSection,
-  } = useSettingsViewNavigation({ initialSection });
+  } = useSettingsViewNavigation({ initialSection, visibleSections });
 
   const orchestration = useSettingsViewOrchestration({
     workspaceGroups,
@@ -172,6 +178,7 @@ export function SettingsView({
               activeSection={activeSection}
               onSelectSection={handleSelectSection}
               showDisclosure={useMobileMasterDetail}
+              visibleSections={visibleSections}
             />
           </div>
         )}
