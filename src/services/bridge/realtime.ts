@@ -56,4 +56,10 @@ export class BridgeRealtimeClient {
       }
     };
   }
+
+  close() {
+    this.socket?.close();
+    this.socket = null;
+    this.listeners.clear();
+  }
 }

@@ -3,12 +3,17 @@ import type { Event, EventCallback, UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
 import type { AppServerEvent } from "../types";
 import {
+  resetBridgeRealtimeClient,
   subscribeAppServerEvents,
   subscribeMenuCycleCollaborationMode,
   subscribeMenuCycleModel,
   subscribeMenuNewAgent,
   subscribeTerminalOutput,
 } from "./events";
+import {
+  resetRuntimeBridgeBaseUrlForTests,
+  setRuntimeBridgeBaseUrl,
+} from "./runtime";
 
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(),
@@ -19,6 +24,8 @@ describe("events subscriptions", () => {
     vi.resetAllMocks();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    resetBridgeRealtimeClient();
+    resetRuntimeBridgeBaseUrlForTests();
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
   });
 
@@ -167,6 +174,43 @@ describe("events subscriptions", () => {
 
     cleanup();
     expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the saved runtime bridge URL for websocket events", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://env.example.com");
+    setRuntimeBridgeBaseUrl("https://saved.example.com");
+    vi.stubGlobal(
+      "WebSocket",
+      vi.fn(() => ({
+        addEventListener: vi.fn(),
+        close: vi.fn(),
+      })),
+    );
+
+    const cleanup = subscribeAppServerEvents(() => {});
+
+    expect(WebSocket).toHaveBeenCalledWith("wss://saved.example.com/ws");
+    cleanup();
+  });
+
+  it("closes the bridge websocket when resetBridgeRealtimeClient is called", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    const close = vi.fn();
+    vi.stubGlobal(
+      "WebSocket",
+      vi.fn(() => ({
+        addEventListener: vi.fn(),
+        close,
+      })),
+    );
+
+    const cleanup = subscribeAppServerEvents(() => {});
+    resetBridgeRealtimeClient();
+
+    expect(close).toHaveBeenCalledTimes(1);
+    cleanup();
   });
 
   it("treats non app-server desktop events as no-ops in web runtime", () => {

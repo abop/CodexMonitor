@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bridgeRpc } from "./http";
+import { bridgeRpc, testBridgeConnection } from "./http";
 
 describe("bridgeRpc", () => {
   it("posts method and params to /api/rpc", async () => {
@@ -45,5 +45,42 @@ describe("bridgeRpc", () => {
     await expect(
       bridgeRpc({ baseUrl: "https://bridge.example.com" }, "bad_method", {}),
     ).rejects.toThrow("bridge denied method");
+  });
+
+  it("rejects non JSON-RPC bridge responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      }),
+    );
+
+    await expect(
+      testBridgeConnection({ baseUrl: "https://bridge.example.com" }),
+    ).rejects.toThrow("Bridge returned an invalid response.");
+  });
+
+  it("tests bridge connectivity with list_workspaces", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ result: [] }),
+      }),
+    );
+
+    await expect(
+      testBridgeConnection({ baseUrl: "https://bridge.example.com" }),
+    ).resolves.toEqual({ ok: true });
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({ method: "list_workspaces", params: {} }),
+        credentials: "include",
+      }),
+    );
   });
 });

@@ -5,12 +5,42 @@ export type RuntimeConfig = {
   bridgeBaseUrl: string | null;
 };
 
+let runtimeBridgeBaseUrlOverride: string | null = null;
+const runtimeBridgeBaseUrlListeners = new Set<
+  (baseUrl: string | null) => void
+>();
+
 function normalizeBridgeBaseUrl(value?: string): string | null {
   const trimmed = value?.trim();
   if (!trimmed) {
     return null;
   }
   return trimmed.replace(/\/+$/, "");
+}
+
+export function setRuntimeBridgeBaseUrl(value: string | null) {
+  runtimeBridgeBaseUrlOverride = normalizeBridgeBaseUrl(value ?? undefined);
+  runtimeBridgeBaseUrlListeners.forEach((listener) => {
+    listener(runtimeBridgeBaseUrlOverride);
+  });
+}
+
+export function getRuntimeBridgeBaseUrl() {
+  return runtimeBridgeBaseUrlOverride;
+}
+
+export function subscribeRuntimeBridgeBaseUrl(
+  listener: (baseUrl: string | null) => void,
+) {
+  runtimeBridgeBaseUrlListeners.add(listener);
+  return () => {
+    runtimeBridgeBaseUrlListeners.delete(listener);
+  };
+}
+
+export function resetRuntimeBridgeBaseUrlForTests() {
+  runtimeBridgeBaseUrlOverride = null;
+  runtimeBridgeBaseUrlListeners.clear();
 }
 
 export function resolveAppRuntime(options: {
@@ -34,9 +64,9 @@ export function readRuntimeConfig(): RuntimeConfig {
       runtimeEnv: import.meta.env.VITE_CODEXMONITOR_RUNTIME,
       hasTauri,
     }),
-    bridgeBaseUrl: normalizeBridgeBaseUrl(
-      import.meta.env.VITE_CODEXMONITOR_BRIDGE_URL,
-    ),
+    bridgeBaseUrl:
+      runtimeBridgeBaseUrlOverride ??
+      normalizeBridgeBaseUrl(import.meta.env.VITE_CODEXMONITOR_BRIDGE_URL),
   };
 }
 

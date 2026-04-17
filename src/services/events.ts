@@ -33,7 +33,7 @@ let bridgeRealtimeClientUrl: string | null = null;
 function getBridgeRealtimeClient() {
   const config = readRuntimeConfig();
   if (!config.bridgeBaseUrl) {
-    throw new Error("Missing VITE_CODEXMONITOR_BRIDGE_URL for web runtime.");
+    throw new Error("Bridge URL is not configured.");
   }
   const wsUrl = new URL("/ws", config.bridgeBaseUrl).toString().replace(/^http/, "ws");
   if (!bridgeRealtimeClient || bridgeRealtimeClientUrl !== wsUrl) {
@@ -41,6 +41,12 @@ function getBridgeRealtimeClient() {
     bridgeRealtimeClientUrl = wsUrl;
   }
   return bridgeRealtimeClient;
+}
+
+export function resetBridgeRealtimeClient() {
+  bridgeRealtimeClient?.close();
+  bridgeRealtimeClient = null;
+  bridgeRealtimeClientUrl = null;
 }
 
 function createEventHub<T>(eventName: string) {

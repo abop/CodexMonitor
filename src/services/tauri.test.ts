@@ -3,6 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import * as notification from "@tauri-apps/plugin-notification";
 import {
+  resetRuntimeBridgeBaseUrlForTests,
+  setRuntimeBridgeBaseUrl,
+} from "./runtime";
+import {
   exportMarkdownFile,
   addWorkspace,
   checkoutGitBranch,
@@ -97,6 +101,7 @@ describe("tauri invoke wrappers", () => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    resetRuntimeBridgeBaseUrlForTests();
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockImplementation(async (command: string) => {
@@ -143,6 +148,36 @@ describe("tauri invoke wrappers", () => {
       expect.objectContaining({
         body: JSON.stringify({ method: "list_workspaces", params: {} }),
       }),
+    );
+  });
+
+  it("routes web RPC through the saved runtime bridge URL", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://env.example.com");
+    setRuntimeBridgeBaseUrl("https://saved.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: [] }),
+      }),
+    );
+
+    await listWorkspaces();
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://saved.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({ method: "list_workspaces", params: {} }),
+      }),
+    );
+  });
+
+  it("fails web RPC clearly when no bridge URL is configured", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    await expect(listWorkspaces()).rejects.toThrow(
+      "Bridge URL is not configured.",
     );
   });
 

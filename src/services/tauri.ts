@@ -102,7 +102,7 @@ type RpcParams = Record<string, unknown>;
 function bridgeConfigOrThrow() {
   const config = readRuntimeConfig();
   if (!config.bridgeBaseUrl) {
-    throw new Error("Missing VITE_CODEXMONITOR_BRIDGE_URL for web runtime.");
+    throw new Error("Bridge URL is not configured.");
   }
   return { baseUrl: config.bridgeBaseUrl };
 }
