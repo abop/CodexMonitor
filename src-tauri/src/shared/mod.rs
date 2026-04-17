@@ -4,6 +4,7 @@ pub(crate) mod codex_aux_core;
 pub(crate) mod codex_core;
 pub(crate) mod codex_update_core;
 pub(crate) mod config_toml_core;
+pub(crate) mod daemon_wire;
 pub(crate) mod files_core;
 pub(crate) mod git_core;
 pub(crate) mod git_rpc;
