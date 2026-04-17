@@ -113,7 +113,6 @@ export function WebBridgeProvider({
       ? normalizeWarning(activeBridge.baseUrl)
       : normalizeWarning(initialSettings.seedBridgeUrl);
   });
-  const [syncVersion, setSyncVersion] = useState(0);
   const pendingReloadRef = useRef(false);
 
   const activeBridge = useMemo(() => getActiveWebBridge(settings), [settings]);
@@ -127,14 +126,10 @@ export function WebBridgeProvider({
       pendingReloadRef.current = false;
       reloadApp();
     }
-    if (status === "switching") {
-      setStatus("idle");
-    }
   }, [
     activeBridge?.baseUrl,
     activeBridge?.id,
     reloadApp,
-    syncVersion,
   ]);
 
   const updateSettings = useCallback((next: LoadedWebBridgeSettings) => {
@@ -191,7 +186,6 @@ export function WebBridgeProvider({
       };
       persistSettings(loaded);
       updateSettings(loaded);
-      setSyncVersion((value) => value + 1);
       setStatus("idle");
     },
     [performTest, updateSettings],
@@ -234,7 +228,6 @@ export function WebBridgeProvider({
       if (draft.activate) {
         pendingReloadRef.current = true;
         setStatus("switching");
-        setSyncVersion((value) => value + 1);
       } else {
         setStatus("idle");
       }
@@ -287,7 +280,6 @@ export function WebBridgeProvider({
       if (urlChanged && current.id === activeBridge?.id) {
         pendingReloadRef.current = true;
         setStatus("switching");
-        setSyncVersion((value) => value + 1);
       } else {
         setStatus("idle");
       }
@@ -325,7 +317,6 @@ export function WebBridgeProvider({
       updateSettings(loaded);
       pendingReloadRef.current = true;
       setStatus("switching");
-      setSyncVersion((value) => value + 1);
     },
     [performTest, updateSettings],
   );
@@ -368,7 +359,6 @@ export function WebBridgeProvider({
       if (currentSettings.activeBridgeId === id) {
         pendingReloadRef.current = true;
         setStatus("switching");
-        setSyncVersion((value) => value + 1);
       } else {
         setStatus("idle");
       }

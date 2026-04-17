@@ -132,6 +132,36 @@ describe("WebBridgeProvider", () => {
     );
   });
 
+  it("broadcasts the committed bridge url once on first save", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    const runtimeBridgeListener = vi.fn();
+    const unsubscribe = runtimeService.subscribeRuntimeBridgeBaseUrl(
+      runtimeBridgeListener,
+    );
+    const testConnection = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useWebBridge(), {
+      wrapper: wrapper({ testConnection }),
+    });
+
+    runtimeBridgeListener.mockClear();
+
+    await act(async () => {
+      await result.current.saveFirstBridge({
+        name: "dev",
+        baseUrl: "https://dev.example.com",
+      });
+    });
+
+    unsubscribe();
+
+    expect(
+      runtimeBridgeListener.mock.calls.filter(
+        ([baseUrl]) => baseUrl === "https://dev.example.com",
+      ),
+    ).toHaveLength(1);
+  });
+
   it("keeps setup open when the first bridge test fails", async () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     const testConnection = vi.fn().mockRejectedValue(new Error("no route"));
