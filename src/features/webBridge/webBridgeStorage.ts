@@ -85,9 +85,15 @@ function parseStoredSettings(raw: string | null): WebBridgeSettings | null {
     ) {
       return null;
     }
+    const activeBridgeExists =
+      parsed.activeBridgeId !== null &&
+      bridges.some((bridge) => bridge.id === parsed.activeBridgeId);
+    const activeBridgeId = activeBridgeExists
+      ? parsed.activeBridgeId
+      : bridges[0]?.id ?? null;
     return {
       version: 1,
-      activeBridgeId: parsed.activeBridgeId ?? null,
+      activeBridgeId,
       bridges,
     };
   } catch {
@@ -186,7 +192,13 @@ export function saveWebBridgeSettings(settings: WebBridgeSettings): void {
     return;
   }
   try {
-    storage.setItem(WEB_BRIDGE_STORAGE_KEY, JSON.stringify(settings));
+    const persisted = {
+      ...(settings as WebBridgeSettings & {
+        seedBridgeUrl?: string | null;
+      }),
+    };
+    delete persisted.seedBridgeUrl;
+    storage.setItem(WEB_BRIDGE_STORAGE_KEY, JSON.stringify(persisted));
   } catch {
     // Best-effort persistence.
   }

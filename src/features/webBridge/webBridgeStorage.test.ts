@@ -76,6 +76,28 @@ describe("webBridgeStorage", () => {
     expect(localStorage.getItem(WEB_BRIDGE_STORAGE_KEY)).toBeNull();
   });
 
+  it("normalizes a missing active bridge id to the first saved bridge", () => {
+    localStorage.setItem(
+      WEB_BRIDGE_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        activeBridgeId: "missing",
+        bridges: [
+          {
+            id: "bridge-1",
+            name: "dev",
+            baseUrl: "https://dev.example.com",
+            createdAtMs: 100,
+            updatedAtMs: 100,
+            lastUsedAtMs: null,
+          },
+        ],
+      }),
+    );
+
+    expect(loadWebBridgeSettings({ nowMs: 200 }).activeBridgeId).toBe("bridge-1");
+  });
+
   it("saves and reloads settings", () => {
     const saved = addWebBridgeTarget(
       { version: 1, activeBridgeId: null, bridges: [] },
@@ -93,6 +115,43 @@ describe("webBridgeStorage", () => {
     expect(loadWebBridgeSettings({ nowMs: 200 })).toMatchObject({
       activeBridgeId: saved.bridges[0].id,
       bridges: [{ name: "dev", baseUrl: "https://dev.example.com" }],
+    });
+  });
+
+  it("does not persist the seed bridge url", () => {
+    const settings = loadWebBridgeSettings({
+      seedUrl: "https://seed.example.com",
+      nowMs: 100,
+    });
+
+    saveWebBridgeSettings({
+      ...settings,
+      bridges: [
+        {
+          id: "bridge-1",
+          name: "dev",
+          baseUrl: "https://dev.example.com",
+          createdAtMs: 100,
+          updatedAtMs: 100,
+          lastUsedAtMs: null,
+        },
+      ],
+      activeBridgeId: "bridge-1",
+    });
+
+    expect(JSON.parse(localStorage.getItem(WEB_BRIDGE_STORAGE_KEY) ?? "{}")).toEqual({
+      version: 1,
+      activeBridgeId: "bridge-1",
+      bridges: [
+        {
+          id: "bridge-1",
+          name: "dev",
+          baseUrl: "https://dev.example.com",
+          createdAtMs: 100,
+          updatedAtMs: 100,
+          lastUsedAtMs: null,
+        },
+      ],
     });
   });
 
@@ -170,5 +229,33 @@ describe("webBridgeStorage", () => {
     const deleted = deleteWebBridgeTarget(second, second.bridges[1].id);
     expect(deleted.activeBridgeId).toBe(first.bridges[0].id);
     expect(deleted.bridges).toHaveLength(1);
+  });
+
+  it("deletes the active bridge and uses the explicit replacement", () => {
+    const first = addWebBridgeTarget(
+      { version: 1, activeBridgeId: null, bridges: [] },
+      {
+        name: "dev",
+        baseUrl: "https://dev.example.com",
+        nowMs: 100,
+        activate: true,
+      },
+    );
+    const second = addWebBridgeTarget(first, {
+      name: "build",
+      baseUrl: "https://build.example.com",
+      nowMs: 200,
+      activate: false,
+    });
+
+    const deleted = deleteWebBridgeTarget(
+      second,
+      first.bridges[0].id,
+      second.bridges[1].id,
+    );
+
+    expect(deleted.activeBridgeId).toBe(second.bridges[1].id);
+    expect(deleted.bridges).toHaveLength(1);
+    expect(deleted.bridges[0].id).toBe(second.bridges[1].id);
   });
 });
