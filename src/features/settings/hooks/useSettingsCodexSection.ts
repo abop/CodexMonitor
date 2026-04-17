@@ -16,6 +16,7 @@ import { normalizeCodexArgsInput } from "@/utils/codexArgsInput";
 type UseSettingsCodexSectionArgs = {
   appSettings: AppSettings;
   projects: WorkspaceInfo[];
+  enabled?: boolean;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
   onRunDoctor: (
     codexBin: string | null,
@@ -78,6 +79,7 @@ export type SettingsCodexSectionProps = {
 export const useSettingsCodexSection = ({
   appSettings,
   projects,
+  enabled = true,
   onUpdateAppSettings,
   onRunDoctor,
   onRunCodexUpdate,
@@ -100,7 +102,7 @@ export const useSettingsCodexSection = ({
     error: defaultModelsError,
     connectedWorkspaceCount: defaultModelsConnectedWorkspaceCount,
     refresh: refreshDefaultModels,
-  } = useSettingsDefaultModels(projects);
+  } = useSettingsDefaultModels(projects, { enabled });
 
   const {
     content: globalAgentsContent,
@@ -113,7 +115,7 @@ export const useSettingsCodexSection = ({
     setContent: setGlobalAgentsContent,
     refresh: refreshGlobalAgents,
     save: saveGlobalAgents,
-  } = useGlobalAgentsMd();
+  } = useGlobalAgentsMd({ enabled });
 
   const {
     content: globalConfigContent,
@@ -126,7 +128,7 @@ export const useSettingsCodexSection = ({
     setContent: setGlobalConfigContent,
     refresh: refreshGlobalConfig,
     save: saveGlobalConfig,
-  } = useGlobalCodexConfigToml();
+  } = useGlobalCodexConfigToml({ enabled });
 
   const globalAgentsEditorMeta = buildEditorContentMeta({
     isLoading: globalAgentsLoading,
@@ -159,6 +161,9 @@ export const useSettingsCodexSection = ({
     nextCodexArgs !== (appSettings.codexArgs ?? null);
 
   const handleBrowseCodex = async () => {
+    if (!enabled) {
+      return;
+    }
     const selection = await open({ multiple: false, directory: false });
     if (!selection || Array.isArray(selection)) {
       return;
@@ -167,6 +172,9 @@ export const useSettingsCodexSection = ({
   };
 
   const handleSaveCodexSettings = async () => {
+    if (!enabled) {
+      return;
+    }
     setIsSavingSettings(true);
     try {
       await onUpdateAppSettings({
@@ -180,6 +188,9 @@ export const useSettingsCodexSection = ({
   };
 
   const handleRunDoctor = async () => {
+    if (!enabled) {
+      return;
+    }
     setDoctorState({ status: "running", result: null });
     try {
       const result = await onRunDoctor(nextCodexBin, nextCodexArgs);
@@ -203,6 +214,9 @@ export const useSettingsCodexSection = ({
   };
 
   const handleRunCodexUpdate = async () => {
+    if (!enabled) {
+      return;
+    }
     setCodexUpdateState({ status: "running", result: null });
     try {
       if (!onRunCodexUpdate) {

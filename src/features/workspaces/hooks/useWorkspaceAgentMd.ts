@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { DebugEntry, WorkspaceInfo } from "../../../types";
 import { readAgentMd, writeAgentMd } from "../../../services/tauri";
 import { useFileEditor, type FileEditorResponse } from "../../shared/hooks/useFileEditor";
+import { isWebRuntime } from "@services/runtime";
 
 type UseWorkspaceAgentMdOptions = {
   activeWorkspace: WorkspaceInfo | null;
@@ -10,9 +11,10 @@ type UseWorkspaceAgentMdOptions = {
 
 export function useWorkspaceAgentMd({ activeWorkspace, onDebug }: UseWorkspaceAgentMdOptions) {
   const workspaceId = activeWorkspace?.id ?? null;
+  const webRuntime = isWebRuntime();
 
   const readWithDebug = useCallback(async (): Promise<FileEditorResponse> => {
-    if (!workspaceId) {
+    if (!workspaceId || webRuntime) {
       return { exists: false, content: "", truncated: false };
     }
     const requestWorkspaceId = workspaceId;
@@ -44,10 +46,10 @@ export function useWorkspaceAgentMd({ activeWorkspace, onDebug }: UseWorkspaceAg
       });
       throw error;
     }
-  }, [onDebug, workspaceId]);
+  }, [onDebug, webRuntime, workspaceId]);
 
   const writeWithDebug = useCallback(async (content: string) => {
-    if (!workspaceId) {
+    if (!workspaceId || webRuntime) {
       return;
     }
     const requestWorkspaceId = workspaceId;
@@ -78,10 +80,10 @@ export function useWorkspaceAgentMd({ activeWorkspace, onDebug }: UseWorkspaceAg
       });
       throw error;
     }
-  }, [onDebug, workspaceId]);
+  }, [onDebug, webRuntime, workspaceId]);
 
   return useFileEditor({
-    key: workspaceId,
+    key: webRuntime ? null : workspaceId,
     read: readWithDebug,
     write: writeWithDebug,
     readErrorTitle: "Couldn’t load AGENTS.md",

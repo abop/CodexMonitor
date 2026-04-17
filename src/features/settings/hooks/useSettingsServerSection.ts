@@ -21,6 +21,7 @@ type UseSettingsServerSectionArgs = {
   appSettings: AppSettings;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
   onMobileConnectSuccess?: () => Promise<void> | void;
+  enabled?: boolean;
 };
 
 export type AddRemoteBackendDraft = {
@@ -146,6 +147,7 @@ export const useSettingsServerSection = ({
   appSettings,
   onUpdateAppSettings,
   onMobileConnectSuccess,
+  enabled = true,
 }: UseSettingsServerSectionArgs): SettingsServerSectionProps => {
   const initialActiveRemoteBackend = getActiveRemoteBackend(appSettings);
   const [remoteNameDraft, setRemoteNameDraft] = useState(initialActiveRemoteBackend.name);
@@ -623,6 +625,9 @@ export const useSettingsServerSection = ({
   }, [runTcpDaemonAction]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     if (!mobilePlatform) {
       handleRefreshTailscaleCommandPreview();
       void handleTcpDaemonStatus();
@@ -635,6 +640,7 @@ export const useSettingsServerSection = ({
     handleRefreshTailscaleCommandPreview,
     handleRefreshTailscaleStatus,
     handleTcpDaemonStatus,
+    enabled,
     mobilePlatform,
     tailscaleStatus,
     tailscaleStatusBusy,

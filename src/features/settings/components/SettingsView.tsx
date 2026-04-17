@@ -117,6 +117,7 @@ export function SettingsView({
     workspaceGroups,
     groupedWorkspaces,
     ungroupedLabel,
+    visibleSections,
     reduceTransparency,
     onToggleTransparency,
     appSettings,

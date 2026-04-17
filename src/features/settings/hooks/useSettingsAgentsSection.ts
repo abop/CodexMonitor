@@ -16,6 +16,7 @@ import { useSettingsDefaultModels } from "./useSettingsDefaultModels";
 
 type UseSettingsAgentsSectionArgs = {
   projects: WorkspaceInfo[];
+  enabled?: boolean;
 };
 
 export type SettingsAgentsSectionProps = {
@@ -82,9 +83,10 @@ const toErrorMessage = (value: unknown, fallback: string): string => {
 
 export const useSettingsAgentsSection = ({
   projects,
+  enabled = true,
 }: UseSettingsAgentsSectionArgs): SettingsAgentsSectionProps => {
   const [settings, setSettings] = useState<AgentsSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(enabled);
   const [isUpdatingCore, setIsUpdatingCore] = useState(false);
   const [creatingAgent, setCreatingAgent] = useState(false);
   const [updatingAgentName, setUpdatingAgentName] = useState<string | null>(null);
@@ -102,9 +104,15 @@ export const useSettingsAgentsSection = ({
     models: modelOptions,
     isLoading: modelOptionsLoading,
     error: modelOptionsError,
-  } = useSettingsDefaultModels(projects);
+  } = useSettingsDefaultModels(projects, { enabled });
 
   const refresh = useCallback(async () => {
+    if (!enabled) {
+      setSettings(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -115,11 +123,17 @@ export const useSettingsAgentsSection = ({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      setSettings(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
     void refresh();
-  }, [refresh]);
+  }, [enabled, refresh]);
 
   const applyCoreSettings = useCallback(
     async (
@@ -127,6 +141,9 @@ export const useSettingsAgentsSection = ({
       maxThreads: number,
       maxDepth: number,
     ): Promise<boolean> => {
+      if (!enabled) {
+        return false;
+      }
       setIsUpdatingCore(true);
       setError(null);
       try {
@@ -144,7 +161,7 @@ export const useSettingsAgentsSection = ({
         setIsUpdatingCore(false);
       }
     },
-    [],
+    [enabled],
   );
 
   const onSetMultiAgentEnabled = useCallback(
@@ -186,6 +203,9 @@ export const useSettingsAgentsSection = ({
       model?: string | null;
       reasoningEffort?: string | null;
     }): Promise<boolean> => {
+      if (!enabled) {
+        return false;
+      }
       setCreatingAgent(true);
       setError(null);
       try {
@@ -199,7 +219,7 @@ export const useSettingsAgentsSection = ({
         setCreatingAgent(false);
       }
     },
-    [],
+    [enabled],
   );
 
   const onUpdateAgent = useCallback(
@@ -210,6 +230,9 @@ export const useSettingsAgentsSection = ({
       developerInstructions?: string | null;
       renameManagedFile?: boolean;
     }): Promise<boolean> => {
+      if (!enabled) {
+        return false;
+      }
       setUpdatingAgentName(input.originalName);
       setError(null);
       try {
@@ -225,7 +248,7 @@ export const useSettingsAgentsSection = ({
         );
       }
     },
-    [],
+    [enabled],
   );
 
   const onDeleteAgent = useCallback(
@@ -233,6 +256,9 @@ export const useSettingsAgentsSection = ({
       name: string;
       deleteManagedFile?: boolean;
     }): Promise<boolean> => {
+      if (!enabled) {
+        return false;
+      }
       setDeletingAgentName(input.name);
       setError(null);
       try {
@@ -246,10 +272,13 @@ export const useSettingsAgentsSection = ({
         setDeletingAgentName((current) => (current === input.name ? null : current));
       }
     },
-    [],
+    [enabled],
   );
 
   const onReadAgentConfig = useCallback(async (agentName: string): Promise<string | null> => {
+    if (!enabled) {
+      return null;
+    }
     setReadingConfigAgentName(agentName);
     setError(null);
     try {
@@ -262,10 +291,13 @@ export const useSettingsAgentsSection = ({
         current === agentName ? null : current,
       );
     }
-  }, []);
+  }, [enabled]);
 
   const onWriteAgentConfig = useCallback(
     async (agentName: string, content: string): Promise<boolean> => {
+      if (!enabled) {
+        return false;
+      }
       setWritingConfigAgentName(agentName);
       setError(null);
       try {
@@ -281,7 +313,7 @@ export const useSettingsAgentsSection = ({
         );
       }
     },
-    [refresh],
+    [enabled, refresh],
   );
 
   const generateDescription = useCallback(
@@ -289,6 +321,9 @@ export const useSettingsAgentsSection = ({
       target: "create" | "edit",
       seed: { name?: string; description: string; developerInstructions: string },
     ): Promise<GeneratedAgentConfiguration | null> => {
+      if (!enabled) {
+        return null;
+      }
       const nameSeed = seed.name?.trim() ?? "";
       const descriptionSeed = seed.description.trim();
       const developerInstructionsSeed = seed.developerInstructions.trim();
@@ -338,7 +373,7 @@ export const useSettingsAgentsSection = ({
         );
       }
     },
-    [sourceWorkspaceConnected, sourceWorkspaceId, sourceWorkspaceName],
+    [enabled, sourceWorkspaceConnected, sourceWorkspaceId, sourceWorkspaceName],
   );
 
   return {

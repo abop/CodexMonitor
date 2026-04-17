@@ -10,6 +10,7 @@ import {
 type UseSettingsFeaturesSectionArgs = {
   appSettings: AppSettings;
   featureWorkspaceId: string | null;
+  enabled?: boolean;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
 };
 
@@ -140,6 +141,7 @@ function mapFeatureToAppSettings(
 export const useSettingsFeaturesSection = ({
   appSettings,
   featureWorkspaceId,
+  enabled = true,
   onUpdateAppSettings,
 }: UseSettingsFeaturesSectionArgs): SettingsFeaturesSectionProps => {
   const [openConfigError, setOpenConfigError] = useState<string | null>(null);
@@ -149,6 +151,9 @@ export const useSettingsFeaturesSection = ({
   const [features, setFeatures] = useState<CodexFeature[]>([]);
 
   const handleOpenConfig = useCallback(async () => {
+    if (!enabled) {
+      return;
+    }
     setOpenConfigError(null);
     try {
       const configPath = await getCodexConfigPath();
@@ -158,11 +163,11 @@ export const useSettingsFeaturesSection = ({
         error instanceof Error ? error.message : "Unable to open config.",
       );
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     let active = true;
-    if (!featureWorkspaceId) {
+    if (!enabled || !featureWorkspaceId) {
       setFeatures([]);
       setFeatureError(null);
       setFeaturesLoading(false);
@@ -222,7 +227,7 @@ export const useSettingsFeaturesSection = ({
     return () => {
       active = false;
     };
-  }, [featureWorkspaceId]);
+  }, [enabled, featureWorkspaceId]);
 
   const stableFeatures = useMemo(
     () =>
@@ -246,6 +251,9 @@ export const useSettingsFeaturesSection = ({
 
   const onToggleCodexFeature = useCallback(
     (feature: CodexFeature) => {
+      if (!enabled) {
+        return;
+      }
       void (async () => {
         const nextEnabled = !feature.enabled;
         setFeatureUpdatingKey(feature.name);
@@ -279,7 +287,7 @@ export const useSettingsFeaturesSection = ({
         }
       })();
     },
-    [appSettings, onUpdateAppSettings],
+    [appSettings, enabled, onUpdateAppSettings],
   );
 
   return {

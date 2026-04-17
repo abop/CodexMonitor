@@ -20,6 +20,11 @@ import {
   isMobileRuntime,
   getModelList,
   listWorkspaces,
+  readGlobalAgentsMd,
+  readGlobalCodexConfigToml,
+  tailscaleDaemonCommandPreview,
+  tailscaleDaemonStatus,
+  tailscaleStatus,
 } from "@services/tauri";
 import { DEFAULT_COMMIT_MESSAGE_PROMPT } from "@utils/commitMessagePrompt";
 import { SettingsView } from "./SettingsView";
@@ -43,6 +48,11 @@ vi.mock("@services/tauri", async () => {
     getAgentsSettings: vi.fn(),
     isMobileRuntime: vi.fn(),
     listWorkspaces: vi.fn(),
+    readGlobalAgentsMd: vi.fn(),
+    readGlobalCodexConfigToml: vi.fn(),
+    tailscaleDaemonCommandPreview: vi.fn(),
+    tailscaleDaemonStatus: vi.fn(),
+    tailscaleStatus: vi.fn(),
   };
 });
 
@@ -54,6 +64,11 @@ const getExperimentalFeatureListMock = vi.mocked(getExperimentalFeatureList);
 const getAgentsSettingsMock = vi.mocked(getAgentsSettings);
 const isMobileRuntimeMock = vi.mocked(isMobileRuntime);
 const listWorkspacesMock = vi.mocked(listWorkspaces);
+const readGlobalAgentsMdMock = vi.mocked(readGlobalAgentsMd);
+const readGlobalCodexConfigTomlMock = vi.mocked(readGlobalCodexConfigToml);
+const tailscaleDaemonCommandPreviewMock = vi.mocked(tailscaleDaemonCommandPreview);
+const tailscaleDaemonStatusMock = vi.mocked(tailscaleDaemonStatus);
+const tailscaleStatusMock = vi.mocked(tailscaleStatus);
 connectWorkspaceMock.mockResolvedValue(undefined);
 getAppBuildTypeMock.mockResolvedValue("release");
 getConfigModelMock.mockResolvedValue(null);
@@ -66,9 +81,94 @@ getAgentsSettingsMock.mockResolvedValue({
   maxDepth: 1,
   agents: [],
 });
+readGlobalAgentsMdMock.mockResolvedValue({
+  exists: false,
+  content: "",
+  truncated: false,
+});
+readGlobalCodexConfigTomlMock.mockResolvedValue({
+  exists: false,
+  content: "",
+  truncated: false,
+});
+tailscaleDaemonCommandPreviewMock.mockResolvedValue({
+  command: "codex monitor daemon",
+  daemonPath: "/usr/local/bin/codex",
+  args: [],
+  tokenConfigured: false,
+});
+tailscaleDaemonStatusMock.mockResolvedValue({
+  state: "stopped",
+  pid: null,
+  startedAtMs: null,
+  lastError: null,
+  listenAddr: null,
+});
+tailscaleStatusMock.mockResolvedValue({
+  installed: false,
+  running: false,
+  version: null,
+  dnsName: null,
+  hostName: null,
+  tailnetName: null,
+  ipv4: [],
+  ipv6: [],
+  suggestedRemoteHost: null,
+  message: "Tailscale unavailable",
+});
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.unstubAllEnvs();
+  connectWorkspaceMock.mockResolvedValue(undefined);
+  getAppBuildTypeMock.mockResolvedValue("release");
+  getConfigModelMock.mockResolvedValue(null);
+  getModelListMock.mockResolvedValue(null);
+  getExperimentalFeatureListMock.mockResolvedValue({ data: [], nextCursor: null });
+  getAgentsSettingsMock.mockResolvedValue({
+    configPath: "/Users/me/.codex/config.toml",
+    multiAgentEnabled: false,
+    maxThreads: 6,
+    maxDepth: 1,
+    agents: [],
+  });
+  isMobileRuntimeMock.mockResolvedValue(false);
+  listWorkspacesMock.mockResolvedValue([]);
+  readGlobalAgentsMdMock.mockResolvedValue({
+    exists: false,
+    content: "",
+    truncated: false,
+  });
+  readGlobalCodexConfigTomlMock.mockResolvedValue({
+    exists: false,
+    content: "",
+    truncated: false,
+  });
+  tailscaleDaemonCommandPreviewMock.mockResolvedValue({
+    command: "codex monitor daemon",
+    daemonPath: "/usr/local/bin/codex",
+    args: [],
+    tokenConfigured: false,
+  });
+  tailscaleDaemonStatusMock.mockResolvedValue({
+    state: "stopped",
+    pid: null,
+    startedAtMs: null,
+    lastError: null,
+    listenAddr: null,
+  });
+  tailscaleStatusMock.mockResolvedValue({
+    installed: false,
+    running: false,
+    version: null,
+    dnsName: null,
+    hostName: null,
+    tailnetName: null,
+    ipv4: [],
+    ipv6: [],
+    suggestedRemoteHost: null,
+    message: "Tailscale unavailable",
+  });
 });
 
 afterEach(() => {
@@ -846,6 +946,122 @@ describe("SettingsView web build", () => {
     expect(screen.queryByRole("button", { name: "Features" })).toBeNull();
     expect(screen.getByText("Projects", { selector: ".settings-section-title" })).toBeTruthy();
     expect(screen.queryByText("Server", { selector: ".settings-section-title" })).toBeNull();
+  });
+
+  it("keeps hidden desktop-only sections inert in the web build", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+
+    render(
+      <SettingsView
+        workspaceGroups={[]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Ungrouped",
+            workspaces: [workspace({ id: "w-web", name: "Web Workspace", connected: true })],
+          },
+        ]}
+        ungroupedLabel="Ungrouped"
+        onClose={vi.fn()}
+        onMoveWorkspace={vi.fn()}
+        onDeleteWorkspace={vi.fn()}
+        onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        reduceTransparency={false}
+        onToggleTransparency={vi.fn()}
+        appSettings={baseSettings}
+        openAppIconById={{}}
+        onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
+        onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
+        onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+        scaleShortcutTitle="Scale shortcut"
+        scaleShortcutText="Use Command +/-"
+        onTestNotificationSound={vi.fn()}
+        onTestSystemNotification={vi.fn()}
+        dictationModelStatus={null}
+        onDownloadDictationModel={vi.fn()}
+        onCancelDictationDownload={vi.fn()}
+        onRemoveDictationModel={vi.fn()}
+        initialSection="projects"
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(getAgentsSettingsMock).not.toHaveBeenCalled();
+    expect(getExperimentalFeatureListMock).not.toHaveBeenCalled();
+    expect(readGlobalAgentsMdMock).not.toHaveBeenCalled();
+    expect(readGlobalCodexConfigTomlMock).not.toHaveBeenCalled();
+    expect(tailscaleDaemonCommandPreviewMock).not.toHaveBeenCalled();
+    expect(tailscaleDaemonStatusMock).not.toHaveBeenCalled();
+    expect(tailscaleStatusMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the hidden Codex section inert in the web build", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+
+    render(
+      <SettingsView
+        workspaceGroups={[]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Ungrouped",
+            workspaces: [workspace({ id: "w-web", name: "Web Workspace", connected: true })],
+          },
+        ]}
+        ungroupedLabel="Ungrouped"
+        onClose={vi.fn()}
+        onMoveWorkspace={vi.fn()}
+        onDeleteWorkspace={vi.fn()}
+        onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        reduceTransparency={false}
+        onToggleTransparency={vi.fn()}
+        appSettings={baseSettings}
+        openAppIconById={{}}
+        onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
+        onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
+        onRunCodexUpdate={vi.fn().mockResolvedValue(createUpdateResult())}
+        onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+        scaleShortcutTitle="Scale shortcut"
+        scaleShortcutText="Use Command +/-"
+        onTestNotificationSound={vi.fn()}
+        onTestSystemNotification={vi.fn()}
+        dictationModelStatus={null}
+        onDownloadDictationModel={vi.fn()}
+        onCancelDictationDownload={vi.fn()}
+        onRemoveDictationModel={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Projects" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Display & Sound" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Composer" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Git" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "About" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Codex" })).toBeNull();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(getModelListMock).not.toHaveBeenCalled();
+    expect(getConfigModelMock).not.toHaveBeenCalled();
   });
 });
 

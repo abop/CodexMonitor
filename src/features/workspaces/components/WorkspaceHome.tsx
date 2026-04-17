@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { isWebRuntime } from "../../../services/runtime";
 import type {
   AppOption,
   CustomPromptOption,
@@ -160,10 +161,14 @@ export function WorkspaceHome({
   onAgentMdRefresh,
   onAgentMdSave,
 }: WorkspaceHomeProps) {
+  const webRuntime = isWebRuntime();
   const [showIcon, setShowIcon] = useState(true);
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const iconPath = useMemo(() => buildIconPath(workspace.path), [workspace.path]);
-  const iconSrc = useMemo(() => convertFileSrc(iconPath), [iconPath]);
+  const iconSrc = useMemo(
+    () => (webRuntime ? undefined : convertFileSrc(iconPath)),
+    [iconPath, webRuntime],
+  );
   const fallbackTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const textareaRef = textareaRefProp ?? fallbackTextareaRef;
   const {
@@ -344,13 +349,17 @@ export function WorkspaceHome({
   }
   const agentMdMeta = agentMdMetaParts.join(" · ");
   const agentMdSaveLabel = agentMdExists ? "Save" : "Create";
-  const agentMdSaveDisabled = agentMdLoading || agentMdSaving || !agentMdDirty;
-  const agentMdRefreshDisabled = agentMdLoading || agentMdSaving;
+  const agentMdErrorMessage =
+    agentMdError ??
+    (webRuntime ? "Codex file access is unavailable in the web build." : null);
+  const agentMdSaveDisabled =
+    webRuntime || agentMdLoading || agentMdSaving || !agentMdDirty;
+  const agentMdRefreshDisabled = webRuntime || agentMdLoading || agentMdSaving;
 
   return (
     <div className="workspace-home">
       <div className="workspace-home-hero">
-        {showIcon && (
+        {showIcon && iconSrc && (
           <img
             className="workspace-home-icon"
             src={iconSrc}
@@ -446,10 +455,10 @@ export function WorkspaceHome({
         <FileEditorCard
           title="AGENTS.md"
           meta={agentMdMeta}
-          error={agentMdError}
+          error={agentMdErrorMessage}
           value={agentMdContent}
           placeholder="Add workspace instructions for the agent…"
-          disabled={agentMdLoading}
+          disabled={webRuntime || agentMdLoading}
           refreshDisabled={agentMdRefreshDisabled}
           saveDisabled={agentMdSaveDisabled}
           saveLabel={agentMdSaveLabel}

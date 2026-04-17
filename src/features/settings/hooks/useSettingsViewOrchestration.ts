@@ -24,11 +24,13 @@ import {
   COMPOSER_PRESET_LABELS,
   DICTATION_MODELS,
 } from "@settings/components/settingsViewConstants";
+import type { CodexSection } from "@settings/components/settingsTypes";
 
 type UseSettingsViewOrchestrationArgs = {
   workspaceGroups: WorkspaceGroup[];
   groupedWorkspaces: GroupedWorkspaces;
   ungroupedLabel: string;
+  visibleSections?: readonly CodexSection[];
   reduceTransparency: boolean;
   onToggleTransparency: (value: boolean) => void;
   appSettings: AppSettings;
@@ -72,6 +74,7 @@ export function useSettingsViewOrchestration({
   workspaceGroups,
   groupedWorkspaces,
   ungroupedLabel,
+  visibleSections,
   reduceTransparency,
   onToggleTransparency,
   appSettings,
@@ -130,6 +133,8 @@ export function useSettingsViewOrchestration({
   }, [appSettings.dictationModelId]);
 
   const dictationReady = dictationModelStatus?.state === "ready";
+  const isSectionEnabled = (section: CodexSection) =>
+    !visibleSections || visibleSections.includes(section);
 
   const {
     openAppDrafts,
@@ -190,6 +195,7 @@ export function useSettingsViewOrchestration({
     appSettings,
     onUpdateAppSettings,
     onMobileConnectSuccess,
+    enabled: isSectionEnabled("server"),
   });
 
   const codexSectionProps = useSettingsCodexSection({
@@ -198,6 +204,7 @@ export function useSettingsViewOrchestration({
     onUpdateAppSettings,
     onRunDoctor,
     onRunCodexUpdate,
+    enabled: isSectionEnabled("codex"),
   });
 
   const gitSectionProps = useSettingsGitSection({
@@ -210,9 +217,13 @@ export function useSettingsViewOrchestration({
     appSettings,
     featureWorkspaceId,
     onUpdateAppSettings,
+    enabled: isSectionEnabled("features"),
   });
 
-  const agentsSectionProps = useSettingsAgentsSection({ projects });
+  const agentsSectionProps = useSettingsAgentsSection({
+    projects,
+    enabled: isSectionEnabled("agents"),
+  });
 
   return {
     aboutSectionProps: {
