@@ -68,6 +68,10 @@ const WEB_SUPPORTED_RPC_METHODS = new Set([
   "skills_list",
   "apps_list",
   "prompts_list",
+  "prompts_create",
+  "prompts_update",
+  "prompts_delete",
+  "prompts_move",
   "account_rate_limits",
   "account_read",
   "respond_to_server_request",
@@ -976,8 +980,7 @@ export async function createPrompt(
     content: string;
   },
 ) {
-  requireDesktopRuntime("Prompt management");
-  return invoke<any>("prompts_create", {
+  return invokeSupportedRpc<any>("prompts_create", {
     workspaceId,
     scope: data.scope,
     name: data.name,
@@ -997,8 +1000,7 @@ export async function updatePrompt(
     content: string;
   },
 ) {
-  requireDesktopRuntime("Prompt management");
-  return invoke<any>("prompts_update", {
+  return invokeSupportedRpc<any>("prompts_update", {
     workspaceId,
     path: data.path,
     name: data.name,
@@ -1009,16 +1011,14 @@ export async function updatePrompt(
 }
 
 export async function deletePrompt(workspaceId: string, path: string) {
-  requireDesktopRuntime("Prompt management");
-  return invoke<any>("prompts_delete", { workspaceId, path });
+  return invokeSupportedRpc<any>("prompts_delete", { workspaceId, path });
 }
 
 export async function movePrompt(
   workspaceId: string,
   data: { path: string; scope: "workspace" | "global" },
 ) {
-  requireDesktopRuntime("Prompt management");
-  return invoke<any>("prompts_move", {
+  return invokeSupportedRpc<any>("prompts_move", {
     workspaceId,
     path: data.path,
     scope: data.scope,

@@ -3,19 +3,21 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
 } from "react";
 import type { CustomPromptOption } from "../../../types";
 import { expandCustomPromptText, getPromptArgumentHint } from "../../../utils/customPrompts";
+import { isWebRuntime } from "../../../services/runtime";
 import type { PanelTabId } from "../../layout/components/PanelTabs";
+import { useMenuController } from "../../app/hooks/useMenuController";
+import {
+  PopoverMenuItem,
+  PopoverSurface,
+} from "../../design-system/components/popover/PopoverPrimitives";
 import { PanelShell } from "../../layout/components/PanelShell";
 import {
   PanelMeta,
   PanelSearchField,
 } from "../../design-system/components/panel/PanelPrimitives";
-import { Menu, MenuItem } from "@tauri-apps/api/menu";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import MoreHorizontal from "lucide-react/dist/esm/icons/more-horizontal";
 import Plus from "lucide-react/dist/esm/icons/plus";
 import ScrollText from "lucide-react/dist/esm/icons/scroll-text";
@@ -70,6 +72,68 @@ function isWorkspacePrompt(prompt: CustomPromptOption) {
   return prompt.scope === "workspace";
 }
 
+type PromptRowMenuButtonProps = {
+  prompt: CustomPromptOption;
+  onEdit: () => void;
+  onMove: (scope: "workspace" | "global") => void | Promise<void>;
+  onDelete: () => void;
+};
+
+function PromptRowMenuButton({
+  prompt,
+  onEdit,
+  onMove,
+  onDelete,
+}: PromptRowMenuButtonProps) {
+  const menu = useMenuController();
+  const scope = isWorkspacePrompt(prompt) ? "workspace" : "global";
+  const nextScope = scope === "workspace" ? "global" : "workspace";
+
+  return (
+    <div className="composer-queue-menu-wrap" ref={menu.containerRef}>
+      <button
+        type="button"
+        className={`ghost icon-button prompt-action-menu${menu.isOpen ? " is-open" : ""}`}
+        onClick={menu.toggle}
+        aria-label="Prompt actions"
+        aria-haspopup="menu"
+        aria-expanded={menu.isOpen}
+        title="Prompt actions"
+      >
+        <MoreHorizontal aria-hidden />
+      </button>
+      {menu.isOpen && (
+        <PopoverSurface className="composer-queue-item-popover" role="menu">
+          <PopoverMenuItem
+            onClick={() => {
+              menu.close();
+              onEdit();
+            }}
+          >
+            Edit
+          </PopoverMenuItem>
+          <PopoverMenuItem
+            onClick={() => {
+              menu.close();
+              void onMove(nextScope);
+            }}
+          >
+            Move to {nextScope === "workspace" ? "workspace" : "general"}
+          </PopoverMenuItem>
+          <PopoverMenuItem
+            onClick={() => {
+              menu.close();
+              onDelete();
+            }}
+          >
+            Delete
+          </PopoverMenuItem>
+        </PopoverSurface>
+      )}
+    </div>
+  );
+}
+
 export function PromptPanel({
   prompts,
   workspacePath,
@@ -94,6 +158,9 @@ export function PromptPanel({
   const [highlightKey, setHighlightKey] = useState<string | null>(null);
   const highlightTimer = useRef<number | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
+  const runtimeAllowsReveal = !isWebRuntime();
+  const canRevealWorkspacePrompts = Boolean(workspacePath) && runtimeAllowsReveal;
+  const canRevealGeneralPromptsInRuntime = canRevealGeneralPrompts && runtimeAllowsReveal;
 
   const showError = (error: unknown) => {
     window.alert(error instanceof Error ? error.message : String(error));
@@ -287,35 +354,6 @@ export function PromptPanel({
     }
   };
 
-  const showPromptMenu = async (
-    event: ReactMouseEvent<HTMLButtonElement>,
-    prompt: CustomPromptOption,
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const scope = isWorkspacePrompt(prompt) ? "workspace" : "global";
-    const nextScope = scope === "workspace" ? "global" : "workspace";
-    const menu = await Menu.new({
-      items: [
-        await MenuItem.new({
-          text: "Edit",
-          action: () => startEdit(prompt),
-        }),
-        await MenuItem.new({
-          text: `Move to ${nextScope === "workspace" ? "workspace" : "general"}`,
-          action: () => void handleMove(prompt, nextScope),
-        }),
-        await MenuItem.new({
-          text: "Delete",
-          action: () => handleDeleteRequest(prompt),
-        }),
-      ],
-    });
-    const position = new LogicalPosition(event.clientX, event.clientY);
-    const window = getCurrentWindow();
-    await menu.popup(position, window);
-  };
-
   const renderPromptRow = (prompt: CustomPromptOption) => {
     const hint = getPromptArgumentHint(prompt);
     const showArgsInput = Boolean(hint);
@@ -371,15 +409,12 @@ export function PromptPanel({
           >
             New agent
           </button>
-          <button
-            type="button"
-            className="ghost icon-button prompt-action-menu"
-            onClick={(event) => void showPromptMenu(event, prompt)}
-            aria-label="Prompt actions"
-            title="Prompt actions"
-          >
-            <MoreHorizontal aria-hidden />
-          </button>
+          <PromptRowMenuButton
+            prompt={prompt}
+            onEdit={() => startEdit(prompt)}
+            onMove={(scope) => handleMove(prompt, scope)}
+            onDelete={() => handleDeleteRequest(prompt)}
+          />
         </div>
         {pendingDeletePath === prompt.path && (
           <div className="prompt-delete-confirm">
@@ -535,7 +570,7 @@ export function PromptPanel({
                 <div className="prompt-empty-title">No workspace prompts yet</div>
                 <div className="prompt-empty-subtitle">
                   Create one here or drop a .md file into the{" "}
-                  {workspacePath ? (
+                  {canRevealWorkspacePrompts ? (
                     <button
                       type="button"
                       className="prompt-empty-link"
@@ -578,7 +613,7 @@ export function PromptPanel({
                 <div className="prompt-empty-title">No general prompts yet</div>
                 <div className="prompt-empty-subtitle">
                   Create one here or drop a .md file into{" "}
-                  {canRevealGeneralPrompts ? (
+                  {canRevealGeneralPromptsInRuntime ? (
                     <button
                       type="button"
                       className="prompt-empty-link"

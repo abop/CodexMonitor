@@ -38,6 +38,10 @@ const ALLOWED_RPC_METHODS: &[&str] = &[
     "skills_list",
     "apps_list",
     "prompts_list",
+    "prompts_create",
+    "prompts_update",
+    "prompts_delete",
+    "prompts_move",
     "account_rate_limits",
     "account_read",
     "respond_to_server_request",
@@ -433,6 +437,36 @@ mod tests {
 
                 assert_eq!(response.status(), StatusCode::OK);
                 assert_eq!(server.last_method().await, "remember_approval_rule");
+            });
+    }
+
+    #[test]
+    fn forwards_prompt_create_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                server.enqueue_result(1, json!({ "ok": true })).await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                r#"{"method":"prompts_create","params":{"workspaceId":"ws-1","scope":"workspace","name":"fix-tests","description":"Tighten coverage","argumentHint":"$TARGET","content":"Run tests"}}"#,
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "prompts_create");
             });
     }
 }

@@ -6,7 +6,9 @@ import {
   exportMarkdownFile,
   addWorkspace,
   compactThread,
+  createPrompt,
   createGitHubRepo,
+  deletePrompt,
   fetchGit,
   forkThread,
   getAppsList,
@@ -44,6 +46,8 @@ import {
   tailscaleStatus,
   pickImageFiles,
   pickWorkspacePaths,
+  movePrompt,
+  updatePrompt,
   writeGlobalAgentsMd,
   writeGlobalCodexConfigToml,
   createAgent,
@@ -260,6 +264,142 @@ describe("tauri invoke wrappers", () => {
       "remember_approval_rule",
       expect.anything(),
     );
+  });
+
+  it("routes createPrompt through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { ok: true } }),
+      }),
+    );
+
+    await createPrompt("ws-1", {
+      scope: "workspace",
+      name: "fix-tests",
+      description: "Tighten coverage",
+      argumentHint: "$TARGET",
+      content: "Run tests",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "prompts_create",
+          params: {
+            workspaceId: "ws-1",
+            scope: "workspace",
+            name: "fix-tests",
+            description: "Tighten coverage",
+            argumentHint: "$TARGET",
+            content: "Run tests",
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("prompts_create", expect.anything());
+  });
+
+  it("routes updatePrompt through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { ok: true } }),
+      }),
+    );
+
+    await updatePrompt("ws-1", {
+      path: ".codex/prompts/fix-tests.md",
+      name: "fix-tests",
+      description: "Updated",
+      argumentHint: null,
+      content: "Run all tests",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "prompts_update",
+          params: {
+            workspaceId: "ws-1",
+            path: ".codex/prompts/fix-tests.md",
+            name: "fix-tests",
+            description: "Updated",
+            argumentHint: null,
+            content: "Run all tests",
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("prompts_update", expect.anything());
+  });
+
+  it("routes deletePrompt through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { ok: true } }),
+      }),
+    );
+
+    await deletePrompt("ws-1", ".codex/prompts/fix-tests.md");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "prompts_delete",
+          params: {
+            workspaceId: "ws-1",
+            path: ".codex/prompts/fix-tests.md",
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("prompts_delete", expect.anything());
+  });
+
+  it("routes movePrompt through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { ok: true } }),
+      }),
+    );
+
+    await movePrompt("ws-1", {
+      path: ".codex/prompts/fix-tests.md",
+      scope: "global",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "prompts_move",
+          params: {
+            workspaceId: "ws-1",
+            path: ".codex/prompts/fix-tests.md",
+            scope: "global",
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("prompts_move", expect.anything());
   });
 
   it("fails clearly for desktop-only actions in web runtime", async () => {
