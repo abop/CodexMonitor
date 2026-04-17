@@ -262,6 +262,7 @@
   }
 
   .web-bridge-trigger-status {
-    display: none;
+    padding: 1px 6px;
+    font-size: 10px;
   }
 }

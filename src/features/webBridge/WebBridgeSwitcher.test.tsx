@@ -1,5 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+// @ts-expect-error node builtins are available in Vitest, but this repo does not ship node typings here.
+import { readFileSync } from "node:fs";
+// @ts-expect-error node builtins are available in Vitest, but this repo does not ship node typings here.
+import path from "node:path";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -197,5 +201,10 @@ describe("WebBridgeSwitcher", () => {
     fireEvent.click(screen.getByRole("button", { name: /Current Bridge: dev/ }));
 
     expect(container.querySelector(".web-bridge-sheet")).toBeTruthy();
+  });
+
+  it("keeps the trigger status visible in the mobile styles", () => {
+    const webBridgeStyles = readFileSync(path.resolve("src/styles/web-bridge.css"), "utf8");
+    expect(webBridgeStyles).not.toMatch(/\.web-bridge-trigger-status\s*\{\s*display:\s*none;/);
   });
 });
