@@ -271,3 +271,26 @@ pub(super) async fn try_handle(
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::parse_workspace_request;
+    use crate::shared::workspace_rpc::AddWorkspaceFromGitUrlRequest;
+    use serde_json::json;
+
+    #[test]
+    fn parses_add_workspace_from_git_url_web_params() {
+        let params = json!({
+            "url": "https://example.com/org/repo.git",
+            "destinationPath": "/srv/repos",
+            "targetFolderName": "repo",
+        });
+
+        let request =
+            parse_workspace_request::<AddWorkspaceFromGitUrlRequest>(&params).expect("request");
+
+        assert_eq!(request.url, "https://example.com/org/repo.git");
+        assert_eq!(request.destination_path, "/srv/repos");
+        assert_eq!(request.target_folder_name.as_deref(), Some("repo"));
+    }
+}

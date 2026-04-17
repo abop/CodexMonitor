@@ -39,9 +39,12 @@ pub(crate) struct AddWorkspaceRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct AddWorkspaceFromGitUrlRequest {
     pub(crate) url: String,
+    #[serde(alias = "destination_path")]
     pub(crate) destination_path: String,
+    #[serde(alias = "target_folder_name")]
     pub(crate) target_folder_name: Option<String>,
 }
 
