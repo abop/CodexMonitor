@@ -32,7 +32,13 @@ function getBridgeStatusLabel(status: "idle" | "testing" | "switching") {
   return "Ready";
 }
 
-export function WebBridgeSwitcher() {
+type WebBridgeSwitcherProps = {
+  placement?: "default" | "sidebar";
+};
+
+export function WebBridgeSwitcher({
+  placement = "default",
+}: WebBridgeSwitcherProps) {
   const {
     isWeb,
     activeBridge,
@@ -83,8 +89,14 @@ export function WebBridgeSwitcher() {
   };
 
   return (
-    <div className="web-bridge-chrome">
-      <div className="web-bridge-switcher" ref={menu.containerRef}>
+    <>
+      <div
+        className={joinClassNames(
+          "web-bridge-switcher",
+          placement === "sidebar" && "is-sidebar",
+        )}
+        ref={menu.containerRef}
+      >
         <button
           type="button"
           className={joinClassNames("web-bridge-trigger", menu.isOpen && "is-open")}
@@ -155,6 +167,6 @@ export function WebBridgeSwitcher() {
           initialMode={managerMode}
         />
       ) : null}
-    </div>
+    </>
   );
 }

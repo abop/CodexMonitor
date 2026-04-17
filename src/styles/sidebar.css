@@ -1761,6 +1761,10 @@
   width: 100%;
 }
 
+.sidebar-bottom-bridge {
+  width: 100%;
+}
+
 .sidebar-account-menu {
   position: relative;
   flex: 1 1 0;

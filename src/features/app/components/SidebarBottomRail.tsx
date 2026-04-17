@@ -3,6 +3,8 @@ import Settings from "lucide-react/dist/esm/icons/settings";
 import User from "lucide-react/dist/esm/icons/user";
 import X from "lucide-react/dist/esm/icons/x";
 import { useEffect } from "react";
+import { isWebRuntime } from "@services/runtime";
+import { WebBridgeSwitcher } from "@/features/webBridge";
 import {
   MenuTrigger,
   PopoverSurface,
@@ -71,6 +73,7 @@ export function SidebarBottomRail({
   onSwitchAccount,
   onCancelSwitchAccount,
 }: SidebarBottomRailProps) {
+  const showWebBridgeSwitcher = isWebRuntime();
   const accountMenu = useMenuController();
   const {
     isOpen: accountMenuOpen,
@@ -164,17 +167,17 @@ export function SidebarBottomRail({
           </div>
         )}
         <div className="sidebar-utility-actions">
-            <button
-              className="ghost sidebar-labeled-button sidebar-utility-button"
-              type="button"
-              onClick={onOpenSettings}
-              aria-label="Open settings"
-            >
-              <span className="sidebar-labeled-button-icon" aria-hidden>
-                <Settings size={14} aria-hidden />
-              </span>
-              <span>Settings</span>
-            </button>
+          <button
+            className="ghost sidebar-labeled-button sidebar-utility-button"
+            type="button"
+            onClick={onOpenSettings}
+            aria-label="Open settings"
+          >
+            <span className="sidebar-labeled-button-icon" aria-hidden>
+              <Settings size={14} aria-hidden />
+            </span>
+            <span>Settings</span>
+          </button>
           {showDebugButton && (
             <button
               className="ghost sidebar-utility-button"
@@ -187,6 +190,11 @@ export function SidebarBottomRail({
           )}
         </div>
       </div>
+      {showWebBridgeSwitcher ? (
+        <div className="sidebar-bottom-bridge">
+          <WebBridgeSwitcher placement="sidebar" />
+        </div>
+      ) : null}
     </div>
   );
 }

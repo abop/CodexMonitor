@@ -33,6 +33,16 @@
   --surface-bubble-user: rgba(77, 153, 255, 0.22);
   --surface-context-core: rgba(255, 255, 255, 0.9);
   --surface-popover: rgba(255, 255, 255, 0.99);
+  --bridge-backdrop: rgba(6, 8, 12, 0.48);
+  --bridge-surface: rgba(255, 255, 255, 0.985);
+  --bridge-surface-muted: rgba(246, 248, 252, 0.98);
+  --bridge-surface-input: rgba(255, 255, 255, 1);
+  --bridge-surface-chip: rgba(15, 23, 36, 0.08);
+  --bridge-border: rgba(15, 23, 36, 0.16);
+  --bridge-border-strong: rgba(15, 23, 36, 0.22);
+  --bridge-text-muted: rgba(17, 20, 28, 0.82);
+  --bridge-text-subtle: rgba(17, 20, 28, 0.64);
+  --bridge-focus-ring: rgba(77, 153, 255, 0.35);
   --surface-review: rgba(255, 170, 210, 0.25);
   --border-review: rgba(200, 90, 140, 0.45);
   --surface-review-active: rgba(255, 170, 210, 0.32);

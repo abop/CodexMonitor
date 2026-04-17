@@ -6,7 +6,6 @@ import { isWebRuntime } from "@services/runtime";
 import { TitlebarExpandControls } from "@/features/layout/components/SidebarToggleControls";
 import { WindowCaptionControls } from "@/features/layout/components/WindowCaptionControls";
 import { MobileServerSetupWizard } from "@/features/mobile/components/MobileServerSetupWizard";
-import { WebBridgeSwitcher } from "@/features/webBridge";
 
 const GitHubPanelData = lazy(() =>
   import("@/features/git/components/GitHubPanelData").then((module) => ({
@@ -52,14 +51,10 @@ export function MainAppShell({
   mobileSetupWizardProps,
 }: MainAppShellProps) {
   const webRuntime = isWebRuntime();
+  const rootClassName = `${appClassName}${isResizing ? " is-resizing" : ""}`;
 
   return (
-    <div className={`${appClassName}${isResizing ? " is-resizing" : ""}`} style={appStyle} ref={appRef}>
-      {webRuntime ? (
-        <div className="web-bridge-chrome">
-          <WebBridgeSwitcher />
-        </div>
-      ) : null}
+    <div className={rootClassName} style={appStyle} ref={appRef}>
       {!webRuntime ? <div className="drag-strip" id="titlebar" /> : null}
       {!webRuntime ? <TitlebarExpandControls {...sidebarToggleProps} /> : null}
       {!webRuntime ? <WindowCaptionControls /> : null}

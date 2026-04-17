@@ -236,14 +236,14 @@ describe("MainAppShell", () => {
     expect(screen.getByTestId("app-modals")).toBeTruthy();
   });
 
-  it("renders the web bridge switcher in web runtime", () => {
+  it("keeps web bridge controls out of the shell in web runtime", () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
 
-    render(<MainAppShell {...buildProps()} />);
+    const { container } = render(<MainAppShell {...buildProps()} />);
 
-    const chrome = document.querySelector(".web-bridge-chrome");
-    expect(chrome).toBeTruthy();
-    expect(screen.getByTestId("web-bridge-switcher")).toBeTruthy();
+    expect(document.querySelector(".web-bridge-chrome")).toBeNull();
+    expect(screen.queryByTestId("web-bridge-switcher")).toBeNull();
+    expect(container.firstElementChild?.className).not.toContain("web-runtime");
   });
 
   it("does not render the web bridge switcher in desktop runtime", () => {

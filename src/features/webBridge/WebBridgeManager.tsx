@@ -66,7 +66,12 @@ export function WebBridgeManager({
 
   const busy = status !== "idle" || isSubmitting;
   return (
-    <ModalShell ariaLabel="Manage Bridges" className="web-bridge-modal" onBackdropClick={onClose}>
+    <ModalShell
+      ariaLabel="Manage Bridges"
+      className="web-bridge-modal-shell"
+      cardClassName="web-bridge-modal"
+      onBackdropClick={onClose}
+    >
       <div className="web-bridge-manager">
         <div className="web-bridge-manager-header">
           <div>
@@ -79,7 +84,11 @@ export function WebBridgeManager({
               </div>
             )}
           </div>
-          <button type="button" className="ghost ds-modal-button" onClick={onClose}>
+          <button
+            type="button"
+            className="ds-modal-button web-bridge-action-button web-bridge-action-button-secondary"
+            onClick={onClose}
+          >
             Close
           </button>
         </div>
@@ -102,11 +111,17 @@ export function WebBridgeManager({
                       <div className="web-bridge-manager-item-url">{bridge.baseUrl}</div>
                     </div>
                     <div className="web-bridge-manager-item-actions">
-                      <button type="button" disabled={busy} onClick={() => setMode({ type: "edit", bridgeId: bridge.id })}>
+                      <button
+                        type="button"
+                        className="web-bridge-action-button web-bridge-action-button-secondary"
+                        disabled={busy}
+                        onClick={() => setMode({ type: "edit", bridgeId: bridge.id })}
+                      >
                         Edit
                       </button>
                       <button
                         type="button"
+                        className="web-bridge-action-button web-bridge-action-button-secondary"
                         disabled={busy || bridges.length === 1}
                         onClick={() => void onDelete(bridge.id)}
                       >
@@ -118,7 +133,12 @@ export function WebBridgeManager({
               })}
             </div>
             <div className="web-bridge-manager-actions">
-              <button type="button" disabled={busy} onClick={() => setMode({ type: "add" })}>
+              <button
+                type="button"
+                className="web-bridge-action-button web-bridge-action-button-secondary"
+                disabled={busy}
+                onClick={() => setMode({ type: "add" })}
+              >
                 Add Bridge
               </button>
             </div>
@@ -161,10 +181,19 @@ export function WebBridgeManager({
             />
 
             <div className="web-bridge-manager-actions">
-              <button type="button" disabled={busy} onClick={() => setMode({ type: "list" })}>
+              <button
+                type="button"
+                className="web-bridge-action-button web-bridge-action-button-secondary"
+                disabled={busy}
+                onClick={() => setMode({ type: "list" })}
+              >
                 Back
               </button>
-              <button type="submit" className="primary" disabled={busy}>
+              <button
+                type="submit"
+                className="primary web-bridge-action-button web-bridge-action-button-primary"
+                disabled={busy}
+              >
                 {busy ? "Testing..." : "Test and Save"}
               </button>
             </div>

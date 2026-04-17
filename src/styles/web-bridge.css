@@ -1,22 +1,53 @@
-.web-bridge-chrome {
-  position: relative;
-  z-index: var(--ds-layer-dropdown, 30);
-}
-
 .web-bridge-switcher {
   position: relative;
+  width: min(100%, 320px);
   display: inline-flex;
   align-items: flex-start;
 }
 
+.web-bridge-switcher.is-sidebar {
+  width: 100%;
+}
+
 .web-bridge-trigger {
-  max-width: 220px;
+  width: 100%;
   min-width: 0;
-  display: inline-flex;
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
   overflow: hidden;
+  border: 1px solid var(--bridge-border);
+  border-radius: 8px;
+  background: var(--bridge-surface-muted);
+  color: var(--text-strong);
+  box-shadow: none;
+}
+
+.web-bridge-switcher.is-sidebar .web-bridge-trigger {
+  min-height: 34px;
+  height: 34px;
+  gap: 8px;
+  padding: 4px 10px;
+  border-color: var(--bridge-border);
+  background: var(--bridge-surface-muted);
+  color: var(--bridge-text-muted);
+}
+
+.web-bridge-trigger:hover:not(:disabled),
+.web-bridge-trigger.is-open {
+  background: var(--bridge-surface);
+  border-color: var(--bridge-border-strong);
+  transform: none;
+}
+
+.web-bridge-switcher.is-sidebar .web-bridge-trigger:hover:not(:disabled),
+.web-bridge-switcher.is-sidebar .web-bridge-trigger.is-open {
+  color: var(--text-strong);
+  border-color: var(--bridge-border-strong);
+  background: var(--bridge-surface);
 }
 
 .web-bridge-trigger-copy {
@@ -27,6 +58,12 @@
   flex: 1;
 }
 
+.web-bridge-switcher.is-sidebar .web-bridge-trigger-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .web-bridge-trigger-label {
   min-width: 0;
   overflow: hidden;
@@ -35,22 +72,41 @@
   line-height: 1.1;
 }
 
+.web-bridge-switcher.is-sidebar .web-bridge-trigger-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: inherit;
+}
+
 .web-bridge-trigger-host {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--bridge-text-subtle);
+}
+
+.web-bridge-switcher.is-sidebar .web-bridge-trigger-host {
+  flex: 1 1 auto;
+  color: var(--bridge-text-subtle);
 }
 
 .web-bridge-trigger-status {
   flex-shrink: 0;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 11px;
-  background: var(--surface-muted);
-  color: var(--text-muted);
+  background: var(--bridge-surface-chip);
+  color: var(--bridge-text-subtle);
+}
+
+.web-bridge-switcher.is-sidebar .web-bridge-trigger-status {
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  background: var(--bridge-surface-chip);
+  color: var(--bridge-text-subtle);
 }
 
 .web-bridge-trigger-icon {
@@ -66,6 +122,18 @@
   padding: 12px;
   display: grid;
   gap: 10px;
+  background: var(--bridge-surface);
+  border: 1px solid var(--bridge-border-strong);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.web-bridge-switcher.is-sidebar .web-bridge-popover {
+  top: auto;
+  bottom: calc(100% + 8px);
+  width: max(100%, 280px);
+  max-width: min(360px, calc(100vw - 24px));
+  max-height: min(60vh, 420px);
+  overflow: auto;
 }
 
 .web-bridge-picker {
@@ -88,7 +156,8 @@
   width: 100%;
   border-radius: 8px;
   padding: 10px 12px;
-  background: var(--surface-muted);
+  border: 1px solid var(--bridge-border);
+  background: var(--bridge-surface-muted);
   color: var(--text-strong);
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr);
@@ -96,15 +165,28 @@
   text-align: left;
 }
 
+.web-bridge-row:hover:not(:disabled),
+.web-bridge-row:focus-visible {
+  background: var(--bridge-surface);
+  border-color: var(--bridge-border-strong);
+  transform: none;
+  box-shadow: none;
+}
+
 .web-bridge-row:disabled {
-  opacity: 0.55;
+  opacity: 1;
+  cursor: default;
 }
 
 .web-bridge-row-marker {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: var(--bridge-text-subtle);
+}
+
+.web-bridge-row:disabled .web-bridge-row-marker {
+  color: var(--status-success);
 }
 
 .web-bridge-row-copy {
@@ -127,7 +209,7 @@
 
 .web-bridge-row-url {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--bridge-text-subtle);
   white-space: nowrap;
 }
 
@@ -137,6 +219,40 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.web-bridge-action-button {
+  min-height: 36px;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.web-bridge-action-button-secondary {
+  border: 1px solid var(--bridge-border);
+  background: var(--bridge-surface-muted);
+  color: var(--text-strong);
+  box-shadow: none;
+}
+
+.web-bridge-action-button-secondary:hover:not(:disabled),
+.web-bridge-action-button-secondary:focus-visible {
+  background: var(--bridge-surface);
+  border-color: var(--bridge-border-strong);
+  box-shadow: none;
+  transform: none;
+}
+
+.web-bridge-action-button-secondary:active:not(:disabled) {
+  background: var(--bridge-surface);
+}
+
+.web-bridge-action-button-secondary:disabled,
+.web-bridge-action-button-primary:disabled {
+  opacity: 0.72;
+}
+
+.web-bridge-action-button-primary {
+  box-shadow: 0 10px 24px var(--shadow-accent);
 }
 
 .web-bridge-error,
@@ -161,8 +277,24 @@
 
 .web-bridge-modal {
   width: min(560px, calc(100vw - 24px));
+  max-height: min(84vh, 720px);
   border-radius: 8px;
-  padding: 16px;
+  padding: 18px;
+  overflow: auto;
+  background: var(--bridge-surface);
+  border: 1px solid var(--bridge-border-strong);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.38);
+}
+
+.web-bridge-modal-shell .ds-modal-backdrop {
+  background: var(--bridge-backdrop);
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+}
+
+.app.reduced-transparency .web-bridge-modal-shell .ds-modal-backdrop {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .web-bridge-manager {
@@ -180,14 +312,20 @@
 .web-bridge-manager-list {
   display: grid;
   gap: 10px;
+  max-height: min(42vh, 360px);
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .web-bridge-manager-item {
   display: grid;
-  gap: 8px;
-  padding: 10px 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
   border-radius: 8px;
-  background: var(--surface-muted);
+  border: 1px solid var(--bridge-border);
+  background: var(--bridge-surface-muted);
 }
 
 .web-bridge-manager-item-main {
@@ -206,7 +344,7 @@
 
 .web-bridge-manager-item-url {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--bridge-text-subtle);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -214,7 +352,7 @@
 
 .web-bridge-manager-form {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .web-bridge-manager-label {
@@ -223,6 +361,15 @@
 
 .web-bridge-manager-input {
   width: 100%;
+  border-color: var(--bridge-border);
+  background: var(--bridge-surface-input);
+  color: var(--text-strong);
+}
+
+.web-bridge-manager-input:focus-visible {
+  outline: none;
+  border-color: var(--bridge-border-strong);
+  box-shadow: 0 0 0 3px var(--bridge-focus-ring);
 }
 
 .web-bridge-sheet {
@@ -234,7 +381,9 @@
 .web-bridge-sheet-backdrop {
   position: absolute;
   inset: 0;
-  background: var(--ds-modal-backdrop);
+  background: var(--bridge-backdrop);
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
 }
 
 .web-bridge-sheet-card {
@@ -243,13 +392,19 @@
   right: 0;
   bottom: 0;
   border-radius: 8px 8px 0 0;
-  background: var(--surface-card);
-  border: 1px solid var(--border-strong);
+  background: var(--bridge-surface);
+  border: 1px solid var(--bridge-border-strong);
   padding: 14px;
   display: grid;
   gap: 10px;
   max-height: min(82vh, 640px);
   overflow: auto;
+  box-shadow: 0 -18px 36px rgba(0, 0, 0, 0.24);
+}
+
+.app.reduced-transparency .web-bridge-sheet-backdrop {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 @media (max-width: 700px) {
@@ -261,8 +416,35 @@
     max-width: min(280px, calc(100vw - 24px));
   }
 
+  .web-bridge-switcher.is-sidebar .web-bridge-trigger {
+    max-width: none;
+  }
+
   .web-bridge-trigger-status {
     padding: 1px 6px;
     font-size: 10px;
+  }
+
+  .web-bridge-modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 14px;
+  }
+
+  .web-bridge-manager-header,
+  .web-bridge-manager-item {
+    grid-template-columns: 1fr;
+  }
+
+  .web-bridge-picker-actions,
+  .web-bridge-manager-actions,
+  .web-bridge-manager-item-actions {
+    width: 100%;
+  }
+
+  .web-bridge-picker-actions > button,
+  .web-bridge-manager-actions > button,
+  .web-bridge-manager-item-actions > button {
+    flex: 1 1 0;
   }
 }

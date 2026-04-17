@@ -120,6 +120,20 @@ describe("WebBridgeSwitcher", () => {
     expect(screen.getByText("Ready")).toBeTruthy();
   });
 
+  it("uses themed bridge action buttons instead of browser defaults", () => {
+    seedTwoBridges();
+
+    renderSwitcher();
+    fireEvent.click(screen.getByRole("button", { name: /Current Bridge: dev/ }));
+
+    expect(screen.getByRole("button", { name: "Add Bridge" }).className).toContain(
+      "web-bridge-action-button",
+    );
+    expect(screen.getByRole("button", { name: "Manage Bridges" }).className).toContain(
+      "web-bridge-action-button",
+    );
+  });
+
   it("switches after a successful test", async () => {
     seedTwoBridges();
     const reloadApp = vi.fn();
@@ -157,6 +171,7 @@ describe("WebBridgeSwitcher", () => {
     fireEvent.click(screen.getByRole("button", { name: /Current Bridge: dev/ }));
     fireEvent.click(screen.getByRole("button", { name: "Manage Bridges" }));
     expect(screen.getByText("Bridge Management")).toBeTruthy();
+    expect(document.querySelector(".ds-modal-card.web-bridge-modal")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Add Bridge" }));
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "prod" },
@@ -168,6 +183,11 @@ describe("WebBridgeSwitcher", () => {
 
     expect(await screen.findByText("prod")).toBeTruthy();
     expect(testConnection).toHaveBeenCalledWith("https://prod.example.com");
+  });
+
+  it("keeps the current bridge row readable when disabled", () => {
+    const webBridgeStyles = readFileSync(path.resolve("src/styles/web-bridge.css"), "utf8");
+    expect(webBridgeStyles).toMatch(/\.web-bridge-row:disabled\s*\{\s*opacity:\s*1;/);
   });
 
   it("deletes a bridge from the manager list", async () => {
@@ -231,5 +251,22 @@ describe("WebBridgeSwitcher", () => {
   it("keeps the trigger status visible in the mobile styles", () => {
     const webBridgeStyles = readFileSync(path.resolve("src/styles/web-bridge.css"), "utf8");
     expect(webBridgeStyles).not.toMatch(/\.web-bridge-trigger-status\s*\{\s*display:\s*none;/);
+  });
+
+  it("keeps the sidebar trigger full width on mobile", () => {
+    const webBridgeStyles = readFileSync(path.resolve("src/styles/web-bridge.css"), "utf8");
+    expect(webBridgeStyles).toMatch(
+      /\.web-bridge-switcher\.is-sidebar\s+\.web-bridge-trigger\s*\{\s*max-width:\s*none;/,
+    );
+  });
+
+  it("supports the sidebar placement variant", () => {
+    seedTwoBridges();
+
+    const { container } = renderSwitcher({
+      children: <WebBridgeSwitcher placement="sidebar" />,
+    });
+
+    expect(container.querySelector(".web-bridge-switcher.is-sidebar")).toBeTruthy();
   });
 });

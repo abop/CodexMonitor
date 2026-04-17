@@ -48,10 +48,20 @@ export function WebBridgePicker({
         })}
       </div>
       <div className="web-bridge-picker-actions">
-        <button type="button" disabled={disabled} onClick={onAdd}>
+        <button
+          type="button"
+          className="web-bridge-action-button web-bridge-action-button-secondary"
+          disabled={disabled}
+          onClick={onAdd}
+        >
           Add Bridge
         </button>
-        <button type="button" disabled={disabled} onClick={onManage}>
+        <button
+          type="button"
+          className="web-bridge-action-button web-bridge-action-button-secondary"
+          disabled={disabled}
+          onClick={onManage}
+        >
           Manage Bridges
         </button>
       </div>
