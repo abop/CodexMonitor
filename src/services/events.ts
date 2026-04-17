@@ -34,6 +34,13 @@ type Listener<T> = (payload: T) => void;
 let bridgeRealtimeClient: BridgeRealtimeClient | null = null;
 let bridgeRealtimeClientUrl: string | null = null;
 let runtimeBridgeBaseUrlUnsubscribe: Unsubscribe | null = null;
+type EventHub<T> = {
+  subscribe: (
+    onEvent: Listener<T>,
+    options?: SubscriptionOptions,
+  ) => Unsubscribe;
+  restart: () => void;
+};
 
 function ensureRuntimeBridgeBaseUrlSubscription() {
   if (runtimeBridgeBaseUrlUnsubscribe) {
@@ -41,6 +48,7 @@ function ensureRuntimeBridgeBaseUrlSubscription() {
   }
   runtimeBridgeBaseUrlUnsubscribe = subscribeRuntimeBridgeBaseUrl(() => {
     resetBridgeRealtimeClient();
+    appServerHub.restart();
   });
 }
 
@@ -66,10 +74,11 @@ export function resetBridgeRealtimeClient() {
   runtimeBridgeBaseUrlUnsubscribe = null;
 }
 
-function createEventHub<T>(eventName: string) {
+function createEventHub<T>(eventName: string): EventHub<T> {
   const listeners = new Set<Listener<T>>();
   let unlisten: Unsubscribe | null = null;
   let listenPromise: Promise<Unsubscribe> | null = null;
+  let lastOptions: SubscriptionOptions | undefined;
 
   const start = (options?: SubscriptionOptions) => {
     if (unlisten || listenPromise) {
@@ -112,7 +121,7 @@ function createEventHub<T>(eventName: string) {
       .catch((error) => {
         listenPromise = null;
         options?.onError?.(error);
-      });
+    });
   };
 
   const stop = () => {
@@ -126,11 +135,19 @@ function createEventHub<T>(eventName: string) {
     }
   };
 
+  const restart = () => {
+    stop();
+    if (listeners.size > 0) {
+      start(lastOptions);
+    }
+  };
+
   const subscribe = (
     onEvent: Listener<T>,
     options?: SubscriptionOptions,
   ): Unsubscribe => {
     listeners.add(onEvent);
+    lastOptions = options;
     start(options);
     return () => {
       listeners.delete(onEvent);
@@ -140,7 +157,7 @@ function createEventHub<T>(eventName: string) {
     };
   };
 
-  return { subscribe };
+  return { subscribe, restart };
 }
 
 const appServerHub = createEventHub<AppServerEvent>("app-server-event");

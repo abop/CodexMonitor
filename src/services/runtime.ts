@@ -20,7 +20,8 @@ function normalizeBridgeBaseUrl(value?: string): string | null {
 
 export function setRuntimeBridgeBaseUrl(value: string | null) {
   runtimeBridgeBaseUrlOverride = normalizeBridgeBaseUrl(value ?? undefined);
-  runtimeBridgeBaseUrlListeners.forEach((listener) => {
+  const listeners = Array.from(runtimeBridgeBaseUrlListeners);
+  listeners.forEach((listener) => {
     listener(runtimeBridgeBaseUrlOverride);
   });
 }

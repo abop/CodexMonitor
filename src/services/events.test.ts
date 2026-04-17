@@ -202,6 +202,31 @@ describe("events subscriptions", () => {
     cleanup();
   });
 
+  it("reattaches live app-server subscriptions when the runtime bridge URL changes", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://old.example.com");
+
+    const close = vi.fn();
+    const addEventListener = vi.fn();
+    const webSocket = vi.fn(() => ({
+      addEventListener,
+      close,
+    }));
+    vi.stubGlobal("WebSocket", webSocket);
+
+    const cleanup = subscribeAppServerEvents(() => {});
+
+    expect(WebSocket).toHaveBeenCalledWith("wss://old.example.com/ws");
+
+    setRuntimeBridgeBaseUrl("https://new.example.com");
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(WebSocket).toHaveBeenNthCalledWith(2, "wss://new.example.com/ws");
+
+    cleanup();
+    expect(close).toHaveBeenCalledTimes(2);
+  });
+
   it("uses the saved runtime bridge URL for websocket events", () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://env.example.com");
