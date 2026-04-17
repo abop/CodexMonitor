@@ -215,7 +215,7 @@ export function addWebBridgeTarget(
     baseUrl: normalized.value,
     createdAtMs: nowMs,
     updatedAtMs: nowMs,
-    lastUsedAtMs: null,
+    lastUsedAtMs: options.activate ? nowMs : null,
   };
 
   const bridges = [...settings.bridges, next];

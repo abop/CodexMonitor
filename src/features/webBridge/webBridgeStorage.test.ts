@@ -87,6 +87,8 @@ describe("webBridgeStorage", () => {
       },
     );
 
+    expect(saved.bridges[0].lastUsedAtMs).toBe(100);
+
     saveWebBridgeSettings(saved);
     expect(loadWebBridgeSettings({ nowMs: 200 })).toMatchObject({
       activeBridgeId: saved.bridges[0].id,
