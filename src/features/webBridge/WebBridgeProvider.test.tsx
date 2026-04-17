@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { act, renderHook } from "@testing-library/react";
+import { act, render, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as eventsService from "@services/events";
 import * as runtimeService from "@services/runtime";
 import { WebBridgeProvider, useWebBridge } from "./WebBridgeProvider";
-import { WEB_BRIDGE_STORAGE_KEY } from "./webBridgeStorage";
+import { WEB_BRIDGE_STORAGE_KEY, saveWebBridgeSettings } from "./webBridgeStorage";
 
 describe("WebBridgeProvider", () => {
   beforeEach(() => {
@@ -65,6 +65,48 @@ describe("WebBridgeProvider", () => {
     expect(result.current.warning).toBe(
       "Plain HTTP should only be used for trusted development hosts.",
     );
+  });
+
+  it("does not rebroadcast runtime bridge url on unrelated rerender with default callbacks", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    saveWebBridgeSettings(
+      {
+        version: 1,
+        activeBridgeId: "bridge-1",
+        bridges: [
+          {
+            id: "bridge-1",
+            name: "dev",
+            baseUrl: "https://dev.example.com",
+            createdAtMs: 100,
+            updatedAtMs: 100,
+            lastUsedAtMs: 100,
+          },
+        ],
+      },
+    );
+
+    const runtimeBridgeListener = vi.fn();
+    const unsubscribe = runtimeService.subscribeRuntimeBridgeBaseUrl(
+      runtimeBridgeListener,
+    );
+
+    function Harness({ tick }: { tick: number }) {
+      return (
+        <WebBridgeProvider>
+          <div data-testid="tick">{tick}</div>
+        </WebBridgeProvider>
+      );
+    }
+
+    const { rerender } = render(<Harness tick={0} />);
+    expect(runtimeBridgeListener).toHaveBeenCalledTimes(1);
+    runtimeBridgeListener.mockClear();
+
+    rerender(<Harness tick={1} />);
+
+    expect(runtimeBridgeListener).not.toHaveBeenCalled();
+    unsubscribe();
   });
 
   it("saves first bridge after a successful test", async () => {
@@ -196,6 +238,43 @@ describe("WebBridgeProvider", () => {
     expect(reloadApp).not.toHaveBeenCalled();
     expect(runtimeBridgeListener).not.toHaveBeenCalled();
     expect(runtimeBridgeUrlSpy).not.toHaveBeenCalled();
+    expect(resetBridgeRealtimeClientSpy).not.toHaveBeenCalled();
+  });
+
+  it("renames the active bridge without reloading when the url stays the same", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    const reloadApp = vi.fn();
+    const resetBridgeRealtimeClientSpy = vi.spyOn(
+      eventsService,
+      "resetBridgeRealtimeClient",
+    );
+    const testConnection = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() => useWebBridge(), {
+      wrapper: wrapper({ testConnection, reloadApp }),
+    });
+
+    await act(async () => {
+      await result.current.saveFirstBridge({
+        name: "dev",
+        baseUrl: "https://dev.example.com",
+      });
+    });
+    const active = result.current.activeBridge;
+    if (!active) {
+      throw new Error("Expected active bridge");
+    }
+
+    resetBridgeRealtimeClientSpy.mockClear();
+    await act(async () => {
+      await result.current.editBridge(active.id, {
+        name: "renamed",
+        baseUrl: active.baseUrl,
+      });
+    });
+
+    expect(result.current.activeBridge?.name).toBe("renamed");
+    expect(reloadApp).not.toHaveBeenCalled();
+    expect(testConnection).toHaveBeenCalledTimes(1);
     expect(resetBridgeRealtimeClientSpy).not.toHaveBeenCalled();
   });
 });

@@ -59,6 +59,13 @@ type WebBridgeProviderProps = {
 
 const WebBridgeContext = createContext<WebBridgeContextValue | null>(null);
 
+const DEFAULT_TEST_CONNECTION = (baseUrl: string) =>
+  testBridgeConnection({ baseUrl }).then(() => void 0);
+
+function defaultReloadApp() {
+  window.location.reload();
+}
+
 function persistSettings(settings: LoadedWebBridgeSettings) {
   const { seedBridgeUrl: _seedBridgeUrl, ...persisted } = settings;
   saveWebBridgeSettings(persisted);
@@ -88,8 +95,8 @@ function resolveReplacementBridge(
 
 export function WebBridgeProvider({
   children,
-  testConnection = (baseUrl: string) => testBridgeConnection({ baseUrl }).then(() => void 0),
-  reloadApp = () => window.location.reload(),
+  testConnection = DEFAULT_TEST_CONNECTION,
+  reloadApp = defaultReloadApp,
 }: WebBridgeProviderProps) {
   const isWeb = useMemo(() => isWebRuntime(), []);
   const initialSettings = useMemo(
@@ -244,9 +251,6 @@ export function WebBridgeProvider({
         return;
       }
 
-      setStatus("testing");
-      setError(null);
-
       const normalized = normalizeWebBridgeUrl(draft.baseUrl);
       if (!normalized.ok) {
         setStatus("idle");
@@ -255,8 +259,11 @@ export function WebBridgeProvider({
       }
 
       setWarning(normalized.warning);
+      const urlChanged = normalized.value !== current.baseUrl;
 
-      if (normalized.value !== current.baseUrl) {
+      if (urlChanged) {
+        setStatus("testing");
+        setError(null);
         try {
           await performTest(normalized.value);
         } catch (cause) {
@@ -277,7 +284,7 @@ export function WebBridgeProvider({
       };
       persistSettings(loaded);
       updateSettings(loaded);
-      if (current.id === activeBridge?.id) {
+      if (urlChanged && current.id === activeBridge?.id) {
         pendingReloadRef.current = true;
         setStatus("switching");
         setSyncVersion((value) => value + 1);
