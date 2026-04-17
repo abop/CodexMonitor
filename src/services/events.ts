@@ -6,7 +6,11 @@ import type {
   TrayOpenThreadPayload,
 } from "../types";
 import { BridgeRealtimeClient } from "./bridge/realtime";
-import { isWebRuntime, readRuntimeConfig } from "./runtime";
+import {
+  isWebRuntime,
+  readRuntimeConfig,
+  subscribeRuntimeBridgeBaseUrl,
+} from "./runtime";
 
 export type Unsubscribe = () => void;
 
@@ -29,8 +33,19 @@ type Listener<T> = (payload: T) => void;
 
 let bridgeRealtimeClient: BridgeRealtimeClient | null = null;
 let bridgeRealtimeClientUrl: string | null = null;
+let runtimeBridgeBaseUrlUnsubscribe: Unsubscribe | null = null;
+
+function ensureRuntimeBridgeBaseUrlSubscription() {
+  if (runtimeBridgeBaseUrlUnsubscribe) {
+    return;
+  }
+  runtimeBridgeBaseUrlUnsubscribe = subscribeRuntimeBridgeBaseUrl(() => {
+    resetBridgeRealtimeClient();
+  });
+}
 
 function getBridgeRealtimeClient() {
+  ensureRuntimeBridgeBaseUrlSubscription();
   const config = readRuntimeConfig();
   if (!config.bridgeBaseUrl) {
     throw new Error("Bridge URL is not configured.");
@@ -47,6 +62,8 @@ export function resetBridgeRealtimeClient() {
   bridgeRealtimeClient?.close();
   bridgeRealtimeClient = null;
   bridgeRealtimeClientUrl = null;
+  runtimeBridgeBaseUrlUnsubscribe?.();
+  runtimeBridgeBaseUrlUnsubscribe = null;
 }
 
 function createEventHub<T>(eventName: string) {

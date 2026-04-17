@@ -33,7 +33,7 @@ export async function bridgeRpc<T>(
     );
   }
 
-  if (!("result" in payload)) {
+  if (!payload || typeof payload !== "object" || !("result" in payload)) {
     throw new Error("Bridge returned an invalid response.");
   }
 

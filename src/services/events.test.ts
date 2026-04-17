@@ -176,6 +176,32 @@ describe("events subscriptions", () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 
+  it("closes the old bridge websocket when the runtime bridge URL changes", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://old.example.com");
+
+    const close = vi.fn();
+    const addEventListener = vi.fn();
+    vi.stubGlobal(
+      "WebSocket",
+      vi.fn(() => ({
+        addEventListener,
+        close,
+      })),
+    );
+
+    const cleanup = subscribeAppServerEvents(() => {});
+
+    expect(WebSocket).toHaveBeenCalledWith("wss://old.example.com/ws");
+    expect(close).not.toHaveBeenCalled();
+
+    setRuntimeBridgeBaseUrl("https://new.example.com");
+
+    expect(close).toHaveBeenCalledTimes(1);
+
+    cleanup();
+  });
+
   it("uses the saved runtime bridge URL for websocket events", () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://env.example.com");

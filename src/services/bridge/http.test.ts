@@ -62,6 +62,21 @@ describe("bridgeRpc", () => {
     ).rejects.toThrow("Bridge returned an invalid response.");
   });
 
+  it("rejects null JSON-RPC bridge responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => null,
+      }),
+    );
+
+    await expect(
+      testBridgeConnection({ baseUrl: "https://bridge.example.com" }),
+    ).rejects.toThrow("Bridge returned an invalid response.");
+  });
+
   it("tests bridge connectivity with list_workspaces", async () => {
     vi.stubGlobal(
       "fetch",
