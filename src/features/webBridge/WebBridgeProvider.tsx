@@ -3,7 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -119,7 +119,7 @@ export function WebBridgeProvider({
   const setupRequired = isWeb && settings.bridges.length === 0;
   const seedBridgeUrl = settings.seedBridgeUrl;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setRuntimeBridgeBaseUrl(activeBridge?.baseUrl ?? null);
     resetBridgeRealtimeClient();
     if (pendingReloadRef.current) {
