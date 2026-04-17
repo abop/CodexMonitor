@@ -17,6 +17,9 @@ vi.mock("@tauri-apps/api/event", () => ({
 describe("events subscriptions", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
   });
 
   it("delivers payloads and unsubscribes on cleanup", async () => {
@@ -125,5 +128,59 @@ describe("events subscriptions", () => {
     expect(onError).toHaveBeenCalledWith(error);
 
     cleanup();
+  });
+
+  it("subscribes to bridge websocket app-server events in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+
+    let onMessage: ((event: MessageEvent<string>) => void) | undefined;
+    const close = vi.fn();
+    const addEventListener = vi.fn((type: string, handler: EventListener) => {
+      if (type === "message") {
+        onMessage = handler as (event: MessageEvent<string>) => void;
+      }
+    });
+    vi.stubGlobal(
+      "WebSocket",
+      vi.fn(() => ({ addEventListener, close })),
+    );
+
+    const onEvent = vi.fn();
+    const cleanup = subscribeAppServerEvents(onEvent);
+
+    expect(WebSocket).toHaveBeenCalledWith("wss://bridge.example.com/ws");
+    expect(listen).not.toHaveBeenCalled();
+
+    const payload: AppServerEvent = {
+      workspace_id: "ws-1",
+      message: { method: "ping" },
+    };
+    if (!onMessage) {
+      throw new Error("WebSocket message handler not registered");
+    }
+    onMessage({
+      data: JSON.stringify({ method: "app-server-event", params: payload }),
+    } as MessageEvent<string>);
+
+    expect(onEvent).toHaveBeenCalledWith(payload);
+
+    cleanup();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats non app-server desktop events as no-ops in web runtime", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal("WebSocket", vi.fn());
+
+    const onEvent = vi.fn();
+    const cleanup = subscribeMenuNewAgent(onEvent);
+
+    expect(listen).not.toHaveBeenCalled();
+    expect(WebSocket).not.toHaveBeenCalled();
+
+    cleanup();
+    expect(onEvent).not.toHaveBeenCalled();
   });
 });

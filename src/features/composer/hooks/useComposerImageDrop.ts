@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { subscribeWindowDragDrop } from "../../../services/dragDrop";
+import { isWebRuntime } from "@services/runtime";
 
 const imageExtensions = [
   ".png",
@@ -78,13 +79,14 @@ export function useComposerImageDrop({
   disabled,
   onAttachImages,
 }: UseComposerImageDropArgs) {
+  const webRuntime = isWebRuntime();
   const [isDragOver, setIsDragOver] = useState(false);
   const dropTargetRef = useRef<HTMLDivElement | null>(null);
   const lastClientPositionRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
-    if (disabled) {
+    if (disabled || webRuntime) {
       return undefined;
     }
     unlisten = subscribeWindowDragDrop((event) => {
@@ -128,10 +130,10 @@ export function useComposerImageDrop({
         unlisten();
       }
     };
-  }, [disabled, onAttachImages]);
+  }, [disabled, onAttachImages, webRuntime]);
 
   const handleDragOver = (event: React.DragEvent<HTMLElement>) => {
-    if (disabled) {
+    if (disabled || webRuntime) {
       return;
     }
     if (isDragFileTransfer(event.dataTransfer?.types)) {
@@ -153,7 +155,7 @@ export function useComposerImageDrop({
   };
 
   const handleDrop = async (event: React.DragEvent<HTMLElement>) => {
-    if (disabled) {
+    if (disabled || webRuntime) {
       return;
     }
     event.preventDefault();

@@ -5,6 +5,8 @@ import type {
   DictationModelStatus,
   TrayOpenThreadPayload,
 } from "../types";
+import { BridgeRealtimeClient } from "./bridge/realtime";
+import { isWebRuntime, readRuntimeConfig } from "./runtime";
 
 export type Unsubscribe = () => void;
 
@@ -25,6 +27,22 @@ type SubscriptionOptions = {
 
 type Listener<T> = (payload: T) => void;
 
+let bridgeRealtimeClient: BridgeRealtimeClient | null = null;
+let bridgeRealtimeClientUrl: string | null = null;
+
+function getBridgeRealtimeClient() {
+  const config = readRuntimeConfig();
+  if (!config.bridgeBaseUrl) {
+    throw new Error("Missing VITE_CODEXMONITOR_BRIDGE_URL for web runtime.");
+  }
+  const wsUrl = new URL("/ws", config.bridgeBaseUrl).toString().replace(/^http/, "ws");
+  if (!bridgeRealtimeClient || bridgeRealtimeClientUrl !== wsUrl) {
+    bridgeRealtimeClient = new BridgeRealtimeClient(wsUrl);
+    bridgeRealtimeClientUrl = wsUrl;
+  }
+  return bridgeRealtimeClient;
+}
+
 function createEventHub<T>(eventName: string) {
   const listeners = new Set<Listener<T>>();
   let unlisten: Unsubscribe | null = null;
@@ -32,6 +50,22 @@ function createEventHub<T>(eventName: string) {
 
   const start = (options?: SubscriptionOptions) => {
     if (unlisten || listenPromise) {
+      return;
+    }
+    if (isWebRuntime()) {
+      if (eventName !== "app-server-event") {
+        unlisten = () => {};
+        return;
+      }
+      unlisten = getBridgeRealtimeClient().subscribe(eventName, (payload) => {
+        for (const listener of listeners) {
+          try {
+            listener(payload as T);
+          } catch (error) {
+            console.error(`[events] ${eventName} listener failed`, error);
+          }
+        }
+      });
       return;
     }
     listenPromise = listen<T>(eventName, (event) => {

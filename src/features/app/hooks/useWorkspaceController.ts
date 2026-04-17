@@ -4,6 +4,8 @@ import type { AppSettings, WorkspaceInfo } from "../../../types";
 import type { DebugEntry } from "../../../types";
 import { useWorkspaceDialogs } from "./useWorkspaceDialogs";
 import { isMobilePlatform } from "../../../utils/platformPaths";
+import { isWebRuntime } from "@services/runtime";
+import type { AddWorkspacesFromPathsResult } from "../../workspaces/hooks/useWorkspaceCrud";
 
 type WorkspaceControllerOptions = {
   appSettings: AppSettings;
@@ -24,6 +26,7 @@ export function useWorkspaceController({
 
   const {
     workspaces,
+    addWorkspaceFromPath,
     addWorkspacesFromPaths: addWorkspacesFromPathsCore,
     removeWorkspace: removeWorkspaceCore,
     removeWorktree: removeWorktreeCore,
@@ -47,19 +50,63 @@ export function useWorkspaceController({
   const runAddWorkspacesFromPaths = useCallback(
     async (
       paths: string[],
-      options?: { rememberMobileRemoteRecents?: boolean },
+      options?: { rememberRemotePathRecents?: boolean },
     ) => {
-      const result = await addWorkspacesFromPathsCore(paths);
+      let result: AddWorkspacesFromPathsResult;
+      if (isWebRuntime()) {
+        const existingPaths = new Set(workspaces.map((entry) => entry.path.trim()));
+        const seenSelections = new Set<string>();
+        const added: WorkspaceInfo[] = [];
+        const skippedExisting: string[] = [];
+        const failures: AddWorkspacesFromPathsResult["failures"] = [];
+
+        for (const selection of paths.map((path) => path.trim()).filter(Boolean)) {
+          if (seenSelections.has(selection)) {
+            continue;
+          }
+          seenSelections.add(selection);
+          if (existingPaths.has(selection)) {
+            skippedExisting.push(selection);
+            continue;
+          }
+          try {
+            const workspace = await addWorkspaceFromPath(selection, {
+              activate: added.length === 0,
+            });
+            if (workspace) {
+              added.push(workspace);
+              existingPaths.add(workspace.path.trim());
+            }
+          } catch (error) {
+            failures.push({
+              path: selection,
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        result = {
+          added,
+          firstAdded: added[0] ?? null,
+          skippedExisting,
+          skippedInvalid: [],
+          failures,
+        };
+      } else {
+        result = await addWorkspacesFromPathsCore(paths);
+      }
       await showAddWorkspacesResult(result);
-      if (options?.rememberMobileRemoteRecents && result.added.length > 0) {
+      if (options?.rememberRemotePathRecents && result.added.length > 0) {
         rememberRecentMobileRemoteWorkspacePaths(result.added.map((entry) => entry.path));
       }
       return result;
     },
     [
+      addWorkspaceFromPath,
       addWorkspacesFromPathsCore,
       rememberRecentMobileRemoteWorkspacePaths,
       showAddWorkspacesResult,
+      workspaces,
     ],
   );
 
@@ -77,7 +124,8 @@ export function useWorkspaceController({
       return null;
     }
     const result = await runAddWorkspacesFromPaths(paths, {
-      rememberMobileRemoteRecents: isMobilePlatform() && appSettings.backendMode === "remote",
+      rememberRemotePathRecents:
+        isWebRuntime() || (isMobilePlatform() && appSettings.backendMode === "remote"),
     });
     return result.firstAdded;
   }, [appSettings.backendMode, requestWorkspacePaths, runAddWorkspacesFromPaths]);

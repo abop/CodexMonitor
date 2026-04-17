@@ -3,6 +3,7 @@ import { ask, message } from "@tauri-apps/plugin-dialog";
 import type { WorkspaceInfo } from "../../../types";
 import { isMobilePlatform } from "../../../utils/platformPaths";
 import { pickWorkspacePaths } from "../../../services/tauri";
+import { isWebRuntime } from "@services/runtime";
 import type { AddWorkspacesFromPathsResult } from "../../workspaces/hooks/useWorkspaceCrud";
 
 const RECENT_REMOTE_WORKSPACE_PATHS_STORAGE_KEY = "mobile-remote-workspace-recent-paths";
@@ -201,6 +202,9 @@ export function useWorkspaceDialogs() {
   }, [resolveMobileRemoteWorkspacePathRequest]);
 
   const requestWorkspacePaths = useCallback(async (backendMode?: string) => {
+    if (isWebRuntime()) {
+      return requestMobileRemoteWorkspacePaths();
+    }
     if (isMobilePlatform() && backendMode === "remote") {
       return requestMobileRemoteWorkspacePaths();
     }

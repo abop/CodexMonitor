@@ -69,6 +69,8 @@ const baseAppSettings = {
 describe("useWorkspaceController dialogs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
     vi.mocked(isMobilePlatform).mockReturnValue(false);
     window.localStorage.clear();
   });
@@ -271,5 +273,51 @@ describe("useWorkspaceController dialogs", () => {
     });
 
     expect(isWorkspacePathDir).toHaveBeenCalledWith("~/dev/personal");
+  });
+
+  it("opens the remote path prompt in web runtime and remembers added paths", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.mocked(listWorkspaces).mockResolvedValue([]);
+    vi.mocked(addWorkspace).mockResolvedValue(workspaceOne);
+
+    const { result } = renderHook(() =>
+      useWorkspaceController({
+        appSettings: baseAppSettings,
+        addDebugEntry: vi.fn(),
+        queueSaveSettings: vi.fn(async (next) => next),
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    let addPromise: Promise<WorkspaceInfo | null> = Promise.resolve(null);
+    await act(async () => {
+      addPromise = result.current.addWorkspace();
+    });
+
+    expect(result.current.mobileRemoteWorkspacePathPrompt).not.toBeNull();
+    expect(pickWorkspacePaths).not.toHaveBeenCalled();
+
+    await act(async () => {
+      result.current.updateMobileRemoteWorkspacePathInput("/srv/codex-monitor");
+    });
+
+    await act(async () => {
+      result.current.submitMobileRemoteWorkspacePathPrompt();
+    });
+
+    let added: WorkspaceInfo | null = null;
+    await act(async () => {
+      added = await addPromise;
+    });
+
+    expect(added).toMatchObject({ id: workspaceOne.id });
+    expect(addWorkspace).toHaveBeenCalledWith("/srv/codex-monitor");
+    expect(result.current.mobileRemoteWorkspacePathPrompt).toBeNull();
+    expect(window.localStorage.getItem("mobile-remote-workspace-recent-paths")).toBe(
+      JSON.stringify(["/tmp/ws-1"]),
+    );
   });
 });

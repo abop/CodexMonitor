@@ -14,8 +14,14 @@ let mockOnDragDropEvent:
     }) => void)
   | null = null;
 
+const subscribeWindowDragDrop = vi.fn((handler: typeof mockOnDragDropEvent) => {
+  mockOnDragDropEvent = handler;
+  return () => {};
+});
+
 vi.mock("../../../services/dragDrop", () => ({
   subscribeWindowDragDrop: (handler: typeof mockOnDragDropEvent) => {
+    subscribeWindowDragDrop(handler);
     mockOnDragDropEvent = handler;
     return () => {};
   },
@@ -81,6 +87,9 @@ function setMockFileReader() {
 describe("useComposerImageDrop", () => {
   beforeEach(() => {
     mockOnDragDropEvent = null;
+    subscribeWindowDragDrop.mockClear();
+    vi.unstubAllEnvs();
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
   });
 
   it("tracks drag over state for file transfers", () => {
@@ -284,6 +293,25 @@ describe("useComposerImageDrop", () => {
         preventDefault,
       } as unknown as React.ClipboardEvent<HTMLTextAreaElement>);
     });
+    expect(onAttachImages).not.toHaveBeenCalled();
+
+    hook.unmount();
+  });
+
+  it("ignores drag attach when the runtime is web", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    const onAttachImages = vi.fn();
+    const hook = renderImageDropHook({ disabled: false, onAttachImages });
+
+    act(() => {
+      hook.result.handleDragOver({
+        dataTransfer: { types: ["Files"] },
+        preventDefault: vi.fn(),
+      } as unknown as React.DragEvent<HTMLElement>);
+    });
+
+    expect(hook.result.isDragOver).toBe(false);
+    expect(subscribeWindowDragDrop).not.toHaveBeenCalled();
     expect(onAttachImages).not.toHaveBeenCalled();
 
     hook.unmount();

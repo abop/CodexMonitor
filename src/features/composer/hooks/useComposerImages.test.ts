@@ -1,7 +1,8 @@
 /** @vitest-environment jsdom */
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { pickImageFiles } from "../../../services/tauri";
 import { useComposerImages } from "./useComposerImages";
 
 vi.mock("../../../services/tauri", () => ({
@@ -58,6 +59,30 @@ function renderComposerImages(
 }
 
 describe("useComposerImages", () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+    vi.clearAllMocks();
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
+  });
+
+  it("uses browser-picked images in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.mocked(pickImageFiles).mockResolvedValueOnce(["data:image/png;base64,AAAA"]);
+
+    const hook = renderComposerImages({
+      activeThreadId: "thread-1",
+      activeWorkspaceId: "ws-1",
+    });
+
+    await act(async () => {
+      await hook.result.pickImages();
+    });
+
+    expect(hook.result.activeImages).toEqual(["data:image/png;base64,AAAA"]);
+
+    hook.unmount();
+  });
+
   it("attaches images and deduplicates paths", () => {
     const hook = renderComposerImages({
       activeThreadId: "thread-1",

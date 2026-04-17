@@ -73,6 +73,9 @@ vi.mock("@tauri-apps/plugin-notification", () => ({
 describe("tauri invoke wrappers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockImplementation(async (command: string) => {
       if (command === "is_macos_debug_build") {
@@ -97,6 +100,72 @@ describe("tauri invoke wrappers", () => {
     expect(invokeMock).toHaveBeenCalledWith("add_workspace", {
       path: "/tmp/project",
     });
+  });
+
+  it("routes listWorkspaces through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: [{ id: "ws-1", path: "/srv/app", connected: true, settings: {} }],
+        }),
+      }),
+    );
+
+    await expect(listWorkspaces()).resolves.toHaveLength(1);
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({ method: "list_workspaces", params: {} }),
+      }),
+    );
+  });
+
+  it("routes sendUserMessage through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { ok: true } }),
+      }),
+    );
+
+    await sendUserMessage("ws-1", "thread-1", "hello", {
+      images: ["data:image/png;base64,AAAA"],
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "send_user_message",
+          params: {
+            workspaceId: "ws-1",
+            threadId: "thread-1",
+            text: "hello",
+            model: null,
+            effort: null,
+            accessMode: null,
+            images: ["data:image/png;base64,AAAA"],
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("send_user_message", expect.anything());
+  });
+
+  it("fails clearly for desktop-only actions in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    await expect(openWorkspaceIn("/srv/app", {})).rejects.toThrow(
+      "Open workspace in external app is unavailable in the web build.",
+    );
+    expect(invoke).not.toHaveBeenCalledWith("open_workspace_in", expect.anything());
   });
 
   it("returns an empty list when workspace picker is cancelled", async () => {

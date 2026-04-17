@@ -1,6 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type { Options as NotificationOptions } from "@tauri-apps/plugin-notification";
+import { bridgeRpc } from "./bridge/http";
+import { pickBrowserImageFiles } from "./browserFiles";
+import { isWebRuntime, readRuntimeConfig } from "./runtime";
 import type {
   AppSettings,
   CodexUpdateResult,
@@ -37,7 +40,72 @@ function isMissingTauriInvokeError(error: unknown) {
   );
 }
 
+const WEB_SUPPORTED_RPC_METHODS = new Set([
+  "list_workspaces",
+  "add_workspace",
+  "connect_workspace",
+  "list_threads",
+  "start_thread",
+  "read_thread",
+  "resume_thread",
+  "set_thread_name",
+  "archive_thread",
+  "send_user_message",
+  "turn_interrupt",
+  "thread_live_subscribe",
+  "thread_live_unsubscribe",
+  "get_git_status",
+  "get_git_diffs",
+  "get_git_log",
+  "list_git_branches",
+  "get_git_commit_diff",
+  "get_git_remote",
+  "get_app_settings",
+  "update_app_settings",
+  "get_config_model",
+  "model_list",
+  "collaboration_mode_list",
+  "skills_list",
+  "apps_list",
+  "prompts_list",
+  "account_rate_limits",
+  "account_read",
+]);
+
+type RpcParams = Record<string, unknown>;
+
+function bridgeConfigOrThrow() {
+  const config = readRuntimeConfig();
+  if (!config.bridgeBaseUrl) {
+    throw new Error("Missing VITE_CODEXMONITOR_BRIDGE_URL for web runtime.");
+  }
+  return { baseUrl: config.bridgeBaseUrl };
+}
+
+function unsupportedInWeb(feature: string): never {
+  throw new Error(`${feature} is unavailable in the web build.`);
+}
+
+async function invokeSupportedRpc<T>(
+  command: string,
+  params?: RpcParams,
+): Promise<T> {
+  if (isWebRuntime()) {
+    if (!WEB_SUPPORTED_RPC_METHODS.has(command)) {
+      throw new Error(`${command} is unavailable in the web build.`);
+    }
+    return bridgeRpc<T>(bridgeConfigOrThrow(), command, params);
+  }
+  if (params === undefined) {
+    return invoke<T>(command);
+  }
+  return invoke<T>(command, params);
+}
+
 export async function pickWorkspacePath(): Promise<string | null> {
+  if (isWebRuntime()) {
+    unsupportedInWeb("Workspace picker");
+  }
   const selection = await open({ directory: true, multiple: false });
   if (!selection || Array.isArray(selection)) {
     return null;
@@ -46,6 +114,9 @@ export async function pickWorkspacePath(): Promise<string | null> {
 }
 
 export async function pickWorkspacePaths(): Promise<string[]> {
+  if (isWebRuntime()) {
+    unsupportedInWeb("Workspace picker");
+  }
   const selection = await open({ directory: true, multiple: true });
   if (!selection) {
     return [];
@@ -54,6 +125,9 @@ export async function pickWorkspacePaths(): Promise<string[]> {
 }
 
 export async function pickImageFiles(): Promise<string[]> {
+  if (isWebRuntime()) {
+    return pickBrowserImageFiles();
+  }
   const selection = await open({
     multiple: true,
     filters: [
@@ -84,6 +158,9 @@ export async function exportMarkdownFile(
   content: string,
   defaultFileName = "plan.md",
 ): Promise<string | null> {
+  if (isWebRuntime()) {
+    unsupportedInWeb("Markdown export");
+  }
   const selection = await save({
     title: "Export plan as Markdown",
     defaultPath: defaultFileName,
@@ -102,6 +179,9 @@ export async function exportMarkdownFile(
 }
 
 export async function listWorkspaces(): Promise<WorkspaceInfo[]> {
+  if (isWebRuntime()) {
+    return invokeSupportedRpc<WorkspaceInfo[]>("list_workspaces", {});
+  }
   try {
     return await invoke<WorkspaceInfo[]>("list_workspaces");
   } catch (error) {
@@ -248,9 +328,12 @@ export async function writeAgentConfigToml(
 }
 
 export async function getConfigModel(workspaceId: string): Promise<string | null> {
-  const response = await invoke<{ model?: string | null }>("get_config_model", {
-    workspaceId,
-  });
+  const response = await invokeSupportedRpc<{ model?: string | null }>(
+    "get_config_model",
+    {
+      workspaceId,
+    },
+  );
   const model = response?.model;
   if (typeof model !== "string") {
     return null;
@@ -260,7 +343,7 @@ export async function getConfigModel(workspaceId: string): Promise<string | null
 }
 
 export async function addWorkspace(path: string): Promise<WorkspaceInfo> {
-  return invoke<WorkspaceInfo>("add_workspace", { path });
+  return invokeSupportedRpc<WorkspaceInfo>("add_workspace", { path });
 }
 
 export async function addWorkspaceFromGitUrl(
@@ -359,6 +442,9 @@ export async function openWorkspaceIn(
     column?: number | null;
   },
 ): Promise<void> {
+  if (isWebRuntime()) {
+    unsupportedInWeb("Open workspace in external app");
+  }
   return invoke("open_workspace_in", {
     path,
     app: options.appName ?? null,
@@ -374,7 +460,7 @@ export async function getOpenAppIcon(appName: string): Promise<string | null> {
 }
 
 export async function connectWorkspace(id: string): Promise<void> {
-  return invoke("connect_workspace", { id });
+  return invokeSupportedRpc("connect_workspace", { id });
 }
 
 export async function setWorkspaceRuntimeCodexArgs(
@@ -388,7 +474,7 @@ export async function setWorkspaceRuntimeCodexArgs(
 }
 
 export async function startThread(workspaceId: string) {
-  return invoke<any>("start_thread", { workspaceId });
+  return invokeSupportedRpc<any>("start_thread", { workspaceId });
 }
 
 export async function forkThread(workspaceId: string, threadId: string) {
@@ -424,6 +510,9 @@ async function normalizeImagesForRpc(images?: string[]): Promise<string[] | null
   }
   if (images.length === 0) {
     return [];
+  }
+  if (isWebRuntime()) {
+    return images;
   }
   const hasPathImages = images.some((image) => !isInlineImageUrl(image));
   if (!hasPathImages) {
@@ -478,7 +567,7 @@ export async function sendUserMessage(
   if (options?.appMentions && options.appMentions.length > 0) {
     payload.appMentions = options.appMentions;
   }
-  return invoke("send_user_message", payload);
+  return invokeSupportedRpc("send_user_message", payload);
 }
 
 export async function interruptTurn(
@@ -486,7 +575,7 @@ export async function interruptTurn(
   threadId: string,
   turnId: string,
 ) {
-  return invoke("turn_interrupt", { workspaceId, threadId, turnId });
+  return invokeSupportedRpc("turn_interrupt", { workspaceId, threadId, turnId });
 }
 
 export async function steerTurn(
@@ -563,7 +652,7 @@ export async function getGitStatus(workspace_id: string): Promise<{
   totalAdditions: number;
   totalDeletions: number;
 }> {
-  return invoke("get_git_status", { workspaceId: workspace_id });
+  return invokeSupportedRpc("get_git_status", { workspaceId: workspace_id });
 }
 
 export type InitGitRepoResponse =
@@ -613,25 +702,28 @@ export async function listGitRoots(
 export async function getGitDiffs(
   workspace_id: string,
 ): Promise<GitFileDiff[]> {
-  return invoke("get_git_diffs", { workspaceId: workspace_id });
+  return invokeSupportedRpc("get_git_diffs", { workspaceId: workspace_id });
 }
 
 export async function getGitLog(
   workspace_id: string,
   limit = 40,
 ): Promise<GitLogResponse> {
-  return invoke("get_git_log", { workspaceId: workspace_id, limit });
+  return invokeSupportedRpc("get_git_log", { workspaceId: workspace_id, limit });
 }
 
 export async function getGitCommitDiff(
   workspace_id: string,
   sha: string,
 ): Promise<GitCommitDiff[]> {
-  return invoke("get_git_commit_diff", { workspaceId: workspace_id, sha });
+  return invokeSupportedRpc("get_git_commit_diff", {
+    workspaceId: workspace_id,
+    sha,
+  });
 }
 
 export async function getGitRemote(workspace_id: string): Promise<string | null> {
-  return invoke("get_git_remote", { workspaceId: workspace_id });
+  return invokeSupportedRpc("get_git_remote", { workspaceId: workspace_id });
 }
 
 export async function stageGitFile(workspaceId: string, path: string) {
@@ -731,7 +823,7 @@ export async function localUsageSnapshot(
 }
 
 export async function getModelList(workspaceId: string) {
-  return invoke<any>("model_list", { workspaceId });
+  return invokeSupportedRpc<any>("model_list", { workspaceId });
 }
 
 export async function getExperimentalFeatureList(
@@ -757,15 +849,15 @@ export async function generateRunMetadata(workspaceId: string, prompt: string) {
 }
 
 export async function getCollaborationModes(workspaceId: string) {
-  return invoke<any>("collaboration_mode_list", { workspaceId });
+  return invokeSupportedRpc<any>("collaboration_mode_list", { workspaceId });
 }
 
 export async function getAccountRateLimits(workspaceId: string) {
-  return invoke<any>("account_rate_limits", { workspaceId });
+  return invokeSupportedRpc<any>("account_rate_limits", { workspaceId });
 }
 
 export async function getAccountInfo(workspaceId: string) {
-  return invoke<any>("account_read", { workspaceId });
+  return invokeSupportedRpc<any>("account_read", { workspaceId });
 }
 
 export async function runCodexLogin(workspaceId: string) {
@@ -782,7 +874,7 @@ export async function cancelCodexLogin(workspaceId: string) {
 }
 
 export async function getSkillsList(workspaceId: string) {
-  return invoke<any>("skills_list", { workspaceId });
+  return invokeSupportedRpc<any>("skills_list", { workspaceId });
 }
 
 export async function getAppsList(
@@ -791,11 +883,16 @@ export async function getAppsList(
   limit?: number | null,
   threadId?: string | null,
 ) {
-  return invoke<any>("apps_list", { workspaceId, cursor, limit, threadId });
+  return invokeSupportedRpc<any>("apps_list", {
+    workspaceId,
+    cursor,
+    limit,
+    threadId,
+  });
 }
 
 export async function getPromptsList(workspaceId: string) {
-  return invoke<any>("prompts_list", { workspaceId });
+  return invokeSupportedRpc<any>("prompts_list", { workspaceId });
 }
 
 export async function getWorkspacePromptsDir(workspaceId: string) {
@@ -862,7 +959,7 @@ export async function movePrompt(
 }
 
 export async function getAppSettings(): Promise<AppSettings> {
-  return invoke<AppSettings>("get_app_settings");
+  return invokeSupportedRpc<AppSettings>("get_app_settings", {});
 }
 
 export async function isMobileRuntime(): Promise<boolean> {
@@ -870,7 +967,7 @@ export async function isMobileRuntime(): Promise<boolean> {
 }
 
 export async function updateAppSettings(settings: AppSettings): Promise<AppSettings> {
-  return invoke<AppSettings>("update_app_settings", { settings });
+  return invokeSupportedRpc<AppSettings>("update_app_settings", { settings });
 }
 
 export async function tailscaleStatus(): Promise<TailscaleStatus> {
@@ -941,7 +1038,7 @@ export async function writeAgentMd(workspaceId: string, content: string): Promis
 }
 
 export async function listGitBranches(workspaceId: string) {
-  return invoke<any>("list_git_branches", { workspaceId });
+  return invokeSupportedRpc<any>("list_git_branches", { workspaceId });
 }
 
 export async function checkoutGitBranch(workspaceId: string, name: string) {
@@ -1049,7 +1146,12 @@ export async function listThreads(
   limit?: number | null,
   sortKey?: "created_at" | "updated_at" | null,
 ) {
-  return invoke<any>("list_threads", { workspaceId, cursor, limit, sortKey });
+  return invokeSupportedRpc<any>("list_threads", {
+    workspaceId,
+    cursor,
+    limit,
+    sortKey,
+  });
 }
 
 export async function listMcpServerStatus(
@@ -1061,23 +1163,26 @@ export async function listMcpServerStatus(
 }
 
 export async function resumeThread(workspaceId: string, threadId: string) {
-  return invoke<any>("resume_thread", { workspaceId, threadId });
+  return invokeSupportedRpc<any>("resume_thread", { workspaceId, threadId });
 }
 
 export async function readThread(workspaceId: string, threadId: string) {
-  return invoke<any>("read_thread", { workspaceId, threadId });
+  return invokeSupportedRpc<any>("read_thread", { workspaceId, threadId });
 }
 
 export async function threadLiveSubscribe(workspaceId: string, threadId: string) {
-  return invoke<any>("thread_live_subscribe", { workspaceId, threadId });
+  return invokeSupportedRpc<any>("thread_live_subscribe", { workspaceId, threadId });
 }
 
 export async function threadLiveUnsubscribe(workspaceId: string, threadId: string) {
-  return invoke<any>("thread_live_unsubscribe", { workspaceId, threadId });
+  return invokeSupportedRpc<any>("thread_live_unsubscribe", {
+    workspaceId,
+    threadId,
+  });
 }
 
 export async function archiveThread(workspaceId: string, threadId: string) {
-  return invoke<any>("archive_thread", { workspaceId, threadId });
+  return invokeSupportedRpc<any>("archive_thread", { workspaceId, threadId });
 }
 
 export async function setThreadName(
@@ -1085,7 +1190,7 @@ export async function setThreadName(
   threadId: string,
   name: string,
 ) {
-  return invoke<any>("set_thread_name", { workspaceId, threadId, name });
+  return invokeSupportedRpc<any>("set_thread_name", { workspaceId, threadId, name });
 }
 
 export async function setTrayRecentThreads(entries: TrayRecentThreadEntry[]) {
