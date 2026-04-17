@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ask } from "@tauri-apps/plugin-dialog";
+import { isWebRuntime } from "../../../services/runtime";
 import {
   applyWorktreeChanges as applyWorktreeChangesService,
   createGitHubRepo as createGitHubRepoService,
@@ -11,6 +12,25 @@ import {
   unstageGitFile as unstageGitFileService,
 } from "../../../services/tauri";
 import type { WorkspaceInfo } from "../../../types";
+
+async function confirmGitAction(
+  body: string,
+  options: {
+    title: string;
+    kind?: "info" | "warning" | "error";
+    okLabel?: string;
+    cancelLabel?: string;
+  },
+) {
+  if (isWebRuntime()) {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    const prefix = options.title.trim();
+    return window.confirm(prefix ? `${prefix}\n\n${body}` : body);
+  }
+  return ask(body, options);
+}
 
 type UseGitActionsOptions = {
   activeWorkspace: WorkspaceInfo | null;
@@ -137,7 +157,7 @@ export function useGitActions({
     if (!workspaceId) {
       return;
     }
-    const confirmed = await ask(
+    const confirmed = await confirmGitAction(
       "Revert all changes in this repo?\n\nThis will discard all staged and unstaged changes, including untracked files.",
       { title: "Revert all changes", kind: "warning" },
     );
@@ -208,7 +228,7 @@ export function useGitActions({
       if (response.status === "needs_confirmation") {
         const entryCount = response.entryCount ?? 0;
         const plural = entryCount === 1 ? "" : "s";
-        const confirmed = await ask(
+        const confirmed = await confirmGitAction(
           `Initialize Git in this folder?\n\nThis will create a .git directory, set the initial branch to "${branch}", and create an initial commit.\n\nThis folder contains ${entryCount} existing item${plural}.`,
           {
             title: "Initialize Git",

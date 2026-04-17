@@ -30,6 +30,18 @@ const ALLOWED_RPC_METHODS: &[&str] = &[
     "list_git_branches",
     "get_git_commit_diff",
     "get_git_remote",
+    "stage_git_file",
+    "stage_git_all",
+    "unstage_git_file",
+    "revert_git_file",
+    "revert_git_all",
+    "commit_git",
+    "fetch_git",
+    "pull_git",
+    "push_git",
+    "sync_git",
+    "checkout_git_branch",
+    "create_git_branch",
     "get_app_settings",
     "update_app_settings",
     "get_config_model",
@@ -437,6 +449,62 @@ mod tests {
 
                 assert_eq!(response.status(), StatusCode::OK);
                 assert_eq!(server.last_method().await, "remember_approval_rule");
+            });
+    }
+
+    #[test]
+    fn forwards_git_write_and_branch_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let methods = [
+                    "stage_git_file",
+                    "stage_git_all",
+                    "unstage_git_file",
+                    "revert_git_file",
+                    "revert_git_all",
+                    "commit_git",
+                    "fetch_git",
+                    "pull_git",
+                    "push_git",
+                    "sync_git",
+                    "checkout_git_branch",
+                    "create_git_branch",
+                ];
+
+                for method in methods {
+                    let (client, mut server) = test_client_pair().await;
+                    server.enqueue_result(1, json!({})).await;
+                    let app = build_router(test_state_with_client(client));
+                    let response = app
+                        .oneshot(
+                            Request::builder()
+                                .method("POST")
+                                .uri("/api/rpc")
+                                .header("content-type", "application/json")
+                                .header("cf-access-jwt-assertion", "present")
+                                .body(Body::from(
+                                    json!({
+                                        "method": method,
+                                        "params": {
+                                            "workspaceId": "ws-1",
+                                            "path": "src/main.ts",
+                                            "message": "feat: bridge",
+                                            "name": "feature/bridge"
+                                        }
+                                    })
+                                    .to_string(),
+                                ))
+                                .unwrap(),
+                        )
+                        .await
+                        .unwrap();
+
+                    assert_eq!(response.status(), StatusCode::OK, "{method} should be allowed");
+                    assert_eq!(server.last_method().await, method);
+                }
             });
     }
 

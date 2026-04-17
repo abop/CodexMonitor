@@ -1,8 +1,14 @@
 /** @vitest-environment jsdom */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GitDiffViewer } from "./GitDiffViewer";
+
+const askMock = vi.hoisted(() => vi.fn(async () => true));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  ask: askMock,
+}));
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
@@ -73,6 +79,13 @@ afterEach(() => {
 });
 
 describe("GitDiffViewer", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
+  });
+
   it("inserts a diff line reference into composer when the line '+' action is clicked", () => {
     const onInsertComposerText = vi.fn();
 
@@ -128,5 +141,38 @@ describe("GitDiffViewer", () => {
     const rawLines = Array.from(document.querySelectorAll(".diff-viewer-raw-line"));
     expect(rawLines[1]?.className).toContain("diff-viewer-raw-line-add");
     expect(rawLines[2]?.className).toContain("diff-viewer-raw-line-del");
+  });
+
+  it("uses browser confirm before discarding a file in web runtime", async () => {
+    const onRevertFile = vi.fn();
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    const confirmMock = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <GitDiffViewer
+        diffs={[
+          {
+            path: "src/main.ts@@item-change-1@@change-0",
+            displayPath: "src/main.ts",
+            status: "M",
+            diff: "@@ -1,1 +1,2 @@\n line one\n+added line",
+          },
+        ]}
+        selectedPath="src/main.ts@@item-change-1@@change-0"
+        isLoading={false}
+        error={null}
+        canRevert
+        onRevertFile={onRevertFile}
+      />,
+    );
+
+    const [discardButton] = screen.getAllByRole("button", {
+      name: "Discard changes in this file",
+    });
+    fireEvent.click(discardButton);
+
+    expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining("Discard changes"));
+    expect(askMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(onRevertFile).toHaveBeenCalledWith("src/main.ts"));
   });
 });

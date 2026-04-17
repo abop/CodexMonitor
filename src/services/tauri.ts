@@ -60,6 +60,18 @@ const WEB_SUPPORTED_RPC_METHODS = new Set([
   "list_git_branches",
   "get_git_commit_diff",
   "get_git_remote",
+  "stage_git_file",
+  "stage_git_all",
+  "unstage_git_file",
+  "revert_git_file",
+  "revert_git_all",
+  "commit_git",
+  "fetch_git",
+  "pull_git",
+  "push_git",
+  "sync_git",
+  "checkout_git_branch",
+  "create_git_branch",
   "get_app_settings",
   "update_app_settings",
   "get_config_model",
@@ -771,56 +783,46 @@ export async function getGitRemote(workspace_id: string): Promise<string | null>
 }
 
 export async function stageGitFile(workspaceId: string, path: string) {
-  requireDesktopRuntime("Git staging");
-  return invoke("stage_git_file", { workspaceId, path });
+  return invokeSupportedRpc("stage_git_file", { workspaceId, path });
 }
 
 export async function stageGitAll(workspaceId: string): Promise<void> {
-  requireDesktopRuntime("Git staging");
-  return invoke("stage_git_all", { workspaceId });
+  return invokeSupportedRpc("stage_git_all", { workspaceId });
 }
 
 export async function unstageGitFile(workspaceId: string, path: string) {
-  requireDesktopRuntime("Git staging");
-  return invoke("unstage_git_file", { workspaceId, path });
+  return invokeSupportedRpc("unstage_git_file", { workspaceId, path });
 }
 
 export async function revertGitFile(workspaceId: string, path: string) {
-  requireDesktopRuntime("Git revert");
-  return invoke("revert_git_file", { workspaceId, path });
+  return invokeSupportedRpc("revert_git_file", { workspaceId, path });
 }
 
 export async function revertGitAll(workspaceId: string) {
-  requireDesktopRuntime("Git revert");
-  return invoke("revert_git_all", { workspaceId });
+  return invokeSupportedRpc("revert_git_all", { workspaceId });
 }
 
 export async function commitGit(
   workspaceId: string,
   message: string,
 ): Promise<void> {
-  requireDesktopRuntime("Git commits");
-  return invoke("commit_git", { workspaceId, message });
+  return invokeSupportedRpc("commit_git", { workspaceId, message });
 }
 
 export async function pushGit(workspaceId: string): Promise<void> {
-  requireDesktopRuntime("Git pushes");
-  return invoke("push_git", { workspaceId });
+  return invokeSupportedRpc("push_git", { workspaceId });
 }
 
 export async function pullGit(workspaceId: string): Promise<void> {
-  requireDesktopRuntime("Git pulls");
-  return invoke("pull_git", { workspaceId });
+  return invokeSupportedRpc("pull_git", { workspaceId });
 }
 
 export async function fetchGit(workspaceId: string): Promise<void> {
-  requireDesktopRuntime("Git fetches");
-  return invoke("fetch_git", { workspaceId });
+  return invokeSupportedRpc("fetch_git", { workspaceId });
 }
 
 export async function syncGit(workspaceId: string): Promise<void> {
-  requireDesktopRuntime("Git sync");
-  return invoke("sync_git", { workspaceId });
+  return invokeSupportedRpc("sync_git", { workspaceId });
 }
 
 export async function getGitHubIssues(
@@ -1120,13 +1122,11 @@ export async function listGitBranches(workspaceId: string) {
 }
 
 export async function checkoutGitBranch(workspaceId: string, name: string) {
-  requireDesktopRuntime("Git branch management");
-  return invoke("checkout_git_branch", { workspaceId, name });
+  return invokeSupportedRpc("checkout_git_branch", { workspaceId, name });
 }
 
 export async function createGitBranch(workspaceId: string, name: string) {
-  requireDesktopRuntime("Git branch management");
-  return invoke("create_git_branch", { workspaceId, name });
+  return invokeSupportedRpc("create_git_branch", { workspaceId, name });
 }
 
 function withModelId(modelId?: string | null) {

@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitLogEntry } from "../../../types";
 import { GitDiffPanel } from "./GitDiffPanel";
 import { fileManagerName } from "../../../utils/platformPaths";
@@ -10,6 +10,7 @@ const menuNew = vi.hoisted(() =>
 );
 const menuItemNew = vi.hoisted(() => vi.fn(async (options) => options));
 const clipboardWriteText = vi.hoisted(() => vi.fn());
+const askMock = vi.hoisted(() => vi.fn(async () => true));
 
 vi.mock("@tauri-apps/api/menu", () => ({
   Menu: { new: menuNew },
@@ -39,7 +40,7 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
-  ask: vi.fn(async () => true),
+  ask: askMock,
 }));
 
 vi.mock("../../../services/toasts", () => ({
@@ -68,6 +69,13 @@ const baseProps = {
 };
 
 describe("GitDiffPanel", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
+  });
+
   it("shows an initialize git button when the repo is missing", () => {
     const onInitGitRepo = vi.fn();
     const { container } = render(
@@ -330,6 +338,31 @@ describe("GitDiffPanel", () => {
     expect(onSelectFile).toHaveBeenCalledWith(
       "src/main.ts@@item-change-1@@change-0",
     );
+  });
+
+  it("uses browser confirm before discarding files in web runtime", async () => {
+    const onRevertFile = vi.fn(async () => undefined);
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    const confirmMock = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <GitDiffPanel
+        {...baseProps}
+        unstagedFiles={[
+          { path: "src/one.ts", status: "M", additions: 1, deletions: 0 },
+          { path: "src/two.ts", status: "M", additions: 2, deletions: 1 },
+        ]}
+        onRevertFile={onRevertFile}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard all changes" }));
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1));
+    expect(confirmMock).toHaveBeenCalledWith(expect.stringContaining("Discard changes"));
+    expect(askMock).not.toHaveBeenCalled();
+    expect(onRevertFile).toHaveBeenNthCalledWith(1, "src/one.ts");
+    expect(onRevertFile).toHaveBeenNthCalledWith(2, "src/two.ts");
   });
 
 });

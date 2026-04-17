@@ -10,6 +10,7 @@ import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import ScrollText from "lucide-react/dist/esm/icons/scroll-text";
 import Search from "lucide-react/dist/esm/icons/search";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { isWebRuntime } from "../../../services/runtime";
 import type { PanelTabId } from "../../layout/components/PanelTabs";
 import { PanelShell } from "../../layout/components/PanelShell";
 import { pushErrorToast } from "../../../services/toasts";
@@ -44,6 +45,25 @@ import {
 import { useDiffFileSelection } from "../hooks/useDiffFileSelection";
 import type { GitPanelMode } from "../types";
 import type { PerFileDiffGroup } from "../utils/perFileThreadDiffs";
+
+async function confirmGitAction(
+  body: string,
+  options: {
+    title: string;
+    kind?: "info" | "warning" | "error";
+    okLabel?: string;
+    cancelLabel?: string;
+  },
+) {
+  if (isWebRuntime()) {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    const prefix = options.title.trim();
+    return window.confirm(prefix ? `${prefix}\n\n${body}` : body);
+  }
+  return ask(body, options);
+}
 
 type GitDiffPanelProps = {
   workspaceId?: string | null;
@@ -353,7 +373,7 @@ export function GitDiffPanel({
       const message = isSingle
         ? `Discard changes in:\n\n${paths[0]}\n\nThis cannot be undone.`
         : `Discard changes in these files?\n\n${preview}${more}\n\nThis cannot be undone.`;
-      const confirmed = await ask(message, {
+      const confirmed = await confirmGitAction(message, {
         title: "Discard changes",
         kind: "warning",
       });

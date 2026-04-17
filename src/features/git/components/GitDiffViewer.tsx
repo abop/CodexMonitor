@@ -14,6 +14,7 @@ import type {
 import {
   DIFF_VIEWER_HIGHLIGHTER_OPTIONS,
 } from "../../design-system/diff/diffViewerTheme";
+import { isWebRuntime } from "../../../services/runtime";
 import { ImageDiffCard } from "./ImageDiffCard";
 import { splitPath } from "./GitDiffPanel.utils";
 import { DiffCard } from "./GitDiffViewerDiffCard";
@@ -64,6 +65,25 @@ function findSelectionLineIndex(
   }
 
   return null;
+}
+
+async function confirmGitAction(
+  body: string,
+  options: {
+    title: string;
+    kind?: "info" | "warning" | "error";
+    okLabel?: string;
+    cancelLabel?: string;
+  },
+) {
+  if (isWebRuntime()) {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    const prefix = options.title.trim();
+    return window.confirm(prefix ? `${prefix}\n\n${body}` : body);
+  }
+  return ask(body, options);
 }
 
 function buildSelectionRangeFromLineSelection({
@@ -319,7 +339,7 @@ export function GitDiffViewer({
       if (!onRevertFile) {
         return;
       }
-      const confirmed = await ask(
+      const confirmed = await confirmGitAction(
         `Discard changes in:\n\n${path}\n\nThis cannot be undone.`,
         { title: "Discard changes", kind: "warning" },
       );

@@ -5,8 +5,11 @@ import * as notification from "@tauri-apps/plugin-notification";
 import {
   exportMarkdownFile,
   addWorkspace,
+  checkoutGitBranch,
   compactThread,
+  commitGit,
   createPrompt,
+  createGitBranch,
   createGitHubRepo,
   deletePrompt,
   fetchGit,
@@ -25,8 +28,15 @@ import {
   readGlobalCodexConfigToml,
   listWorkspaces,
   openWorkspaceIn,
+  pullGit,
+  pushGit,
   readAgentMd,
+  revertGitAll,
+  revertGitFile,
   stageGitAll,
+  stageGitFile,
+  syncGit,
+  unstageGitFile,
   respondToServerRequest,
   respondToUserInputRequest,
   rememberApprovalRule,
@@ -420,9 +430,6 @@ describe("tauri invoke wrappers", () => {
     await expect(removeWorkspace("ws-1")).rejects.toThrow(
       "Remove workspace is unavailable in the web build.",
     );
-    await expect(stageGitAll("ws-1")).rejects.toThrow(
-      "Git staging is unavailable in the web build.",
-    );
     await expect(setTrayRecentThreads([])).rejects.toThrow(
       "Tray integration is unavailable in the web build.",
     );
@@ -432,7 +439,6 @@ describe("tauri invoke wrappers", () => {
 
     expect(invoke).not.toHaveBeenCalledWith("add_workspace_from_git_url", expect.anything());
     expect(invoke).not.toHaveBeenCalledWith("remove_workspace", expect.anything());
-    expect(invoke).not.toHaveBeenCalledWith("stage_git_all", expect.anything());
     expect(invoke).not.toHaveBeenCalledWith("set_tray_recent_threads", expect.anything());
     expect(invoke).not.toHaveBeenCalledWith("is_macos_debug_build");
   });
@@ -748,6 +754,117 @@ describe("tauri invoke wrappers", () => {
 
     expect(invokeMock).toHaveBeenCalledWith("stage_git_all", {
       workspaceId: "ws-6",
+    });
+  });
+
+  it("routes git write and branch methods through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ result: {} }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await stageGitFile("ws-1", "src/main.ts");
+    await stageGitAll("ws-1");
+    await unstageGitFile("ws-1", "src/main.ts");
+    await revertGitFile("ws-1", "src/main.ts");
+    await revertGitAll("ws-1");
+    await commitGit("ws-1", "feat: test bridge");
+    await fetchGit("ws-1");
+    await pullGit("ws-1");
+    await pushGit("ws-1");
+    await syncGit("ws-1");
+    await checkoutGitBranch("ws-1", "feature/bridge");
+    await createGitBranch("ws-1", "feature/bridge");
+
+    const expectedCalls = [
+      { method: "stage_git_file", params: { workspaceId: "ws-1", path: "src/main.ts" } },
+      { method: "stage_git_all", params: { workspaceId: "ws-1" } },
+      { method: "unstage_git_file", params: { workspaceId: "ws-1", path: "src/main.ts" } },
+      { method: "revert_git_file", params: { workspaceId: "ws-1", path: "src/main.ts" } },
+      { method: "revert_git_all", params: { workspaceId: "ws-1" } },
+      {
+        method: "commit_git",
+        params: { workspaceId: "ws-1", message: "feat: test bridge" },
+      },
+      { method: "fetch_git", params: { workspaceId: "ws-1" } },
+      { method: "pull_git", params: { workspaceId: "ws-1" } },
+      { method: "push_git", params: { workspaceId: "ws-1" } },
+      { method: "sync_git", params: { workspaceId: "ws-1" } },
+      {
+        method: "checkout_git_branch",
+        params: { workspaceId: "ws-1", name: "feature/bridge" },
+      },
+      {
+        method: "create_git_branch",
+        params: { workspaceId: "ws-1", name: "feature/bridge" },
+      },
+    ];
+
+    expect(fetchMock).toHaveBeenCalledTimes(expectedCalls.length);
+    expectedCalls.forEach((call, index) => {
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        index + 1,
+        "https://bridge.example.com/api/rpc",
+        expect.objectContaining({
+          body: JSON.stringify(call),
+        }),
+      );
+    });
+  });
+
+  it("invokes git write and branch methods on desktop runtime", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValue({});
+
+    await stageGitFile("ws-2", "src/main.ts");
+    await unstageGitFile("ws-2", "src/main.ts");
+    await revertGitFile("ws-2", "src/main.ts");
+    await revertGitAll("ws-2");
+    await commitGit("ws-2", "feat: desktop");
+    await pullGit("ws-2");
+    await pushGit("ws-2");
+    await syncGit("ws-2");
+    await checkoutGitBranch("ws-2", "feature/desktop");
+    await createGitBranch("ws-2", "feature/desktop");
+
+    expect(invokeMock).toHaveBeenCalledWith("stage_git_file", {
+      workspaceId: "ws-2",
+      path: "src/main.ts",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("unstage_git_file", {
+      workspaceId: "ws-2",
+      path: "src/main.ts",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("revert_git_file", {
+      workspaceId: "ws-2",
+      path: "src/main.ts",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("revert_git_all", {
+      workspaceId: "ws-2",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("commit_git", {
+      workspaceId: "ws-2",
+      message: "feat: desktop",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("pull_git", {
+      workspaceId: "ws-2",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("push_git", {
+      workspaceId: "ws-2",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("sync_git", {
+      workspaceId: "ws-2",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("checkout_git_branch", {
+      workspaceId: "ws-2",
+      name: "feature/desktop",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("create_git_branch", {
+      workspaceId: "ws-2",
+      name: "feature/desktop",
     });
   });
 
