@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebBridgeProvider } from "./WebBridgeProvider";
 import { WebBridgeSwitcher } from "./WebBridgeSwitcher";
@@ -10,6 +11,48 @@ afterEach(() => {
   cleanup();
   vi.unstubAllEnvs();
 });
+
+type MatchMediaMock = {
+  setMatches: (matches: boolean) => void;
+};
+
+function installControllableMatchMedia(initialMatches = false): MatchMediaMock {
+  let matches = initialMatches;
+  const listeners = new Set<(event: MediaQueryListEvent) => void>();
+
+  window.matchMedia = vi.fn().mockImplementation((query: string) => {
+    const mediaQueryList = {
+      get matches() {
+        return matches;
+      },
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
+        if (type === "change") {
+          listeners.add(listener);
+        }
+      }),
+      removeEventListener: vi.fn((type: string, listener: (event: MediaQueryListEvent) => void) => {
+        if (type === "change") {
+          listeners.delete(listener);
+        }
+      }),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    } as MediaQueryList;
+
+    return mediaQueryList;
+  });
+
+  return {
+    setMatches(nextMatches: boolean) {
+      matches = nextMatches;
+      const event = { matches: nextMatches, media: "(max-width: 700px)" } as MediaQueryListEvent;
+      listeners.forEach((listener) => listener(event));
+    },
+  };
+}
 
 function seedTwoBridges() {
   const first = addWebBridgeTarget(
@@ -95,6 +138,7 @@ describe("WebBridgeSwitcher", () => {
     renderSwitcher({ testConnection });
     fireEvent.click(screen.getByRole("button", { name: /Current Bridge: dev/ }));
     fireEvent.click(screen.getByRole("button", { name: "Manage Bridges" }));
+    expect(screen.getByText("Bridge Management")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Add Bridge" }));
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "prod" },
@@ -110,18 +154,12 @@ describe("WebBridgeSwitcher", () => {
 
   it("renders mobile picker as a bottom sheet", () => {
     seedTwoBridges();
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes("max-width"),
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
+    const matchMedia = installControllableMatchMedia(false);
 
     const { container } = renderSwitcher();
+    act(() => {
+      matchMedia.setMatches(true);
+    });
     fireEvent.click(screen.getByRole("button", { name: /Current Bridge: dev/ }));
 
     expect(container.querySelector(".web-bridge-sheet")).toBeTruthy();

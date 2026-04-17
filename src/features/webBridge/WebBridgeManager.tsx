@@ -70,7 +70,7 @@ export function WebBridgeManager({
       <div className="web-bridge-manager">
         <div className="web-bridge-manager-header">
           <div>
-            <div className="ds-modal-title">Manage Bridges</div>
+            <div className="ds-modal-title">Bridge Management</div>
             {mode.type === "list" ? (
               <div className="ds-modal-subtitle">Keep your bridge list current.</div>
             ) : (

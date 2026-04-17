@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import { useMenuController } from "@app/hooks/useMenuController";
 import { PopoverSurface } from "@/features/design-system/components/popover/PopoverPrimitives";
@@ -30,8 +30,24 @@ export function WebBridgeSwitcher() {
   const menu = useMenuController();
   const [managerOpen, setManagerOpen] = useState(false);
   const [managerMode, setManagerMode] = useState<"list" | "add">("list");
+  const [mobileSheet, setMobileSheet] = useState(() => isMobileWebBridgeSheet());
 
-  const mobileSheet = useMemo(() => isMobileWebBridgeSheet(), []);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQueryList = window.matchMedia("(max-width: 700px)");
+    const handleChange = (event: MediaQueryListEvent) => {
+      setMobileSheet(event.matches);
+    };
+
+    setMobileSheet(mediaQueryList.matches);
+    mediaQueryList.addEventListener("change", handleChange);
+    return () => {
+      mediaQueryList.removeEventListener("change", handleChange);
+    };
+  }, []);
 
   if (!isWeb || !activeBridge) {
     return null;
