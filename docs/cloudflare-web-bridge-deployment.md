@@ -433,7 +433,11 @@ Use this order in production:
 
 ## 14. macOS `launchctl` setup
 
-Cloudflare officially supports `cloudflared service install` on macOS. For the CodexMonitor daemon and bridge, use your own `launchctl` plists.
+This section shows a user-login startup setup where all three processes are managed the same way:
+
+- daemon
+- web bridge
+- `cloudflared`
 
 ### 14.1 Recommended log and runtime directories
 
@@ -441,7 +445,13 @@ Cloudflare officially supports `cloudflared service install` on macOS. For the C
 mkdir -p "$REPO_DIR/.deploy/log"
 mkdir -p "$REPO_DIR/.deploy/data"
 mkdir -p "$HOME/Library/LaunchAgents"
+mkdir -p "$HOME/Library/Logs/CodexMonitor"
 ```
+
+Privacy note:
+
+- keep real tokens, account identifiers, and credential file paths out of screenshots, chat logs, and checked-in files
+- in plist files, replace placeholder values with your real local values only on the target machine
 
 ### 14.2 Daemon plist
 
@@ -553,9 +563,61 @@ launchctl enable "gui/$(id -u)/com.codexmonitor.web-bridge"
 launchctl kickstart -k "gui/$(id -u)/com.codexmonitor.web-bridge"
 ```
 
-### 14.4 `cloudflared` on macOS
+### 14.4 Tunnel plist
 
-Cloudflare's documented macOS path is simpler than a hand-written plist:
+Create `~/Library/LaunchAgents/com.codexmonitor.cloudflare-bridge-tunnel.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.codexmonitor.cloudflare-bridge-tunnel</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/opt/homebrew/bin/cloudflared</string>
+      <string>tunnel</string>
+      <string>--config</string>
+      <string>/Users/you/.cloudflared/config.yml</string>
+      <string>run</string>
+      <string>codex-monitor-bridge</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/you/workspace/CodexMonitor</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/you/Library/Logs/CodexMonitor/cloudflared.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/you/Library/Logs/CodexMonitor/cloudflared.stderr.log</string>
+  </dict>
+</plist>
+```
+
+Load it:
+
+```bash
+launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.codexmonitor.cloudflare-bridge-tunnel.plist"
+launchctl enable "gui/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel"
+launchctl kickstart -k "gui/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel"
+```
+
+### 14.5 Alternative: `cloudflared service install`
+
+If you prefer Cloudflare's own macOS service wrapper for the tunnel, you can use:
 
 ```bash
 cloudflared service install
@@ -583,14 +645,14 @@ Cloudflare documents the macOS logs here:
 /Library/Logs/com.cloudflare.cloudflared.out.log
 ```
 
-### 14.5 Login-time vs boot-time on macOS
+### 14.6 Login-time vs boot-time on macOS
 
 - `~/Library/LaunchAgents` runs in the logged-in user's session.
 - `/Library/LaunchDaemons` runs at boot, but then every path and permission must also work without an interactive login.
 
 If this machine is a headless server and no user session is guaranteed, prefer boot-time services:
 
-- `sudo cloudflared service install` for `cloudflared`
+- `sudo cloudflared service install` for `cloudflared`, or a root-owned LaunchDaemon if you want to manage all three processes the same way
 - `/Library/LaunchDaemons` for the CodexMonitor daemon and bridge
 
 If this machine is your own logged-in Mac mini or desktop, the user-level `LaunchAgents` examples above are usually simpler.
@@ -600,6 +662,9 @@ If this machine is your own logged-in Mac mini or desktop, the user-level `Launc
 After everything is up:
 
 ```bash
+launchctl print "gui/$(id -u)/com.codexmonitor.daemon" | head
+launchctl print "gui/$(id -u)/com.codexmonitor.web-bridge" | head
+launchctl print "gui/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel" | head
 lsof -nP -iTCP:4732 -sTCP:LISTEN
 lsof -nP -iTCP:8787 -sTCP:LISTEN
 cloudflared tunnel info "$TUNNEL_NAME"
