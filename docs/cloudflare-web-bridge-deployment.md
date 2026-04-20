@@ -175,6 +175,12 @@ Build output:
 $REPO_DIR/dist
 ```
 
+Important:
+
+- Use `npm run build:web` for the browser bundle.
+- Do not replace it with plain `vite build` or the desktop-oriented build flow.
+- If you want to inspect the result locally before deploying, serve `dist/` and confirm the first-run bridge setup UI is present.
+
 ## 7. Install and configure Cloudflare CLI
 
 For this runbook, "Cloudflare CLI" means `wrangler` for Pages deployments.
@@ -319,6 +325,11 @@ Create the DNS route:
 cloudflared tunnel route dns "$TUNNEL_NAME" "$BRIDGE_HOST"
 ```
 
+Hostname note:
+
+- Prefer a single-label hostname such as `bridge.example.com`.
+- If you choose a deeper hostname such as `machine.bridge.example.com`, make sure your certificate coverage already includes that exact hostname. A normal `*.example.com` wildcard does not cover arbitrary deeper levels.
+
 Run the tunnel manually once:
 
 ```bash
@@ -351,11 +362,37 @@ Recommended settings:
 - enable your real identity provider
 - turn on `Instant Auth` if you only allow one provider
 - keep the bridge hostname private and do not add public bypass rules
+- if the frontend is also behind Access, prefer managing `"$WEB_HOST"` and `"$BRIDGE_HOST"` in the same Access application so they stay under one policy set
 
 Important order:
 
 - create the Access app before exposing the route broadly
 - keep `CODEX_MONITOR_WEB_BRIDGE_REQUIRE_CF_ACCESS_HEADER=true` on the bridge
+
+### 11.1 Required CORS setting for browser-to-bridge requests
+
+Because the frontend and bridge use different hostnames, the browser sends a preflight `OPTIONS` request before the real bridge RPC call.
+
+If Access protects `"$BRIDGE_HOST"` and you do not configure preflight handling, the browser will fail with a CORS error before the request ever reaches the bridge.
+
+Recommended setup in the Access application for `"$BRIDGE_HOST"`:
+
+1. Open `Advanced settings > Cross-Origin Resource Sharing (CORS) settings`.
+2. Turn on `Bypass options requests to origin`.
+
+Why this is the recommended choice here:
+
+- the CodexMonitor bridge already returns the required CORS headers
+- letting `OPTIONS` reach the bridge avoids duplicating the same policy in two places
+
+Alternative:
+
+- instead of bypassing `OPTIONS`, you can configure Access to answer preflight requests itself
+- if you choose that route, the Access CORS response must match the bridge policy:
+  - allowed origin: `https://$WEB_HOST`
+  - allowed methods: `POST, OPTIONS`
+  - allowed headers: `content-type, cf-access-jwt-assertion`
+  - allow credentials: enabled
 
 ## 12. Enable Access validation in the tunnel
 
@@ -576,12 +613,29 @@ Then test in a real browser:
 4. Confirm the app can list workspaces and open normal UI without a blank screen.
 5. Confirm bridge switching still works if you have more than one bridge URL configured in the browser.
 
+Preflight check:
+
+```bash
+curl -i -X OPTIONS "https://$BRIDGE_HOST/api/rpc" \
+  -H "Origin: https://$WEB_HOST" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type"
+```
+
+Expected result:
+
+- not `403`
+- response includes `Access-Control-Allow-Origin`
+
 ## 16. Known gotchas
 
 - If `"$WEB_HOST"` is a Pages custom domain and you want Access on it too, attach the custom domain first and only then add the Access app.
+- If the bridge hostname is behind Access, you must also handle preflight `OPTIONS` requests or the browser will fail with a CORS error before the bridge sees the request.
 - If `CODEX_MONITOR_WEB_BRIDGE_ALLOWED_ORIGINS` is too strict, the frontend will fail with CORS errors.
 - If `CODEX_MONITOR_WEB_BRIDGE_REQUIRE_CF_ACCESS_HEADER=true` but `Protect with Access` is not enabled, bridge requests will fail with `401`.
+- If you build with the wrong command and skip `npm run build:web`, the deployed frontend may come up in the wrong runtime and web-only behavior can disappear.
 - If the tunnel DNS record exists but `cloudflared` is not running, users will see a tunnel/DNS failure instead of reaching the bridge.
+- If you use a deeper hostname than your certificate covers, TLS will fail even if the tunnel and DNS record are correct.
 - Do not expose the daemon directly on a public interface. The public hostname should terminate at Cloudflare Tunnel and forward only to the bridge.
 
 ## 17. Official references
@@ -604,5 +658,7 @@ Then test in a real browser:
   `https://developers.cloudflare.com/tunnel/routing/`
 - Cloudflare Access self-hosted applications:
   `https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/`
+- Cloudflare Access CORS and preflight handling:
+  `https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/cors/`
 - `cloudflared` as a macOS service:
   `https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/local-management/as-a-service/macos/`
