@@ -46,6 +46,8 @@ CODEX_MONITOR_WEB_BRIDGE_REQUIRE_CF_ACCESS_HEADER=true
 
 Keep Cloudflare in front of the bridge and keep the daemon private to the server.
 
+Deployment runbook: [docs/cloudflare-web-bridge-deployment.md](docs/cloudflare-web-bridge-deployment.md)
+
 ### Composer & Agent Controls
 
 - Compose with image attachments (picker, drag/drop, paste) and configurable follow-up behavior (`Queue` vs `Steer` while a run is active).
