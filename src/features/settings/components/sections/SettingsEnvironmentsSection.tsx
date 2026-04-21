@@ -8,6 +8,7 @@ type SettingsEnvironmentsSectionProps = {
   environmentWorkspace: WorkspaceInfo | null;
   environmentSaving: boolean;
   environmentError: string | null;
+  readOnlyMode: boolean;
   environmentDraftScript: string;
   environmentSavedScript: string | null;
   environmentDirty: boolean;
@@ -29,6 +30,7 @@ export function SettingsEnvironmentsSection({
   environmentWorkspace,
   environmentSaving,
   environmentError,
+  readOnlyMode,
   environmentDraftScript,
   environmentSavedScript,
   environmentDirty,
@@ -47,12 +49,21 @@ export function SettingsEnvironmentsSection({
   const hasAnyChanges =
     environmentDirty || globalWorktreesFolderDirty || worktreesFolderDirty;
   const hasProjects = mainWorkspaces.length > 0;
+  const fieldsDisabled = !readOnlyMode && environmentSaving;
 
   return (
     <SettingsSection
       title="Environments"
-      subtitle="Configure per-project setup scripts and worktree locations."
+      subtitle={
+        readOnlyMode
+          ? "Inspect per-project setup scripts and worktree locations. Editing remains desktop-only in the web build."
+          : "Configure per-project setup scripts and worktree locations."
+      }
     >
+      {readOnlyMode ? (
+        <div className="settings-help">Read-only in the web build.</div>
+      ) : null}
+
       <div className="settings-field">
         <label className="settings-field-label" htmlFor="settings-global-worktrees-folder">
           Global worktrees root
@@ -69,35 +80,38 @@ export function SettingsEnvironmentsSection({
             value={globalWorktreesFolderDraft}
             onChange={(event) => onSetGlobalWorktreesFolderDraft(event.target.value)}
             placeholder="/path/to/worktrees-root"
-            disabled={environmentSaving}
+            readOnly={readOnlyMode}
+            disabled={fieldsDisabled}
           />
-          <button
-            type="button"
-            className="ghost settings-button-compact"
-            onClick={async () => {
-              try {
-                const { open } = await import("@tauri-apps/plugin-dialog");
-                const selected = await open({
-                  directory: true,
-                  multiple: false,
-                  title: "Select global worktrees root",
-                });
-                if (selected && typeof selected === "string") {
-                  onSetGlobalWorktreesFolderDraft(selected);
+          {readOnlyMode ? null : (
+            <button
+              type="button"
+              className="ghost settings-button-compact"
+              onClick={async () => {
+                try {
+                  const { open } = await import("@tauri-apps/plugin-dialog");
+                  const selected = await open({
+                    directory: true,
+                    multiple: false,
+                    title: "Select global worktrees root",
+                  });
+                  if (selected && typeof selected === "string") {
+                    onSetGlobalWorktreesFolderDraft(selected);
+                  }
+                } catch (error) {
+                  pushErrorToast({
+                    title: "Failed to open folder picker",
+                    message: error instanceof Error ? error.message : String(error),
+                  });
                 }
-              } catch (error) {
-                pushErrorToast({
-                  title: "Failed to open folder picker",
-                  message: error instanceof Error ? error.message : String(error),
-                });
-              }
-            }}
-            disabled={environmentSaving}
-          >
-            Browse
-          </button>
+              }}
+              disabled={environmentSaving}
+            >
+              Browse
+            </button>
+          )}
         </div>
-        {!hasProjects ? (
+        {!hasProjects && !readOnlyMode ? (
           <div className="settings-field-actions">
             <button
               type="button"
@@ -137,7 +151,7 @@ export function SettingsEnvironmentsSection({
               className="settings-select"
               value={environmentWorkspace?.id ?? ""}
               onChange={(event) => onSetEnvironmentWorkspaceId(event.target.value)}
-              disabled={environmentSaving}
+              disabled={fieldsDisabled}
             >
               {mainWorkspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
@@ -164,7 +178,8 @@ export function SettingsEnvironmentsSection({
               onChange={(event) => onSetEnvironmentDraftScript(event.target.value)}
               placeholder="pnpm install"
               spellCheck={false}
-              disabled={environmentSaving}
+              readOnly={readOnlyMode}
+              disabled={fieldsDisabled}
             />
             <div className="settings-field-actions">
               <button
@@ -193,24 +208,28 @@ export function SettingsEnvironmentsSection({
               >
                 Copy
               </button>
-              <button
-                type="button"
-                className="ghost settings-button-compact"
-                onClick={() => onSetEnvironmentDraftScript(environmentSavedScript ?? "")}
-                disabled={environmentSaving || !environmentDirty}
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                className="primary settings-button-compact"
-                onClick={() => {
-                  void onSaveEnvironmentSetup();
-                }}
-                disabled={environmentSaving || !hasAnyChanges}
-              >
-                {environmentSaving ? "Saving..." : "Save"}
-              </button>
+              {readOnlyMode ? null : (
+                <>
+                  <button
+                    type="button"
+                    className="ghost settings-button-compact"
+                    onClick={() => onSetEnvironmentDraftScript(environmentSavedScript ?? "")}
+                    disabled={environmentSaving || !environmentDirty}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    className="primary settings-button-compact"
+                    onClick={() => {
+                      void onSaveEnvironmentSetup();
+                    }}
+                    disabled={environmentSaving || !hasAnyChanges}
+                  >
+                    {environmentSaving ? "Saving..." : "Save"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -230,33 +249,36 @@ export function SettingsEnvironmentsSection({
                 value={worktreesFolderDraft}
                 onChange={(event) => onSetWorktreesFolderDraft(event.target.value)}
                 placeholder="/path/to/worktrees"
-                disabled={environmentSaving}
+                readOnly={readOnlyMode}
+                disabled={fieldsDisabled}
               />
-              <button
-                type="button"
-                className="ghost settings-button-compact"
-                onClick={async () => {
-                  try {
-                    const { open } = await import("@tauri-apps/plugin-dialog");
-                    const selected = await open({
-                      directory: true,
-                      multiple: false,
-                      title: "Select worktrees folder",
-                    });
-                    if (selected && typeof selected === "string") {
-                      onSetWorktreesFolderDraft(selected);
+              {readOnlyMode ? null : (
+                <button
+                  type="button"
+                  className="ghost settings-button-compact"
+                  onClick={async () => {
+                    try {
+                      const { open } = await import("@tauri-apps/plugin-dialog");
+                      const selected = await open({
+                        directory: true,
+                        multiple: false,
+                        title: "Select worktrees folder",
+                      });
+                      if (selected && typeof selected === "string") {
+                        onSetWorktreesFolderDraft(selected);
+                      }
+                    } catch (error) {
+                      pushErrorToast({
+                        title: "Failed to open folder picker",
+                        message: error instanceof Error ? error.message : String(error),
+                      });
                     }
-                  } catch (error) {
-                    pushErrorToast({
-                      title: "Failed to open folder picker",
-                      message: error instanceof Error ? error.message : String(error),
-                    });
-                  }
-                }}
-                disabled={environmentSaving}
-              >
-                Browse
-              </button>
+                  }}
+                  disabled={environmentSaving}
+                >
+                  Browse
+                </button>
+              )}
             </div>
           </div>
         </>

@@ -152,6 +152,9 @@ export function useSettingsViewOrchestration({
   const featuresReadOnlyWebMode = Boolean(
     webRuntime && runtimeCapabilities?.operations.featureFlags,
   );
+  const environmentsReadOnlyWebMode = Boolean(
+    webRuntime && isSectionEnabled("environments"),
+  );
 
   const {
     openAppDrafts,
@@ -265,7 +268,10 @@ export function useSettingsViewOrchestration({
       onToggleAutomaticAppUpdateChecks,
     },
     projectsSectionProps,
-    environmentsSectionProps,
+    environmentsSectionProps: {
+      ...environmentsSectionProps,
+      readOnlyMode: environmentsReadOnlyWebMode,
+    },
     displaySectionProps,
     composerSectionProps: {
       appSettings,

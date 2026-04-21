@@ -937,7 +937,7 @@ describe("SettingsView web build", () => {
     expect(screen.getByRole("button", { name: "Git" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "About" })).toBeTruthy();
 
-    expect(screen.queryByRole("button", { name: "Environments" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Environments" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Dictation" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Shortcuts" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Open in" })).toBeNull();
@@ -1708,6 +1708,71 @@ describe("SettingsView Environments", () => {
         delete (navigator as any).clipboard;
       }
     }
+  });
+
+  it("shows a read-only Environments section in the web build", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+
+    renderEnvironmentsSection({
+      appSettings: { globalWorktreesFolder: "I:/existing-worktrees" },
+      groupedWorkspaces: [
+        {
+          id: null,
+          name: "Ungrouped",
+          workspaces: [
+            workspace({
+              id: "w1",
+              name: "Project One",
+              settings: {
+                sidebarCollapsed: false,
+                worktreeSetupScript: "echo one",
+                worktreesFolder: "I:/project-one-worktrees",
+              },
+            }),
+            workspace({
+              id: "w2",
+              name: "Project Two",
+              settings: {
+                sidebarCollapsed: false,
+                worktreeSetupScript: "echo two",
+                worktreesFolder: "I:/project-two-worktrees",
+              },
+            }),
+          ],
+        },
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: "Environments" })).toBeTruthy();
+    expect(screen.getByText("Read-only in the web build.")).toBeTruthy();
+
+    const globalRootInput = screen.getByLabelText("Global worktrees root") as HTMLInputElement;
+    const setupScriptTextarea = screen.getByPlaceholderText(
+      "pnpm install",
+    ) as HTMLTextAreaElement;
+    const worktreesFolderInput = screen.getByLabelText("Worktrees folder") as HTMLInputElement;
+    const projectSelect = screen.getByLabelText("Project") as HTMLSelectElement;
+
+    expect(globalRootInput.readOnly).toBe(true);
+    expect(setupScriptTextarea.readOnly).toBe(true);
+    expect(worktreesFolderInput.readOnly).toBe(true);
+    expect(projectSelect.disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Browse" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Copy" })).toBeTruthy();
+
+    fireEvent.change(projectSelect, { target: { value: "w2" } });
+
+    await waitFor(() => {
+      expect(
+        (screen.getByPlaceholderText("pnpm install") as HTMLTextAreaElement).value,
+      ).toBe("echo two");
+      expect((screen.getByLabelText("Worktrees folder") as HTMLInputElement).value).toBe(
+        "I:/project-two-worktrees",
+      );
+    });
   });
 });
 

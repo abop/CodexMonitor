@@ -77,6 +77,7 @@ type SettingsWebRuntimeCapabilities = Pick<WebRuntimeCapabilities, "files" | "op
 
 const SETTINGS_WEB_BASE_SECTION_IDS = [
   "projects",
+  "environments",
   "display",
   "composer",
   "git",

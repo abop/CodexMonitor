@@ -25,6 +25,7 @@ This document describes the current capability split between the desktop app and
 - Home usage snapshot when the connected web bridge advertises `operations.usageSnapshot`.
 - Codex doctor report in the reduced web Codex settings section when the connected bridge advertises `operations.doctorReport`.
 - Read-only `Features` settings visibility when the connected web bridge advertises `operations.featureFlags`.
+- Read-only `Environments` settings visibility for remote worktree roots and per-project setup scripts/worktrees folders.
 
 ## Desktop-Only Workflows
 
@@ -85,8 +86,9 @@ This document describes the current capability split between the desktop app and
 
 ## Web-Only Runtime Differences
 
-- Web settings only surface `Projects`, `Display`, `Composer`, `Git`, and `About` by default.
-- Hidden in web settings: `Environments`, `Dictation`, `Shortcuts`, `Open in`, `Server`, and `Agents`. `Codex` and `Features` appear only when the connected bridge advertises the matching read-only capabilities.
+- Web settings surface `Projects`, `Environments`, `Display`, `Composer`, `Git`, and `About` by default.
+- `Environments` remains a reduced read-only view in web for inspecting the shared global worktrees root plus per-project worktree setup script and worktrees folder values.
+- Hidden in web settings: `Dictation`, `Shortcuts`, `Open in`, `Server`, and `Agents`. `Codex` and `Features` appear only when the connected bridge advertises the matching read-only capabilities.
 - The `Codex` settings section appears in web only when the connected bridge advertises global file visibility or doctor-report visibility, and it remains a reduced read-only view for runtime summary, diagnostics, and files.
 - The `Features` settings section appears in web only when the connected bridge advertises `operations.featureFlags`, and it remains a reduced read-only view of Codex-returned feature states.
 - Web bridge selection lives in the sidebar rail and is web-only.
@@ -103,7 +105,7 @@ This document describes the current capability split between the desktop app and
 - Web realtime event surface: `src/services/events.ts`
 - Home usage orchestration and capability-aware empty state: `src/features/app/orchestration/useWorkspaceOrchestration.ts`, `src/features/home/components/HomeUsageSection.tsx`
 - Account-switch capability gating and auth flow: `src/features/app/hooks/useWebRuntimeCapabilities.ts`, `src/features/app/hooks/useAccountSwitching.ts`, `src/features/app/components/Sidebar.tsx`
-- Web settings section filter and capability-aware Codex visibility: `src/features/settings/components/settingsViewConstants.ts`
+- Web settings section filter and read-only environment/Codex visibility: `src/features/settings/components/settingsViewConstants.ts`, `src/features/settings/components/sections/SettingsEnvironmentsSection.tsx`
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
 - Workspace `AGENTS.md` runtime gating and web read-only behavior: `src/features/workspaces/components/WorkspaceHome.tsx`
 - Global Codex file web read-only behavior: `src/features/settings/components/sections/SettingsCodexSection.tsx`
