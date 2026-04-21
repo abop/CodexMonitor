@@ -294,6 +294,10 @@ mod tests {
         assert!(methods.contains(&"fork_thread"));
         assert!(capabilities.thread_controls.compact);
         assert!(methods.contains(&"compact_thread"));
+        assert!(capabilities.thread_controls.review);
+        assert!(methods.contains(&"start_review"));
+        assert!(capabilities.thread_controls.mcp);
+        assert!(methods.contains(&"list_mcp_server_status"));
     }
 
     #[test]
@@ -380,6 +384,59 @@ mod tests {
                         StatusCode::OK,
                         "{method} should be allowed"
                     );
+                    assert_eq!(server.last_method().await, method);
+                    assert_eq!(server.last_params().await, params);
+                }
+            });
+    }
+
+    #[test]
+    fn forwards_review_and_mcp_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let requests = [
+                    (
+                        "start_review",
+                        json!({
+                            "workspaceId": "ws-1",
+                            "threadId": "thread-1",
+                            "target": { "type": "uncommittedChanges" },
+                            "delivery": "detached"
+                        }),
+                    ),
+                    (
+                        "list_mcp_server_status",
+                        json!({
+                            "workspaceId": "ws-1",
+                            "cursor": null,
+                            "limit": null
+                        }),
+                    ),
+                ];
+
+                for (method, params) in requests {
+                    let (client, mut server) = test_client_pair().await;
+                    server.enqueue_result(1, json!({})).await;
+                    let app = build_router(test_state_with_client(client));
+                    let response = app
+                        .oneshot(
+                            Request::builder()
+                                .method("POST")
+                                .uri("/api/rpc")
+                                .header("content-type", "application/json")
+                                .header("cf-access-jwt-assertion", "present")
+                                .body(Body::from(
+                                    json!({ "method": method, "params": params }).to_string(),
+                                ))
+                                .unwrap(),
+                        )
+                        .await
+                        .unwrap();
+
+                    assert_eq!(response.status(), StatusCode::OK, "{method} should be allowed");
                     assert_eq!(server.last_method().await, method);
                     assert_eq!(server.last_params().await, params);
                 }
