@@ -851,6 +851,7 @@ describe("useThreadMessaging telemetry", () => {
       await result.current.startMcp("/mcp");
     });
 
+    expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith({
       type: "addAssistantMessage",
       threadId: "thread-1",
@@ -905,6 +906,7 @@ describe("useThreadMessaging telemetry", () => {
       await result.current.startMcp("/mcp");
     });
 
+    expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith({
       type: "addAssistantMessage",
       threadId: "thread-1",
