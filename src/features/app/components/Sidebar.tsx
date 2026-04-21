@@ -117,6 +117,7 @@ type SidebarProps = {
   onRefreshAllThreads: () => void;
   activeWorkspaceId: string | null;
   activeThreadId: string | null;
+  accountSwitcherEnabled?: boolean;
   userInputRequests?: RequestUserInputRequest[];
   accountRateLimits: RateLimitSnapshot | null;
   usageShowRemaining: boolean;
@@ -178,6 +179,7 @@ export const Sidebar = memo(function Sidebar({
   onRefreshAllThreads,
   activeWorkspaceId,
   activeThreadId,
+  accountSwitcherEnabled = true,
   userInputRequests = [],
   accountRateLimits,
   usageShowRemaining,
@@ -361,7 +363,7 @@ export const Sidebar = memo(function Sidebar({
       ? "API key"
       : "Sign in to Codex";
   const accountActionLabel = accountEmail ? "Switch account" : "Sign in";
-  const showAccountSwitcher = Boolean(activeWorkspaceId);
+  const showAccountSwitcher = Boolean(activeWorkspaceId) && accountSwitcherEnabled;
   const accountSwitchDisabled = accountSwitching || !activeWorkspaceId;
   const accountCancelDisabled = !accountSwitching || !activeWorkspaceId;
   const refreshDisabled = workspaces.length === 0 || workspaces.every((workspace) => !workspace.connected);

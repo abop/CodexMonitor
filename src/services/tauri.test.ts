@@ -80,7 +80,9 @@ import {
   renameWorktree,
   renameWorktreeUpstream,
   runCodexDoctor,
+  runCodexLogin,
   applyWorktreeChanges,
+  cancelCodexLogin,
   setWorkspaceRuntimeCodexArgs,
   readWorkspaceFile,
 } from "./tauri";
@@ -1886,6 +1888,64 @@ describe("tauri invoke wrappers", () => {
             text: "continue",
             images: ["data:image/png;base64,abc"],
           },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("routes runCodexLogin through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: { loginId: "login-1", authUrl: "https://example.com/auth" },
+        }),
+      }),
+    );
+
+    await expect(runCodexLogin("ws-4")).resolves.toEqual({
+      loginId: "login-1",
+      authUrl: "https://example.com/auth",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "codex_login",
+          params: { workspaceId: "ws-4" },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("routes cancelCodexLogin through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { canceled: true, status: "canceled" } }),
+      }),
+    );
+
+    await expect(cancelCodexLogin("ws-4")).resolves.toEqual({
+      canceled: true,
+      status: "canceled",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "codex_login_cancel",
+          params: { workspaceId: "ws-4" },
         }),
       }),
     );

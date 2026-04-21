@@ -866,15 +866,13 @@ export async function getAccountInfo(workspaceId: string) {
 }
 
 export async function runCodexLogin(workspaceId: string) {
-  requireDesktopRuntime("Codex login");
-  return invoke<{ loginId: string; authUrl: string; raw?: unknown }>("codex_login", {
+  return invokeSupportedRpc<{ loginId: string; authUrl: string; raw?: unknown }>("codex_login", {
     workspaceId,
   });
 }
 
 export async function cancelCodexLogin(workspaceId: string) {
-  requireDesktopRuntime("Codex login");
-  return invoke<{ canceled: boolean; status?: string; raw?: unknown }>(
+  return invokeSupportedRpc<{ canceled: boolean; status?: string; raw?: unknown }>(
     "codex_login_cancel",
     { workspaceId },
   );

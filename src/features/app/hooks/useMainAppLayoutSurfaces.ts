@@ -60,6 +60,7 @@ type UseMainAppLayoutSurfacesArgs = {
   activeAccount: SidebarProps["accountInfo"];
   homeRateLimits: LayoutNodesOptions["primary"]["homeProps"]["accountRateLimits"];
   homeAccount: LayoutNodesOptions["primary"]["homeProps"]["accountInfo"];
+  accountSwitcherEnabled: SidebarProps["accountSwitcherEnabled"];
   accountSwitching: SidebarProps["accountSwitching"];
   onSwitchAccount: SidebarProps["onSwitchAccount"];
   onCancelSwitchAccount: SidebarProps["onCancelSwitchAccount"];
@@ -264,6 +265,7 @@ function buildPrimarySurface({
   sidebarAccount,
   homeRateLimits,
   homeAccount,
+  accountSwitcherEnabled,
   accountSwitching,
   onSwitchAccount,
   onCancelSwitchAccount,
@@ -403,6 +405,7 @@ function buildPrimarySurface({
       accountRateLimits: sidebarRateLimits,
       usageShowRemaining: appSettings.usageShowRemaining,
       accountInfo: sidebarAccount,
+      accountSwitcherEnabled,
       onSwitchAccount,
       onCancelSwitchAccount,
       accountSwitching,
@@ -984,6 +987,7 @@ export function useMainAppLayoutSurfaces({
   activeAccount,
   homeRateLimits,
   homeAccount,
+  accountSwitcherEnabled,
   accountSwitching,
   onSwitchAccount,
   onCancelSwitchAccount,
@@ -1147,6 +1151,7 @@ export function useMainAppLayoutSurfaces({
     activeAccount,
     homeRateLimits,
     homeAccount,
+    accountSwitcherEnabled,
     accountSwitching,
     onSwitchAccount,
     onCancelSwitchAccount,

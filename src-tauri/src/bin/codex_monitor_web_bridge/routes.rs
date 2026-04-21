@@ -365,6 +365,16 @@ mod tests {
     }
 
     #[test]
+    fn advertises_account_login_operation_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.operations.account_login);
+        assert!(methods.contains(&"codex_login"));
+        assert!(methods.contains(&"codex_login_cancel"));
+    }
+
+    #[test]
     fn rejects_methods_outside_the_allowlist() {
         tokio::runtime::Builder::new_current_thread()
             .enable_all()

@@ -1055,6 +1055,7 @@ describe("SettingsView web build", () => {
             usageSnapshot: true,
             doctorReport: false,
             featureFlags: false,
+            accountLogin: false,
           },
         }}
       />,
@@ -1138,6 +1139,7 @@ describe("SettingsView web build", () => {
             usageSnapshot: true,
             doctorReport: false,
             featureFlags: false,
+            accountLogin: false,
           },
         }}
       />,
@@ -1240,6 +1242,7 @@ describe("SettingsView web build", () => {
             usageSnapshot: true,
             doctorReport: true,
             featureFlags: false,
+            accountLogin: false,
           },
         }}
       />,
@@ -1362,6 +1365,7 @@ describe("SettingsView web build", () => {
             usageSnapshot: true,
             doctorReport: false,
             featureFlags: true,
+            accountLogin: false,
           },
         }}
       />,

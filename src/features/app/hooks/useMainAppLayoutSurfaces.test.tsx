@@ -55,6 +55,7 @@ function buildArgs(
     activeAccount: null,
     homeRateLimits: null,
     homeAccount: null,
+    accountSwitcherEnabled: true,
     accountSwitching: false,
     onSwitchAccount: vi.fn(),
     onCancelSwitchAccount: vi.fn(),
@@ -348,6 +349,15 @@ function buildArgs(
 }
 
 describe("useMainAppLayoutSurfaces", () => {
+  it("passes account switcher capability through to sidebar props", () => {
+    const args = buildArgs(true);
+    args.accountSwitcherEnabled = false;
+
+    const surfaces = useMainAppLayoutSurfaces(args);
+
+    expect(surfaces.primary.sidebarProps.accountSwitcherEnabled).toBe(false);
+  });
+
   it("omits the git review entry point when review capability is unavailable", () => {
     const surfaces = useMainAppLayoutSurfaces(buildArgs(false));
 

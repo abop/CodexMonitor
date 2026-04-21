@@ -1633,6 +1633,7 @@ export default function MainApp() {
     activeAccount,
     homeRateLimits,
     homeAccount,
+    accountSwitcherEnabled: runtimeCapabilities.operations.accountLogin,
     accountSwitching,
     onSwitchAccount: handleSwitchAccount,
     onCancelSwitchAccount: handleCancelSwitchAccount,

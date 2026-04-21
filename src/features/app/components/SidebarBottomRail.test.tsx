@@ -56,6 +56,14 @@ describe("SidebarBottomRail", () => {
     expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("renders the account switcher in web runtime when the parent enables it", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    render(<SidebarBottomRail {...buildProps()} />);
+
+    expect(screen.getByRole("button", { name: "Account" })).toBeTruthy();
+  });
+
   it("hides the web bridge switcher outside the web runtime", () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "desktop");
 

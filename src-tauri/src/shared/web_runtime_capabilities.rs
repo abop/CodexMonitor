@@ -66,6 +66,8 @@ const BRIDGE_ALLOWED_RPC_METHODS: &[&str] = &[
     "prompts_move",
     "account_rate_limits",
     "account_read",
+    "codex_login",
+    "codex_login_cancel",
     "respond_to_server_request",
     "remember_approval_rule",
 ];
@@ -105,6 +107,7 @@ pub(crate) struct OperationsCapabilities {
     pub(crate) usage_snapshot: bool,
     pub(crate) doctor_report: bool,
     pub(crate) feature_flags: bool,
+    pub(crate) account_login: bool,
 }
 
 pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
@@ -128,6 +131,7 @@ pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
             usage_snapshot: true,
             doctor_report: true,
             feature_flags: true,
+            account_login: true,
         },
     }
 }

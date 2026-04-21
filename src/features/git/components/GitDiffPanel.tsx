@@ -4,12 +4,12 @@ import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask } from "@tauri-apps/plugin-dialog";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import FileText from "lucide-react/dist/esm/icons/file-text";
 import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import ScrollText from "lucide-react/dist/esm/icons/scroll-text";
 import Search from "lucide-react/dist/esm/icons/search";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { openExternalUrl } from "../../../services/externalLinks";
 import { isWebRuntime } from "../../../services/runtime";
 import type { PanelTabId } from "../../layout/components/PanelTabs";
 import { PanelShell } from "../../layout/components/PanelShell";
@@ -328,7 +328,7 @@ export function GitDiffPanel({
         const openItem = await MenuItem.new({
           text: "Open on GitHub",
           action: async () => {
-            await openUrl(`${githubBaseUrl}/commit/${entry.sha}`);
+            await openExternalUrl(`${githubBaseUrl}/commit/${entry.sha}`);
           },
         });
         items.push(openItem);
@@ -350,7 +350,7 @@ export function GitDiffPanel({
       const openItem = await MenuItem.new({
         text: "Open on GitHub",
         action: async () => {
-          await openUrl(pullRequest.url);
+          await openExternalUrl(pullRequest.url);
         },
       });
 

@@ -3,8 +3,8 @@ import Settings from "lucide-react/dist/esm/icons/settings";
 import User from "lucide-react/dist/esm/icons/user";
 import X from "lucide-react/dist/esm/icons/x";
 import { useEffect } from "react";
-import { isWebRuntime } from "@services/runtime";
 import { WebBridgeSwitcher } from "@/features/webBridge";
+import { isWebRuntime } from "@services/runtime";
 import {
   MenuTrigger,
   PopoverSurface,

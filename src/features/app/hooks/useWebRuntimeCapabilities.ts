@@ -28,6 +28,7 @@ const DESKTOP_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
     usageSnapshot: true,
     doctorReport: true,
     featureFlags: true,
+    accountLogin: true,
   },
 };
 
@@ -51,6 +52,7 @@ const WEB_SAFE_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
     usageSnapshot: false,
     doctorReport: false,
     featureFlags: false,
+    accountLogin: false,
   },
 };
 

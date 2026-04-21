@@ -22,6 +22,7 @@ export type WebRuntimeCapabilities = {
     usageSnapshot: boolean;
     doctorReport: boolean;
     featureFlags: boolean;
+    accountLogin: boolean;
   };
 };
 
@@ -74,7 +75,8 @@ function isWebRuntimeCapabilities(
     isBoolean(files.globalConfig) &&
     isBoolean(operations.usageSnapshot) &&
     isBoolean(operations.doctorReport) &&
-    isBoolean(operations.featureFlags)
+    isBoolean(operations.featureFlags) &&
+    isBoolean(operations.accountLogin)
   );
 }
 

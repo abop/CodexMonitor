@@ -21,7 +21,7 @@ This document describes the current capability split between the desktop app and
 - Global `AGENTS.md` and global `config.toml` preview and refresh in the web Codex settings section when the connected bridge advertises `files.globalAgents` / `files.globalConfig`.
 - Read-only remote `codexBin` / `codexArgs` runtime summary in the reduced web Codex settings section from shared app settings.
 - Prompt list, create, update, delete, and move.
-- Models, collaboration modes, skills, apps, account info, and rate-limit reads.
+- Models, collaboration modes, skills, apps, account info, rate-limit reads, and account login/switch when the connected bridge advertises `operations.accountLogin`.
 - Home usage snapshot when the connected web bridge advertises `operations.usageSnapshot`.
 - Codex doctor report in the reduced web Codex settings section when the connected bridge advertises `operations.doctorReport`.
 - Read-only `Features` settings visibility when the connected web bridge advertises `operations.featureFlags`.
@@ -63,7 +63,6 @@ This document describes the current capability split between the desktop app and
 
 - Dictation model management and live dictation.
 - Terminal sessions.
-- Codex login and account switch flow.
 - Custom-bin/custom-args Codex doctor. Web currently supports a read-only report using the server's current config only when `operations.doctorReport` is available.
 - Codex update.
 - Experimental feature flag management.
@@ -95,7 +94,7 @@ This document describes the current capability split between the desktop app and
 
 ## Current Shared-UI Gaps
 
-- The sidebar account switcher can render in shared UI, but the login and switch flow still depends on desktop-only commands.
+- None currently.
 
 ## Source of Truth
 
@@ -103,6 +102,7 @@ This document describes the current capability split between the desktop app and
 - Bridge capability catalog: `src-tauri/src/shared/web_runtime_capabilities.rs`
 - Web realtime event surface: `src/services/events.ts`
 - Home usage orchestration and capability-aware empty state: `src/features/app/orchestration/useWorkspaceOrchestration.ts`, `src/features/home/components/HomeUsageSection.tsx`
+- Account-switch capability gating and auth flow: `src/features/app/hooks/useWebRuntimeCapabilities.ts`, `src/features/app/hooks/useAccountSwitching.ts`, `src/features/app/components/Sidebar.tsx`
 - Web settings section filter and capability-aware Codex visibility: `src/features/settings/components/settingsViewConstants.ts`
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
 - Workspace `AGENTS.md` runtime gating and web read-only behavior: `src/features/workspaces/components/WorkspaceHome.tsx`

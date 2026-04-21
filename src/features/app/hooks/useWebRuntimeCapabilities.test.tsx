@@ -101,6 +101,7 @@ describe("useWebRuntimeCapabilities", () => {
         usageSnapshot: true,
         doctorReport: false,
         featureFlags: false,
+        accountLogin: false,
       },
     });
 
@@ -126,6 +127,7 @@ describe("useWebRuntimeCapabilities", () => {
       usageSnapshot: true,
       doctorReport: false,
       featureFlags: false,
+      accountLogin: false,
     });
   });
 
@@ -161,6 +163,7 @@ describe("useWebRuntimeCapabilities", () => {
         usageSnapshot: false,
         doctorReport: false,
         featureFlags: false,
+        accountLogin: false,
       },
     });
 
@@ -257,6 +260,7 @@ describe("useWebRuntimeCapabilities", () => {
           usageSnapshot: false,
           doctorReport: false,
           featureFlags: false,
+          accountLogin: false,
         },
       });
     });
@@ -290,6 +294,7 @@ describe("useWebRuntimeCapabilities", () => {
           usageSnapshot: false,
           doctorReport: false,
           featureFlags: false,
+          accountLogin: false,
         },
       });
     });

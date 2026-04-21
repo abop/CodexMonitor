@@ -122,6 +122,7 @@ describe("bridgeRpc", () => {
           usageSnapshot: false,
           doctorReport: false,
           featureFlags: false,
+          accountLogin: true,
         },
       }),
     });
@@ -136,6 +137,9 @@ describe("bridgeRpc", () => {
           steer: true,
           fork: true,
           compact: true,
+        }),
+        operations: expect.objectContaining({
+          accountLogin: true,
         }),
       }),
     );
@@ -175,6 +179,7 @@ describe("bridgeRpc", () => {
             usageSnapshot: false,
             doctorReport: false,
             featureFlags: false,
+            accountLogin: false,
           },
         }),
       }),
@@ -211,6 +216,7 @@ describe("bridgeRpc", () => {
             usageSnapshot: false,
             doctorReport: false,
             featureFlags: false,
+            accountLogin: false,
           },
         }),
       }),
