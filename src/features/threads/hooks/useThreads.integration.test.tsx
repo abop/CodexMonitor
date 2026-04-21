@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { WorkspaceInfo } from "@/types";
+import type { ConversationItem, WorkspaceInfo } from "@/types";
 import type { useAppServerEvents } from "@app/hooks/useAppServerEvents";
 import { useThreadRows } from "@app/hooks/useThreadRows";
 import {
@@ -24,6 +24,9 @@ import { useQueuedSend } from "./useQueuedSend";
 import { useThreads } from "./useThreads";
 
 type AppServerHandlers = Parameters<typeof useAppServerEvents>[0];
+type AssistantMessage = Extract<ConversationItem, { kind: "message" }> & {
+  role: "assistant";
+};
 
 let handlers: AppServerHandlers | null = null;
 
@@ -64,6 +67,15 @@ const workspace: WorkspaceInfo = {
   connected: true,
   settings: { sidebarCollapsed: false },
 };
+
+function getAssistantMessages(
+  items: ConversationItem[],
+): AssistantMessage[] {
+  return items.filter(
+    (item): item is AssistantMessage =>
+      item.kind === "message" && item.role === "assistant",
+  );
+}
 
 describe("useThreads UX integration", () => {
   let now: number;
@@ -987,8 +999,8 @@ describe("useThreads UX integration", () => {
       });
     });
 
-    const parentAssistantMessagesBefore = result.current.activeItems.filter(
-      (item) => item.kind === "message" && item.role === "assistant",
+    const parentAssistantMessagesBefore = getAssistantMessages(
+      result.current.activeItems,
     );
 
     await act(async () => {
@@ -1009,8 +1021,8 @@ describe("useThreads UX integration", () => {
       expect(result.current.activeThreadId).toBe("thread-parent");
     });
 
-    const parentAssistantMessagesAfter = result.current.activeItems.filter(
-      (item) => item.kind === "message" && item.role === "assistant",
+    const parentAssistantMessagesAfter = getAssistantMessages(
+      result.current.activeItems,
     );
     expect(parentAssistantMessagesAfter).toHaveLength(
       parentAssistantMessagesBefore.length,
@@ -1056,18 +1068,14 @@ describe("useThreads UX integration", () => {
       });
     });
 
-    const assistantMessagesBefore = result.current.activeItems.filter(
-      (item) => item.kind === "message" && item.role === "assistant",
-    );
+    const assistantMessagesBefore = getAssistantMessages(result.current.activeItems);
 
     await act(async () => {
       await result.current.startCompact("/compact");
     });
 
     expect(compactThread).toHaveBeenCalledWith("ws-1", "thread-compact");
-    const assistantMessagesAfter = result.current.activeItems.filter(
-      (item) => item.kind === "message" && item.role === "assistant",
-    );
+    const assistantMessagesAfter = getAssistantMessages(result.current.activeItems);
     expect(assistantMessagesAfter).toHaveLength(assistantMessagesBefore.length);
     expect(
       assistantMessagesAfter.some(
@@ -1132,9 +1140,7 @@ describe("useThreads UX integration", () => {
       [],
     );
     expect(sendUserMessageService).not.toHaveBeenCalled();
-    const assistantMessagesAfter = result.current.activeItems.filter(
-      (item) => item.kind === "message" && item.role === "assistant",
-    );
+    const assistantMessagesAfter = getAssistantMessages(result.current.activeItems);
     expect(assistantMessagesAfter).toHaveLength(1);
     expect(assistantMessagesAfter[0]?.text).toBe("Existing steer note");
   });
