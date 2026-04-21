@@ -42,6 +42,8 @@ import { getSubagentDescendantThreadIds } from "@threads/utils/subagentTree";
 
 type UseThreadsOptions = {
   activeWorkspace: WorkspaceInfo | null;
+  reviewEnabled?: boolean;
+  mcpEnabled?: boolean;
   onWorkspaceConnected: (id: string) => void;
   onDebug?: (entry: DebugEntry) => void;
   ensureWorkspaceRuntimeCodexArgs?: (
@@ -76,6 +78,8 @@ const CASCADE_ARCHIVE_SKIP_TTL_MS = 120_000;
 
 export function useThreads({
   activeWorkspace,
+  reviewEnabled = true,
+  mcpEnabled = true,
   onWorkspaceConnected,
   onDebug,
   ensureWorkspaceRuntimeCodexArgs,
@@ -761,6 +765,8 @@ export function useThreads({
   } = useThreadMessaging({
     activeWorkspace,
     activeThreadId,
+    reviewEnabled,
+    mcpEnabled,
     accessMode,
     model,
     effort,

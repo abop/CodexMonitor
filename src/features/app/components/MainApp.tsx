@@ -424,6 +424,7 @@ export default function MainApp() {
     selectedEffort: resolvedEffort,
     resolvedModel,
   });
+  const runtimeCapabilities = useWebRuntimeCapabilities();
 
   const {
     setActiveThreadId,
@@ -497,6 +498,8 @@ export default function MainApp() {
     refreshAccountRateLimits,
   } = useThreads({
     activeWorkspace,
+    reviewEnabled: runtimeCapabilities.threadControls.review,
+    mcpEnabled: runtimeCapabilities.threadControls.mcp,
     onWorkspaceConnected: markWorkspaceConnected,
     onDebug: addDebugEntry,
     model: resolvedModel,
@@ -1094,7 +1097,6 @@ export default function MainApp() {
   const activePlan = activeThreadId
     ? planByThread[activeThreadId] ?? null
     : null;
-  const runtimeCapabilities = useWebRuntimeCapabilities();
   const hasActivePlan = Boolean(
     activePlan && (activePlan.steps.length > 0 || activePlan.explanation)
   );

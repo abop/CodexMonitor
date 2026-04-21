@@ -46,6 +46,8 @@ import {
 type UseThreadMessagingOptions = {
   activeWorkspace: WorkspaceInfo | null;
   activeThreadId: string | null;
+  reviewEnabled?: boolean;
+  mcpEnabled?: boolean;
   accessMode?: "read-only" | "current" | "full-access";
   model?: string | null;
   effort?: string | null;
@@ -100,6 +102,8 @@ type UseThreadMessagingOptions = {
 export function useThreadMessaging({
   activeWorkspace,
   activeThreadId,
+  reviewEnabled = true,
+  mcpEnabled = true,
   accessMode,
   model,
   effort,
@@ -514,8 +518,42 @@ export function useThreadMessaging({
     setActiveTurnId,
   ]);
 
+  const dispatchLocalAssistantMessage = useCallback(
+    async (text: string): Promise<boolean> => {
+      if (!activeWorkspace) {
+        return false;
+      }
+      const threadId = activeThreadId ?? (await ensureThreadForActiveWorkspace());
+      if (!threadId) {
+        return false;
+      }
+
+      const timestamp = Date.now();
+      recordThreadActivity(activeWorkspace.id, threadId, timestamp);
+      dispatch({
+        type: "addAssistantMessage",
+        threadId,
+        text,
+      });
+      safeMessageActivity();
+      return true;
+    },
+    [
+      activeThreadId,
+      activeWorkspace,
+      dispatch,
+      ensureThreadForActiveWorkspace,
+      recordThreadActivity,
+      safeMessageActivity,
+    ],
+  );
+
   const startReviewTarget = useCallback(
     async (target: ReviewTarget, workspaceIdOverride?: string): Promise<boolean> => {
+      if (!reviewEnabled) {
+        await dispatchLocalAssistantMessage("Review is unavailable in this runtime.");
+        return false;
+      }
       const workspaceId = workspaceIdOverride ?? activeWorkspace?.id ?? null;
       if (!workspaceId) {
         return false;
@@ -603,6 +641,7 @@ export function useThreadMessaging({
     },
     [
       activeWorkspace,
+      dispatchLocalAssistantMessage,
       ensureThreadForActiveWorkspace,
       ensureThreadForWorkspace,
       getCustomName,
@@ -612,6 +651,7 @@ export function useThreadMessaging({
       pushThreadErrorMessage,
       safeMessageActivity,
       setActiveTurnId,
+      reviewEnabled,
       reviewDeliveryMode,
       registerDetachedReviewChild,
       renameThread,
@@ -652,6 +692,10 @@ export function useThreadMessaging({
       if (!activeWorkspace || !text.trim()) {
         return;
       }
+      if (!reviewEnabled) {
+        await dispatchLocalAssistantMessage("Review is unavailable in this runtime.");
+        return;
+      }
       const trimmed = text.trim();
       const rest = trimmed.replace(/^\/review\b/i, "").trim();
       if (!rest) {
@@ -664,7 +708,9 @@ export function useThreadMessaging({
     },
     [
       activeWorkspace,
+      dispatchLocalAssistantMessage,
       openReviewPrompt,
+      reviewEnabled,
       startReviewTarget,
     ],
   );
@@ -773,6 +819,12 @@ export function useThreadMessaging({
 
   const startMcp = useCallback(
     async (_text: string) => {
+      if (!mcpEnabled) {
+        await dispatchLocalAssistantMessage(
+          "MCP tools:\n- MCP status is unavailable in this runtime.",
+        );
+        return;
+      }
       if (!activeWorkspace) {
         return;
       }
@@ -816,8 +868,10 @@ export function useThreadMessaging({
     },
     [
       activeWorkspace,
+      dispatchLocalAssistantMessage,
       dispatch,
       ensureThreadForActiveWorkspace,
+      mcpEnabled,
       recordThreadActivity,
       safeMessageActivity,
     ],
