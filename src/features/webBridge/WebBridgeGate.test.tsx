@@ -90,7 +90,9 @@ describe("WebBridgeGate", () => {
       expect(screen.getByText("App content")).toBeTruthy();
     });
 
-    expect(observedBridgeUrl).toHaveBeenCalledWith("https://dev.example.com");
+    await waitFor(() => {
+      expect(observedBridgeUrl).toHaveBeenCalledWith("https://dev.example.com");
+    });
     expect(observedBridgeUrl).not.toHaveBeenCalledWith(null);
   });
 
