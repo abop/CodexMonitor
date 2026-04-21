@@ -34,6 +34,16 @@ const makeStatus = (branchName: string, additions = 0, deletions = 0) => ({
   totalDeletions: deletions,
 });
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("useGitStatus", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
@@ -179,6 +189,50 @@ describe("useGitStatus", () => {
 
     expect(result.current.status.branchName).toBe("main");
     expect(result.current.status.error).toBe("boom");
+
+    unmount();
+  });
+
+  it("does not overlap polling requests and replays one queued refresh", async () => {
+    const getGitStatusMock = vi.mocked(getGitStatus);
+    const firstRequest = createDeferred<ReturnType<typeof makeStatus>>();
+    const secondRequest = createDeferred<ReturnType<typeof makeStatus>>();
+    getGitStatusMock
+      .mockReturnValueOnce(firstRequest.promise)
+      .mockReturnValueOnce(secondRequest.promise);
+
+    const { result, unmount } = renderHook(
+      ({ active }: { active: WorkspaceInfo | null }) => useGitStatus(active),
+      { initialProps: { active: workspace } },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getGitStatusMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    expect(getGitStatusMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      firstRequest.resolve(makeStatus("main", 1, 0));
+      await Promise.resolve();
+    });
+
+    expect(getGitStatusMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      secondRequest.resolve(makeStatus("queued", 3, 2));
+      await Promise.resolve();
+    });
+
+    expect(result.current.status.branchName).toBe("queued");
+    expect(result.current.status.totalAdditions).toBe(3);
 
     unmount();
   });

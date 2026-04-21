@@ -21,9 +21,14 @@ export function useLocalUsage(enabled: boolean, workspacePath: string | null) {
   const requestIdRef = useRef(0);
   const enabledRef = useRef(enabled);
   const workspaceRef = useRef(workspacePath);
+  const inFlightRef = useRef<Promise<void> | null>(null);
+  const pendingRefreshRef = useRef(false);
 
   useEffect(() => {
     enabledRef.current = enabled;
+    requestIdRef.current += 1;
+    inFlightRef.current = null;
+    pendingRefreshRef.current = false;
     if (!enabled) {
       setState((prev) => ({ ...prev, isLoading: false }));
     }
@@ -31,29 +36,47 @@ export function useLocalUsage(enabled: boolean, workspacePath: string | null) {
 
   useEffect(() => {
     workspaceRef.current = workspacePath;
+    requestIdRef.current += 1;
+    inFlightRef.current = null;
+    pendingRefreshRef.current = false;
   }, [workspacePath]);
 
   const refresh = useCallback(() => {
     if (!enabledRef.current) {
       return Promise.resolve();
     }
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
-    return localUsageSnapshot(30, workspaceRef.current ?? undefined)
-      .then((snapshot) => {
-        if (requestIdRef.current !== requestId || !enabledRef.current) {
-          return;
+    if (inFlightRef.current) {
+      pendingRefreshRef.current = true;
+      return inFlightRef.current;
+    }
+    let cyclePromise: Promise<void>;
+    cyclePromise = (async () => {
+      do {
+        pendingRefreshRef.current = false;
+        const requestId = requestIdRef.current + 1;
+        requestIdRef.current = requestId;
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+        try {
+          const snapshot = await localUsageSnapshot(30, workspaceRef.current ?? undefined);
+          if (requestIdRef.current !== requestId || !enabledRef.current) {
+            continue;
+          }
+          setState({ snapshot, isLoading: false, error: null });
+        } catch (err) {
+          if (requestIdRef.current !== requestId || !enabledRef.current) {
+            continue;
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          setState((prev) => ({ ...prev, isLoading: false, error: message }));
         }
-        setState({ snapshot, isLoading: false, error: null });
-      })
-      .catch((err) => {
-        if (requestIdRef.current !== requestId || !enabledRef.current) {
-          return;
-        }
-        const message = err instanceof Error ? err.message : String(err);
-        setState((prev) => ({ ...prev, isLoading: false, error: message }));
-      });
+      } while (pendingRefreshRef.current && enabledRef.current);
+    })().finally(() => {
+      if (inFlightRef.current === cyclePromise) {
+        inFlightRef.current = null;
+      }
+    });
+    inFlightRef.current = cyclePromise;
+    return cyclePromise;
   }, []);
 
   useEffect(() => {

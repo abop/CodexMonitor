@@ -28,6 +28,8 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
   const requestIdRef = useRef(0);
   const workspaceIdRef = useRef<string | null>(activeWorkspace?.id ?? null);
   const cachedStatusRef = useRef<Map<string, GitStatusState>>(new Map());
+  const inFlightRef = useRef<Promise<void> | null>(null);
+  const pendingRefreshRef = useRef(false);
   const workspaceId = activeWorkspace?.id ?? null;
 
   const resolveBranchName = useCallback(
@@ -47,49 +49,66 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
   const refresh = useCallback(() => {
     if (!workspaceId) {
       setStatus(emptyStatus);
-      return;
+      return Promise.resolve();
     }
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    return getGitStatus(workspaceId)
-      .then((data) => {
-        if (
-          requestIdRef.current !== requestId ||
-          workspaceIdRef.current !== workspaceId
-        ) {
-          return;
+    if (inFlightRef.current) {
+      pendingRefreshRef.current = true;
+      return inFlightRef.current;
+    }
+    let cyclePromise: Promise<void>;
+    cyclePromise = (async () => {
+      do {
+        pendingRefreshRef.current = false;
+        const requestId = requestIdRef.current + 1;
+        requestIdRef.current = requestId;
+        try {
+          const data = await getGitStatus(workspaceId);
+          if (
+            requestIdRef.current !== requestId ||
+            workspaceIdRef.current !== workspaceId
+          ) {
+            continue;
+          }
+          const cached = cachedStatusRef.current.get(workspaceId);
+          const resolvedBranchName = resolveBranchName(data.branchName, cached);
+          const nextStatus = {
+            ...data,
+            branchName: resolvedBranchName,
+            error: null,
+          };
+          setStatus(nextStatus);
+          cachedStatusRef.current.set(workspaceId, nextStatus);
+        } catch (err) {
+          console.error("Failed to load git status", err);
+          if (
+            requestIdRef.current !== requestId ||
+            workspaceIdRef.current !== workspaceId
+          ) {
+            continue;
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          const cached = cachedStatusRef.current.get(workspaceId);
+          const nextStatus = cached
+            ? { ...cached, error: message }
+            : { ...emptyStatus, branchName: "unknown", error: message };
+          setStatus(nextStatus);
         }
-        const cached = cachedStatusRef.current.get(workspaceId);
-        const resolvedBranchName = resolveBranchName(data.branchName, cached);
-        const nextStatus = {
-          ...data,
-          branchName: resolvedBranchName,
-          error: null,
-        };
-        setStatus(nextStatus);
-        cachedStatusRef.current.set(workspaceId, nextStatus);
-      })
-      .catch((err) => {
-        console.error("Failed to load git status", err);
-        if (
-          requestIdRef.current !== requestId ||
-          workspaceIdRef.current !== workspaceId
-        ) {
-          return;
-        }
-        const message = err instanceof Error ? err.message : String(err);
-        const cached = cachedStatusRef.current.get(workspaceId);
-        const nextStatus = cached
-          ? { ...cached, error: message }
-          : { ...emptyStatus, branchName: "unknown", error: message };
-        setStatus(nextStatus);
-      });
+      } while (pendingRefreshRef.current && workspaceIdRef.current === workspaceId);
+    })().finally(() => {
+      if (inFlightRef.current === cyclePromise) {
+        inFlightRef.current = null;
+      }
+    });
+    inFlightRef.current = cyclePromise;
+    return cyclePromise;
   }, [resolveBranchName, workspaceId]);
 
   useEffect(() => {
     if (workspaceIdRef.current !== workspaceId) {
       workspaceIdRef.current = workspaceId;
       requestIdRef.current += 1;
+      inFlightRef.current = null;
+      pendingRefreshRef.current = false;
       if (!workspaceId) {
         setStatus(emptyStatus);
         return;
