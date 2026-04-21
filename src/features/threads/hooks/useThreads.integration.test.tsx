@@ -979,7 +979,17 @@ describe("useThreads UX integration", () => {
 
     act(() => {
       result.current.setActiveThreadId("thread-parent");
+      handlers?.onAgentMessageCompleted?.({
+        workspaceId: "ws-1",
+        threadId: "thread-parent",
+        itemId: "local-assistant-parent",
+        text: "Existing parent note",
+      });
     });
+
+    const parentAssistantMessagesBefore = result.current.activeItems.filter(
+      (item) => item.kind === "message" && item.role === "assistant",
+    );
 
     await act(async () => {
       await result.current.startFork("/fork");
@@ -990,6 +1000,26 @@ describe("useThreads UX integration", () => {
       expect(resumeThread).toHaveBeenCalledWith("ws-1", "thread-fork-1");
       expect(result.current.activeThreadId).toBe("thread-fork-1");
     });
+
+    act(() => {
+      result.current.setActiveThreadId("thread-parent");
+    });
+
+    await waitFor(() => {
+      expect(result.current.activeThreadId).toBe("thread-parent");
+    });
+
+    const parentAssistantMessagesAfter = result.current.activeItems.filter(
+      (item) => item.kind === "message" && item.role === "assistant",
+    );
+    expect(parentAssistantMessagesAfter).toHaveLength(
+      parentAssistantMessagesBefore.length,
+    );
+    expect(
+      parentAssistantMessagesAfter.some(
+        (item) => item.text === "Existing parent note",
+      ),
+    ).toBe(true);
 
     vi.mocked(resumeThread).mockClear();
     act(() => {
