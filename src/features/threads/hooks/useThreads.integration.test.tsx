@@ -27,6 +27,9 @@ type AppServerHandlers = Parameters<typeof useAppServerEvents>[0];
 
 let handlers: AppServerHandlers | null = null;
 
+const legacyWebBuildErrorPattern =
+  /desktop-only|desktop app|web build|unavailable in the web build/i;
+
 vi.mock("@app/hooks/useAppServerEvents", () => ({
   useAppServerEvents: (incoming: AppServerHandlers) => {
     handlers = incoming;
@@ -953,6 +956,7 @@ describe("useThreads UX integration", () => {
   });
 
   it("forks through the bridge and keeps the forked thread resumable", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
     vi.mocked(forkThread).mockResolvedValue({
       result: { thread: { id: "thread-fork-1" } },
     } as Awaited<ReturnType<typeof forkThread>>);
@@ -987,6 +991,15 @@ describe("useThreads UX integration", () => {
       expect(resumeThread).toHaveBeenCalledWith("ws-1", "thread-fork-1");
       expect(result.current.activeThreadId).toBe("thread-fork-1");
     });
+
+    expect(
+      result.current.activeItems.some(
+        (item) =>
+          item.kind === "message" &&
+          item.role === "assistant" &&
+          legacyWebBuildErrorPattern.test(item.text),
+      ),
+    ).toBe(false);
 
     vi.mocked(resumeThread).mockClear();
     act(() => {
@@ -1027,9 +1040,7 @@ describe("useThreads UX integration", () => {
         (item) =>
           item.kind === "message" &&
           item.role === "assistant" &&
-          /desktop-only|desktop app|only available in the desktop app/i.test(
-            item.text,
-          ),
+          legacyWebBuildErrorPattern.test(item.text),
       ),
     ).toBe(false);
   });
@@ -1084,6 +1095,14 @@ describe("useThreads UX integration", () => {
       [],
     );
     expect(sendUserMessageService).not.toHaveBeenCalled();
+    expect(
+      result.current.activeItems.some(
+        (item) =>
+          item.kind === "message" &&
+          item.role === "assistant" &&
+          legacyWebBuildErrorPattern.test(item.text),
+      ),
+    ).toBe(false);
   });
 
   it("links detached review thread to its parent", async () => {
