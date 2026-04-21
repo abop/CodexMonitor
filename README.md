@@ -48,6 +48,7 @@ Keep Cloudflare in front of the bridge and keep the daemon private to the server
 
 Deployment runbook: [docs/cloudflare-web-bridge-deployment.md](docs/cloudflare-web-bridge-deployment.md)
 Current web/desktop feature split: [docs/web-desktop-parity.md](docs/web-desktop-parity.md)
+Long-horizon web parity roadmap: [docs/superpowers/specs/2026-04-21-web-parity-roadmap-design.md](docs/superpowers/specs/2026-04-21-web-parity-roadmap-design.md)
 
 ### Composer & Agent Controls
 
