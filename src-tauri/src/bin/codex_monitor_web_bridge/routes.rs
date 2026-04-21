@@ -1,5 +1,5 @@
 use crate::auth::require_bridge_headers;
-use crate::shared::web_runtime_capabilities::{
+use crate::web_runtime_capabilities::{
     bridge_all_allowed_rpc_methods, bridge_capabilities_v1,
 };
 use crate::state::BridgeState;
@@ -235,7 +235,7 @@ mod tests {
     use super::{build_router, test_state};
     use crate::config::BridgeConfig;
     use crate::daemon_client::test_client_pair;
-    use crate::shared::web_runtime_capabilities::bridge_capabilities_v1;
+    use crate::web_runtime_capabilities::bridge_capabilities_v1;
     use crate::state::BridgeState;
     use axum::body::{to_bytes, Body};
     use axum::http::{header, HeaderValue, Request, StatusCode};

@@ -7,8 +7,8 @@ mod daemon_client;
 #[allow(dead_code)]
 #[path = "../shared/daemon_wire.rs"]
 mod daemon_wire;
-#[path = "../shared/mod.rs"]
-mod shared;
+#[path = "../shared/web_runtime_capabilities.rs"]
+mod web_runtime_capabilities;
 #[path = "codex_monitor_web_bridge/routes.rs"]
 mod routes;
 #[path = "codex_monitor_web_bridge/state.rs"]
