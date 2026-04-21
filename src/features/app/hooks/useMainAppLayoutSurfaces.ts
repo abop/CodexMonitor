@@ -809,8 +809,10 @@ function buildGitSurface({
       onUnstageFile: gitState.handleUnstageGitFile,
       onRevertFile: gitState.handleRevertGitFile,
       onRevertAllChanges: gitState.handleRevertAllGitChanges,
-      onReviewUncommittedChanges: (workspaceId) =>
-        startUncommittedReview(workspaceId ?? activeWorkspace?.id ?? null),
+      onReviewUncommittedChanges: composerWorkspaceState.commandCapabilities.review
+        ? (workspaceId) =>
+            startUncommittedReview(workspaceId ?? activeWorkspace?.id ?? null)
+        : undefined,
       commitMessage: gitState.commitMessage,
       commitMessageLoading: gitState.commitMessageLoading,
       commitMessageError: gitState.commitMessageError,

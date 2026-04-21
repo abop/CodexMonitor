@@ -88,8 +88,8 @@ describe("useWebRuntimeCapabilities", () => {
         steer: true,
         fork: true,
         compact: false,
-        review: false,
-        mcp: false,
+        review: true,
+        mcp: true,
       },
       files: {
         workspaceTree: false,
@@ -117,8 +117,8 @@ describe("useWebRuntimeCapabilities", () => {
         steer: true,
         fork: true,
         compact: false,
-        review: false,
-        mcp: false,
+        review: true,
+        mcp: true,
       }),
     );
   });

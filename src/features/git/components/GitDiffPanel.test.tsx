@@ -144,6 +144,24 @@ describe("GitDiffPanel", () => {
     expect(onReviewUncommittedChanges).toHaveBeenCalledWith("ws-2");
   });
 
+  it("hides the uncommitted review button when no callback is supplied", () => {
+    const { container } = render(
+      <GitDiffPanel
+        {...baseProps}
+        workspaceId="ws-2"
+        unstagedFiles={[
+          { path: "src/file.ts", status: "M", additions: 4, deletions: 1 },
+        ]}
+      />,
+    );
+
+    expect(
+      within(container).queryByRole("button", {
+        name: "Review uncommitted changes",
+      }),
+    ).toBeNull();
+  });
+
   it("adds a show in file manager option for file context menus", async () => {
     clipboardWriteText.mockClear();
     const { container } = render(

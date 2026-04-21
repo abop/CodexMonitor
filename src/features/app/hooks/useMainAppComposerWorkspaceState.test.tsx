@@ -165,4 +165,29 @@ describe("useMainAppComposerWorkspaceState", () => {
     expect(disabledByTurn.current.steerAvailable).toBe(false);
     expect(disabledByCapability.current.steerAvailable).toBe(false);
   });
+
+  it("mirrors runtime review and mcp capabilities into commandCapabilities", () => {
+    const { result: enabled } = renderHook(() =>
+      useMainAppComposerWorkspaceState(buildArgs()),
+    );
+    const { result: disabled } = renderHook(() =>
+      useMainAppComposerWorkspaceState({
+        ...buildArgs(),
+        runtimeCapabilities: {
+          threadControls: {
+            steer: true,
+            fork: true,
+            compact: true,
+            review: false,
+            mcp: false,
+          },
+        },
+      }),
+    );
+
+    expect(enabled.current.commandCapabilities.review).toBe(true);
+    expect(enabled.current.commandCapabilities.mcp).toBe(true);
+    expect(disabled.current.commandCapabilities.review).toBe(false);
+    expect(disabled.current.commandCapabilities.mcp).toBe(false);
+  });
 });
