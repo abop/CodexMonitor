@@ -140,7 +140,7 @@ export function HomeUsageSection({
               className="home-usage-select"
               value={usageWorkspaceId ?? ""}
               onChange={(event) => onUsageWorkspaceChange(event.target.value || null)}
-              disabled={!usageSnapshotAvailable || usageWorkspaceOptions.length === 0}
+              disabled={usageWorkspaceOptions.length === 0}
             >
               <option value="">All workspaces</option>
               {usageWorkspaceOptions.map((option) => (

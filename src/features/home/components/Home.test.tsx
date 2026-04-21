@@ -367,10 +367,16 @@ describe("Home", () => {
   });
 
   it("shows capability-aware usage guidance when usage snapshot support is unavailable", () => {
+    const onUsageWorkspaceChange = vi.fn();
     render(
       <Home
         {...baseProps}
         usageSnapshotAvailable={false}
+        usageWorkspaceOptions={[
+          { id: "workspace-1", label: "Workspace One" },
+          { id: "workspace-2", label: "Workspace Two" },
+        ]}
+        onUsageWorkspaceChange={onUsageWorkspaceChange}
       />,
     );
 
@@ -385,12 +391,18 @@ describe("Home", () => {
       (screen.getByRole("button", { name: "Refresh usage" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    expect((screen.getByRole("combobox") as HTMLSelectElement).disabled).toBe(true);
+    expect((screen.getByRole("combobox") as HTMLSelectElement).disabled).toBe(false);
     expect(
       (screen.getByRole("button", { name: "Tokens" }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
       (screen.getByRole("button", { name: "Time" }) as HTMLButtonElement).disabled,
     ).toBe(true);
+
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "workspace-2" },
+    });
+
+    expect(onUsageWorkspaceChange).toHaveBeenCalledWith("workspace-2");
   });
 });
