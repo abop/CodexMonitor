@@ -23,6 +23,7 @@ export type WebRuntimeCapabilities = {
     doctorReport: boolean;
     featureFlags: boolean;
     accountLogin: boolean;
+    agentsSettings: boolean;
   };
 };
 
@@ -76,7 +77,8 @@ function isWebRuntimeCapabilities(
     isBoolean(operations.usageSnapshot) &&
     isBoolean(operations.doctorReport) &&
     isBoolean(operations.featureFlags) &&
-    isBoolean(operations.accountLogin)
+    isBoolean(operations.accountLogin) &&
+    isBoolean(operations.agentsSettings)
   );
 }
 

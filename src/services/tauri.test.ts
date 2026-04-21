@@ -1613,6 +1613,45 @@ describe("tauri invoke wrappers", () => {
     expect(invokeMock).toHaveBeenCalledWith("get_agents_settings");
   });
 
+  it("routes getAgentsSettings through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: {
+            configPath: "/srv/.codex/config.toml",
+            multiAgentEnabled: true,
+            maxThreads: 8,
+            maxDepth: 2,
+            agents: [],
+          },
+        }),
+      }),
+    );
+
+    await expect(getAgentsSettings()).resolves.toEqual({
+      configPath: "/srv/.codex/config.toml",
+      multiAgentEnabled: true,
+      maxThreads: 8,
+      maxDepth: 2,
+      agents: [],
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "get_agents_settings",
+          params: {},
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   it("updates core agents settings", async () => {
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockResolvedValueOnce({

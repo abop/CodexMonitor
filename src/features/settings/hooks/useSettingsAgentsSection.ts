@@ -17,6 +17,7 @@ import { useSettingsDefaultModels } from "./useSettingsDefaultModels";
 type UseSettingsAgentsSectionArgs = {
   projects: WorkspaceInfo[];
   enabled?: boolean;
+  readOnlyMode?: boolean;
 };
 
 export type SettingsAgentsSectionProps = {
@@ -69,6 +70,7 @@ export type SettingsAgentsSectionProps = {
   modelOptions: ModelOption[];
   modelOptionsLoading: boolean;
   modelOptionsError: string | null;
+  readOnlyMode?: boolean;
 };
 
 const toErrorMessage = (value: unknown, fallback: string): string => {
@@ -84,6 +86,7 @@ const toErrorMessage = (value: unknown, fallback: string): string => {
 export const useSettingsAgentsSection = ({
   projects,
   enabled = true,
+  readOnlyMode = false,
 }: UseSettingsAgentsSectionArgs): SettingsAgentsSectionProps => {
   const [settings, setSettings] = useState<AgentsSettings | null>(null);
   const [isLoading, setIsLoading] = useState(enabled);
@@ -104,7 +107,7 @@ export const useSettingsAgentsSection = ({
     models: modelOptions,
     isLoading: modelOptionsLoading,
     error: modelOptionsError,
-  } = useSettingsDefaultModels(projects, { enabled });
+  } = useSettingsDefaultModels(projects, { enabled: enabled && !readOnlyMode });
 
   const refresh = useCallback(async () => {
     if (!enabled) {
@@ -404,5 +407,6 @@ export const useSettingsAgentsSection = ({
     modelOptions,
     modelOptionsLoading,
     modelOptionsError,
+    readOnlyMode,
   };
 };

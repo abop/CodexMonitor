@@ -20,6 +20,7 @@ This document describes the current capability split between the desktop app and
 - Workspace `AGENTS.md` preview and refresh in Workspace Home when the connected bridge advertises `files.workspaceAgents`.
 - Global `AGENTS.md` and global `config.toml` preview and refresh in the web Codex settings section when the connected bridge advertises `files.globalAgents` / `files.globalConfig`.
 - Read-only remote `codexBin` / `codexArgs` runtime summary in the reduced web Codex settings section from shared app settings.
+- Read-only `Agents` settings visibility for remote multi-agent core settings and configured custom agent summaries when the connected bridge advertises `operations.agentsSettings`.
 - Prompt list, create, update, delete, and move.
 - Models, collaboration modes, skills, apps, account info, rate-limit reads, and account login/switch when the connected bridge advertises `operations.accountLogin`.
 - Home usage snapshot when the connected web bridge advertises `operations.usageSnapshot`.
@@ -52,7 +53,7 @@ This document describes the current capability split between the desktop app and
 - Workspace `AGENTS.md` editing. Web currently supports read-only preview and refresh only when `files.workspaceAgents` is available.
 - Global `AGENTS.md` editing. Web currently supports read-only preview and refresh only when `files.globalAgents` is available.
 - Global Codex config editing. Web currently supports read-only preview and refresh only when `files.globalConfig` is available.
-- Agent role management and agent config editing/generation.
+- Agent role management and agent config editing/generation. Web currently supports read-only settings summary only when `operations.agentsSettings` is available.
 - Prompt folder reveal.
 - Open workspace paths in local editors or commands.
 - Open file links in local editors or file managers.
@@ -88,7 +89,8 @@ This document describes the current capability split between the desktop app and
 
 - Web settings surface `Projects`, `Environments`, `Display`, `Composer`, `Git`, and `About` by default.
 - `Environments` remains a reduced read-only view in web for inspecting the shared global worktrees root plus per-project worktree setup script and worktrees folder values.
-- Hidden in web settings: `Dictation`, `Shortcuts`, `Open in`, `Server`, and `Agents`. `Codex` and `Features` appear only when the connected bridge advertises the matching read-only capabilities.
+- The `Agents` settings section appears in web only when the connected bridge advertises `operations.agentsSettings`, and it remains a reduced read-only view of core multi-agent settings and configured custom agent summaries.
+- Hidden in web settings: `Dictation`, `Shortcuts`, `Open in`, and `Server`. `Agents`, `Codex`, and `Features` appear only when the connected bridge advertises the matching read-only capabilities.
 - The `Codex` settings section appears in web only when the connected bridge advertises global file visibility or doctor-report visibility, and it remains a reduced read-only view for runtime summary, diagnostics, and files.
 - The `Features` settings section appears in web only when the connected bridge advertises `operations.featureFlags`, and it remains a reduced read-only view of Codex-returned feature states.
 - Web bridge selection lives in the sidebar rail and is web-only.
@@ -105,7 +107,7 @@ This document describes the current capability split between the desktop app and
 - Web realtime event surface: `src/services/events.ts`
 - Home usage orchestration and capability-aware empty state: `src/features/app/orchestration/useWorkspaceOrchestration.ts`, `src/features/home/components/HomeUsageSection.tsx`
 - Account-switch capability gating and auth flow: `src/features/app/hooks/useWebRuntimeCapabilities.ts`, `src/features/app/hooks/useAccountSwitching.ts`, `src/features/app/components/Sidebar.tsx`
-- Web settings section filter and read-only environment/Codex visibility: `src/features/settings/components/settingsViewConstants.ts`, `src/features/settings/components/sections/SettingsEnvironmentsSection.tsx`
+- Web settings section filter and read-only environment/agents/Codex visibility: `src/features/settings/components/settingsViewConstants.ts`, `src/features/settings/components/sections/SettingsEnvironmentsSection.tsx`, `src/features/settings/components/sections/SettingsAgentsSection.tsx`
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
 - Workspace `AGENTS.md` runtime gating and web read-only behavior: `src/features/workspaces/components/WorkspaceHome.tsx`
 - Global Codex file web read-only behavior: `src/features/settings/components/sections/SettingsCodexSection.tsx`

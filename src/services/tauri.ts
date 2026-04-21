@@ -265,8 +265,7 @@ export async function writeGlobalCodexConfigToml(content: string): Promise<void>
 }
 
 export async function getAgentsSettings(): Promise<AgentsSettings> {
-  requireDesktopRuntime("Agent settings");
-  return invoke<AgentsSettings>("get_agents_settings");
+  return invokeSupportedRpc<AgentsSettings>("get_agents_settings");
 }
 
 export async function setAgentsCoreSettings(

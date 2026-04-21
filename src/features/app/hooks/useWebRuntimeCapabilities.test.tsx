@@ -102,6 +102,7 @@ describe("useWebRuntimeCapabilities", () => {
         doctorReport: false,
         featureFlags: false,
         accountLogin: false,
+        agentsSettings: false,
       },
     });
 
@@ -128,6 +129,7 @@ describe("useWebRuntimeCapabilities", () => {
       doctorReport: false,
       featureFlags: false,
       accountLogin: false,
+      agentsSettings: false,
     });
   });
 
@@ -164,6 +166,7 @@ describe("useWebRuntimeCapabilities", () => {
         doctorReport: false,
         featureFlags: false,
         accountLogin: false,
+        agentsSettings: false,
       },
     });
 
@@ -261,6 +264,7 @@ describe("useWebRuntimeCapabilities", () => {
           doctorReport: false,
           featureFlags: false,
           accountLogin: false,
+          agentsSettings: false,
         },
       });
     });
@@ -295,6 +299,7 @@ describe("useWebRuntimeCapabilities", () => {
           doctorReport: false,
           featureFlags: false,
           accountLogin: false,
+          agentsSettings: false,
         },
       });
     });

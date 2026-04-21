@@ -101,6 +101,10 @@ export function getWebVisibleSettingsSections(
     sections.push("features");
   }
 
+  if (runtimeCapabilities?.operations.agentsSettings) {
+    sections.push("agents");
+  }
+
   return sections;
 }
 

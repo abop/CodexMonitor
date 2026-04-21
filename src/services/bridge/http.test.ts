@@ -123,6 +123,7 @@ describe("bridgeRpc", () => {
           doctorReport: false,
           featureFlags: false,
           accountLogin: true,
+          agentsSettings: false,
         },
       }),
     });
@@ -140,6 +141,7 @@ describe("bridgeRpc", () => {
         }),
         operations: expect.objectContaining({
           accountLogin: true,
+          agentsSettings: false,
         }),
       }),
     );
@@ -180,6 +182,7 @@ describe("bridgeRpc", () => {
             doctorReport: false,
             featureFlags: false,
             accountLogin: false,
+            agentsSettings: false,
           },
         }),
       }),
@@ -217,6 +220,7 @@ describe("bridgeRpc", () => {
             doctorReport: false,
             featureFlags: false,
             accountLogin: false,
+            agentsSettings: false,
           },
         }),
       }),

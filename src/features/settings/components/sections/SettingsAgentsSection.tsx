@@ -61,6 +61,7 @@ export function SettingsAgentsSection({
   modelOptions,
   modelOptionsLoading,
   modelOptionsError,
+  readOnlyMode = false,
 }: SettingsAgentsSectionProps) {
   const [openPathError, setOpenPathError] = useState<string | null>(null);
   const [maxThreadsDraft, setMaxThreadsDraft] = useState("6");
@@ -229,6 +230,101 @@ export function SettingsAgentsSection({
   const currentMaxDepth = settings
     ? (parseMaxDepth(maxDepthDraft) ?? settings.maxDepth)
     : MIN_MAX_DEPTH;
+
+  if (readOnlyMode) {
+    return (
+      <SettingsSection
+        title="Agents"
+        subtitle="Inspect remote multi-agent settings and configured custom roles. Editing remains desktop-only in the web build."
+      >
+        <div className="settings-help">Read-only in the web build.</div>
+        <div className="settings-help settings-agents-builtins-help">
+          Built-in roles from Codex are still available: <code>default</code>, <code>explorer</code>,
+          and <code>worker</code>.
+        </div>
+
+        <SettingsToggleRow
+          title="Config file"
+          subtitle="Current remote Codex config path for agent settings."
+        >
+          <div className="settings-agents-actions">
+            <button type="button" className="ghost" onClick={onRefresh} disabled={isLoading}>
+              Refresh
+            </button>
+          </div>
+        </SettingsToggleRow>
+        <div className="settings-help">
+          <code>{settings?.configPath ?? "Unavailable"}</code>
+        </div>
+
+        <SettingsToggleRow
+          title="Enable Multi-Agent"
+          subtitle={
+            <>
+              Current value from remote <code>features.multi_agent</code>.
+            </>
+          }
+        >
+          <div className="settings-help settings-help-inline">
+            {settings ? (settings.multiAgentEnabled ? "Enabled" : "Disabled") : "Unavailable"}
+          </div>
+        </SettingsToggleRow>
+
+        <SettingsToggleRow
+          title="Max Threads"
+          subtitle="Current maximum open agent threads from the remote config."
+        >
+          <div className="settings-help settings-help-inline">
+            {settings ? String(currentMaxThreads) : "Unavailable"}
+          </div>
+        </SettingsToggleRow>
+
+        <SettingsToggleRow
+          title="Max Depth"
+          subtitle="Current maximum nested spawn depth from the remote config."
+        >
+          <div className="settings-help settings-help-inline">
+            {settings ? String(currentMaxDepth) : "Unavailable"}
+          </div>
+        </SettingsToggleRow>
+
+        <SettingsSubsection
+          title="Configured Agents"
+          subtitle="Custom roles currently available from the connected server."
+        />
+
+        {settings && settings.agents.length === 0 && !isLoading && (
+          <div className="settings-help">No custom agents configured yet.</div>
+        )}
+
+        {settings?.agents.map((agent) => (
+          <div className="settings-field settings-agent-card" key={agent.name}>
+            <div className="settings-agent-card-header">
+              <div>
+                <div className="settings-toggle-title">{agent.name}</div>
+                <div className="settings-toggle-subtitle">
+                  {agent.description || "No description."}
+                </div>
+              </div>
+            </div>
+            <div className="settings-help settings-help-inline">
+              <code>{agent.configFile || "(missing config_file)"}</code>
+            </div>
+            <div className="settings-help">
+              <code>{agent.resolvedPath}</code>
+            </div>
+            <div className="settings-help">
+              {agent.managedByApp ? "Managed file." : "External path."}{" "}
+              {agent.fileExists ? "File present." : "File missing."}
+            </div>
+          </div>
+        ))}
+
+        {isLoading && <div className="settings-help">Loading agents settings...</div>}
+        {error && <div className="settings-agents-error">{error}</div>}
+      </SettingsSection>
+    );
+  }
 
   const handleMaxDepthStep = async (delta: number) => {
     if (!settings || isUpdatingCore) {

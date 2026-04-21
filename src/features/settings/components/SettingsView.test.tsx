@@ -1056,6 +1056,7 @@ describe("SettingsView web build", () => {
             doctorReport: false,
             featureFlags: false,
             accountLogin: false,
+            agentsSettings: false,
           },
         }}
       />,
@@ -1140,6 +1141,7 @@ describe("SettingsView web build", () => {
             doctorReport: false,
             featureFlags: false,
             accountLogin: false,
+            agentsSettings: false,
           },
         }}
       />,
@@ -1185,6 +1187,100 @@ describe("SettingsView web build", () => {
       true,
     );
 
+    expect(getModelListMock).not.toHaveBeenCalled();
+    expect(getConfigModelMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a reduced read-only Agents section in web when agent settings capability is available", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+    getAgentsSettingsMock.mockResolvedValueOnce({
+      configPath: "/Users/me/.codex/config.toml",
+      multiAgentEnabled: true,
+      maxThreads: 8,
+      maxDepth: 2,
+      agents: [
+        {
+          name: "researcher",
+          description: "Research-focused role",
+          developerInstructions: "Investigate and propose safe changes.",
+          configFile: "researcher.toml",
+          resolvedPath: "/Users/me/.codex/agents/researcher.toml",
+          managedByApp: true,
+          fileExists: true,
+        },
+      ],
+    });
+    const runtimeCapabilities = {
+      files: {
+        workspaceTree: true,
+        workspaceAgents: true,
+        globalAgents: false,
+        globalConfig: false,
+      },
+      operations: {
+        usageSnapshot: true,
+        doctorReport: false,
+        featureFlags: false,
+        accountLogin: false,
+        agentsSettings: true,
+      },
+    } as unknown as NonNullable<ComponentProps<typeof SettingsView>["runtimeCapabilities"]>;
+
+    render(
+      <SettingsView
+        workspaceGroups={[]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Ungrouped",
+            workspaces: [workspace({ id: "w-web", name: "Web Workspace", connected: true })],
+          },
+        ]}
+        ungroupedLabel="Ungrouped"
+        onClose={vi.fn()}
+        onMoveWorkspace={vi.fn()}
+        onDeleteWorkspace={vi.fn()}
+        onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        reduceTransparency={false}
+        onToggleTransparency={vi.fn()}
+        appSettings={baseSettings}
+        openAppIconById={{}}
+        onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
+        onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
+        onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+        scaleShortcutTitle="Scale shortcut"
+        scaleShortcutText="Use Command +/-"
+        onTestNotificationSound={vi.fn()}
+        onTestSystemNotification={vi.fn()}
+        dictationModelStatus={null}
+        onDownloadDictationModel={vi.fn()}
+        onCancelDictationDownload={vi.fn()}
+        onRemoveDictationModel={vi.fn()}
+        runtimeCapabilities={runtimeCapabilities}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Agents" })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+
+    await waitFor(() => {
+      expect(getAgentsSettingsMock).toHaveBeenCalled();
+      expect(screen.getByText("Read-only in the web build.")).toBeTruthy();
+      expect(screen.getByText("researcher", { selector: ".settings-toggle-title" })).toBeTruthy();
+      expect(screen.getByText("Research-focused role")).toBeTruthy();
+    });
+
+    expect(screen.queryByText("Create Agent")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
     expect(getModelListMock).not.toHaveBeenCalled();
     expect(getConfigModelMock).not.toHaveBeenCalled();
   });
@@ -1243,6 +1339,7 @@ describe("SettingsView web build", () => {
             doctorReport: true,
             featureFlags: false,
             accountLogin: false,
+            agentsSettings: false,
           },
         }}
       />,
@@ -1366,6 +1463,7 @@ describe("SettingsView web build", () => {
             doctorReport: false,
             featureFlags: true,
             accountLogin: false,
+            agentsSettings: false,
           },
         }}
       />,

@@ -53,6 +53,7 @@ const BRIDGE_ALLOWED_RPC_METHODS: &[&str] = &[
     "create_git_branch",
     "get_app_settings",
     "update_app_settings",
+    "get_agents_settings",
     "local_usage_snapshot",
     "get_config_model",
     "model_list",
@@ -108,6 +109,7 @@ pub(crate) struct OperationsCapabilities {
     pub(crate) doctor_report: bool,
     pub(crate) feature_flags: bool,
     pub(crate) account_login: bool,
+    pub(crate) agents_settings: bool,
 }
 
 pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
@@ -132,6 +134,7 @@ pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
             doctor_report: true,
             feature_flags: true,
             account_login: true,
+            agents_settings: true,
         },
     }
 }

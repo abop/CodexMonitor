@@ -155,6 +155,9 @@ export function useSettingsViewOrchestration({
   const environmentsReadOnlyWebMode = Boolean(
     webRuntime && isSectionEnabled("environments"),
   );
+  const agentsReadOnlyWebMode = Boolean(
+    webRuntime && runtimeCapabilities?.operations.agentsSettings,
+  );
 
   const {
     openAppDrafts,
@@ -260,6 +263,7 @@ export function useSettingsViewOrchestration({
   const agentsSectionProps = useSettingsAgentsSection({
     projects,
     enabled: isSectionEnabled("agents"),
+    readOnlyMode: agentsReadOnlyWebMode,
   });
 
   return {
@@ -322,7 +326,10 @@ export function useSettingsViewOrchestration({
     },
     gitSectionProps,
     serverSectionProps,
-    agentsSectionProps,
+    agentsSectionProps: {
+      ...agentsSectionProps,
+      readOnlyMode: agentsReadOnlyWebMode,
+    },
     codexSectionProps,
     featuresSectionProps,
   };

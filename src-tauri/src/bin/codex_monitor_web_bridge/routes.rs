@@ -375,6 +375,15 @@ mod tests {
     }
 
     #[test]
+    fn advertises_agents_settings_operation_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.operations.agents_settings);
+        assert!(methods.contains(&"get_agents_settings"));
+    }
+
+    #[test]
     fn rejects_methods_outside_the_allowlist() {
         tokio::runtime::Builder::new_current_thread()
             .enable_all()
