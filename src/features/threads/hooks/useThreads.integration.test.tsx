@@ -6,6 +6,8 @@ import type { useAppServerEvents } from "@app/hooks/useAppServerEvents";
 import { useThreadRows } from "@app/hooks/useThreadRows";
 import {
   archiveThread,
+  compactThread,
+  forkThread,
   interruptTurn,
   listThreads,
   readThread,
@@ -16,6 +18,7 @@ import {
   startReview,
   steerTurn,
 } from "@services/tauri";
+import { isWebRuntime } from "@services/runtime";
 import { STORAGE_KEY_DETACHED_REVIEW_LINKS } from "@threads/utils/threadStorage";
 import { useQueuedSend } from "./useQueuedSend";
 import { useThreads } from "./useThreads";
@@ -38,6 +41,8 @@ vi.mock("@services/tauri", () => ({
   steerTurn: vi.fn(),
   startReview: vi.fn(),
   startThread: vi.fn(),
+  forkThread: vi.fn(),
+  compactThread: vi.fn(),
   listThreads: vi.fn(),
   resumeThread: vi.fn(),
   readThread: vi.fn(),
@@ -46,6 +51,10 @@ vi.mock("@services/tauri", () => ({
   getAccountRateLimits: vi.fn(),
   getAccountInfo: vi.fn(),
   interruptTurn: vi.fn(),
+}));
+
+vi.mock("@services/runtime", () => ({
+  isWebRuntime: vi.fn(() => false),
 }));
 
 const workspace: WorkspaceInfo = {
@@ -64,12 +73,14 @@ describe("useThreads UX integration", () => {
     handlers = null;
     localStorage.clear();
     vi.clearAllMocks();
+    vi.mocked(isWebRuntime).mockReturnValue(false);
     now = 1000;
     nowSpy = vi.spyOn(Date, "now").mockImplementation(() => now++);
   });
 
   afterEach(() => {
     nowSpy.mockRestore();
+    vi.restoreAllMocks();
   });
 
   it("resumes selected threads when no local items exist", async () => {
@@ -941,7 +952,93 @@ describe("useThreads UX integration", () => {
     expect(interruptMock).not.toHaveBeenCalledWith("ws-1", "thread-1", "pending");
   });
 
+  it("forks through the bridge and keeps the forked thread resumable", async () => {
+    vi.mocked(forkThread).mockResolvedValue({
+      result: { thread: { id: "thread-fork-1" } },
+    } as Awaited<ReturnType<typeof forkThread>>);
+    vi.mocked(resumeThread).mockResolvedValue({
+      result: {
+        thread: {
+          id: "thread-fork-1",
+          preview: "Forked thread",
+          updated_at: 9999,
+          turns: [],
+        },
+      },
+    });
+
+    const { result } = renderHook(() =>
+      useThreads({
+        activeWorkspace: workspace,
+        onWorkspaceConnected: vi.fn(),
+      }),
+    );
+
+    act(() => {
+      result.current.setActiveThreadId("thread-parent");
+    });
+
+    await act(async () => {
+      await result.current.startFork("/fork");
+    });
+
+    expect(forkThread).toHaveBeenCalledWith("ws-1", "thread-parent");
+    await waitFor(() => {
+      expect(resumeThread).toHaveBeenCalledWith("ws-1", "thread-fork-1");
+      expect(result.current.activeThreadId).toBe("thread-fork-1");
+    });
+
+    vi.mocked(resumeThread).mockClear();
+    act(() => {
+      result.current.setActiveThreadId("thread-fork-1");
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(resumeThread).not.toHaveBeenCalled();
+  });
+
+  it("compacts through the bridge without surfacing desktop-only errors", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.mocked(compactThread).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof compactThread>>,
+    );
+
+    const { result } = renderHook(() =>
+      useThreads({
+        activeWorkspace: workspace,
+        onWorkspaceConnected: vi.fn(),
+      }),
+    );
+
+    act(() => {
+      result.current.setActiveThreadId("thread-compact");
+    });
+
+    await act(async () => {
+      await result.current.startCompact("/compact");
+    });
+
+    expect(compactThread).toHaveBeenCalledWith("ws-1", "thread-compact");
+    expect(
+      result.current.activeItems.some(
+        (item) =>
+          item.kind === "message" &&
+          item.role === "assistant" &&
+          /desktop-only|desktop app|only available in the desktop app/i.test(
+            item.text,
+          ),
+      ),
+    ).toBe(false);
+  });
+
   it("uses turn steer after request user input when the turn is still active", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(
+      (() => 0) as typeof setTimeout,
+    );
     vi.mocked(steerTurn).mockResolvedValue({
       result: { turnId: "turn-1" },
     } as Awaited<ReturnType<typeof steerTurn>>);
