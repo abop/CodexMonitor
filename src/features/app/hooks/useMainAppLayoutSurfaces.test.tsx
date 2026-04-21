@@ -8,7 +8,7 @@ function buildArgs(review: boolean): Parameters<typeof useMainAppLayoutSurfaces>
       composerCodeBlockCopyUseModifier: false,
       showMessageFilePath: false,
       openAppTargets: [],
-      selectedOpenAppId: null,
+      selectedOpenAppId: "vscode",
       experimentalAppsEnabled: false,
       followUpMessageBehavior: "queue",
       composerFollowUpHintEnabled: false,
@@ -30,9 +30,9 @@ function buildArgs(review: boolean): Parameters<typeof useMainAppLayoutSurfaces>
     threadListPagingByWorkspace: {},
     threadListCursorByWorkspace: {},
     pinnedThreadsVersion: 0,
-    threadListSortKey: "updatedAt",
+    threadListSortKey: "updated_at",
     onSetThreadListSortKey: vi.fn(),
-    threadListOrganizeMode: "flat",
+    threadListOrganizeMode: "by_project",
     onSetThreadListOrganizeMode: vi.fn(),
     onRefreshAllThreads: vi.fn(),
     activeWorkspace: {
@@ -52,7 +52,7 @@ function buildArgs(review: boolean): Parameters<typeof useMainAppLayoutSurfaces>
     activeAccount: null,
     homeRateLimits: null,
     homeAccount: null,
-    accountSwitching: { loading: false, targetAccountId: null, error: null },
+    accountSwitching: false,
     onSwitchAccount: vi.fn(),
     onCancelSwitchAccount: vi.fn(),
     onDecision: vi.fn(),
@@ -339,7 +339,7 @@ function buildArgs(review: boolean): Parameters<typeof useMainAppLayoutSurfaces>
     handleDebugClick: vi.fn(),
     sidebarRateLimits: null,
     sidebarAccount: null,
-  } as Parameters<typeof useMainAppLayoutSurfaces>[0];
+  } as unknown as Parameters<typeof useMainAppLayoutSurfaces>[0];
 }
 
 describe("useMainAppLayoutSurfaces", () => {
