@@ -235,6 +235,7 @@ mod tests {
     use super::{build_router, test_state};
     use crate::config::BridgeConfig;
     use crate::daemon_client::test_client_pair;
+    use crate::shared::web_runtime_capabilities::bridge_capabilities_v1;
     use crate::state::BridgeState;
     use axum::body::{to_bytes, Body};
     use axum::http::{header, HeaderValue, Request, StatusCode};
@@ -276,90 +277,23 @@ mod tests {
 
                 assert_eq!(response.status(), StatusCode::OK);
                 let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-                assert_eq!(
-                    serde_json::from_slice::<serde_json::Value>(&body).unwrap(),
-                    json!({
-                        "version": 1,
-                        "methods": [
-                            "list_workspaces",
-                            "add_workspace",
-                            "add_workspace_from_git_url",
-                            "connect_workspace",
-                            "remove_workspace",
-                            "remove_worktree",
-                            "rename_worktree",
-                            "rename_worktree_upstream",
-                            "apply_worktree_changes",
-                            "set_workspace_runtime_codex_args",
-                            "list_threads",
-                            "start_thread",
-                            "read_thread",
-                            "resume_thread",
-                            "set_thread_name",
-                            "archive_thread",
-                            "send_user_message",
-                            "turn_interrupt",
-                            "turn_steer",
-                            "fork_thread",
-                            "compact_thread",
-                            "thread_live_subscribe",
-                            "thread_live_unsubscribe",
-                            "get_git_status",
-                            "get_git_diffs",
-                            "get_git_log",
-                            "list_git_branches",
-                            "get_git_commit_diff",
-                            "get_git_remote",
-                            "stage_git_file",
-                            "stage_git_all",
-                            "unstage_git_file",
-                            "revert_git_file",
-                            "revert_git_all",
-                            "commit_git",
-                            "fetch_git",
-                            "pull_git",
-                            "push_git",
-                            "sync_git",
-                            "checkout_git_branch",
-                            "create_git_branch",
-                            "get_app_settings",
-                            "update_app_settings",
-                            "get_config_model",
-                            "model_list",
-                            "collaboration_mode_list",
-                            "skills_list",
-                            "apps_list",
-                            "prompts_list",
-                            "prompts_create",
-                            "prompts_update",
-                            "prompts_delete",
-                            "prompts_move",
-                            "account_rate_limits",
-                            "account_read",
-                            "respond_to_server_request",
-                            "remember_approval_rule"
-                        ],
-                        "threadControls": {
-                            "steer": true,
-                            "fork": true,
-                            "compact": true,
-                            "review": false,
-                            "mcp": false
-                        },
-                        "files": {
-                            "workspaceTree": false,
-                            "workspaceAgents": false,
-                            "globalAgents": false,
-                            "globalConfig": false
-                        },
-                        "operations": {
-                            "usageSnapshot": false,
-                            "doctorReport": false,
-                            "featureFlags": false
-                        }
-                    })
-                );
+                let actual = serde_json::from_slice::<serde_json::Value>(&body).unwrap();
+                let expected = serde_json::to_value(bridge_capabilities_v1()).unwrap();
+                assert_eq!(actual, expected);
             });
+    }
+
+    #[test]
+    fn advertised_thread_controls_have_matching_methods() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.thread_controls.steer);
+        assert!(methods.contains(&"turn_steer"));
+        assert!(capabilities.thread_controls.fork);
+        assert!(methods.contains(&"fork_thread"));
+        assert!(capabilities.thread_controls.compact);
+        assert!(methods.contains(&"compact_thread"));
     }
 
     #[test]
@@ -447,6 +381,7 @@ mod tests {
                         "{method} should be allowed"
                     );
                     assert_eq!(server.last_method().await, method);
+                    assert_eq!(server.last_params().await, params);
                 }
             });
     }

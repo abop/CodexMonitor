@@ -163,6 +163,7 @@ pub(crate) async fn test_client_pair() -> (DaemonClient, TestServer) {
 pub(crate) struct TestServer {
     responses: Arc<Mutex<VecDeque<String>>>,
     last_method: Arc<Mutex<Option<String>>>,
+    last_params: Arc<Mutex<Option<Value>>>,
 }
 
 #[cfg(test)]
@@ -174,8 +175,10 @@ impl TestServer {
     {
         let responses = Arc::new(Mutex::new(VecDeque::<String>::new()));
         let last_method = Arc::new(Mutex::new(None));
+        let last_params = Arc::new(Mutex::new(None));
         let responses_for_task = Arc::clone(&responses);
         let last_method_for_task = Arc::clone(&last_method);
+        let last_params_for_task = Arc::clone(&last_params);
 
         tokio::spawn(async move {
             let mut lines = BufReader::new(reader).lines();
@@ -191,7 +194,9 @@ impl TestServer {
                     .and_then(Value::as_str)
                     .unwrap_or_default()
                     .to_string();
+                let params = value.get("params").cloned().unwrap_or(Value::Null);
                 *last_method_for_task.lock().await = Some(method);
+                *last_params_for_task.lock().await = Some(params);
 
                 while let Some(response) = responses_for_task.lock().await.pop_front() {
                     writer
@@ -206,6 +211,7 @@ impl TestServer {
         Self {
             responses,
             last_method,
+            last_params,
         }
     }
 
@@ -230,6 +236,16 @@ impl TestServer {
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
         panic!("expected method");
+    }
+
+    pub(crate) async fn last_params(&self) -> Value {
+        for _ in 0..20 {
+            if let Some(params) = self.last_params.lock().await.clone() {
+                return params;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        panic!("expected params");
     }
 }
 
