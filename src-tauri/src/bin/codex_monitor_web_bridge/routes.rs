@@ -375,6 +375,15 @@ mod tests {
     }
 
     #[test]
+    fn advertises_worktree_setup_status_operation_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.operations.worktree_setup_status);
+        assert!(methods.contains(&"worktree_setup_status"));
+    }
+
+    #[test]
     fn advertises_agents_settings_operation_support() {
         let capabilities = bridge_capabilities_v1();
         let methods = capabilities.methods;
@@ -523,6 +532,50 @@ mod tests {
                     assert_eq!(server.last_method().await, method);
                     assert_eq!(server.last_params().await, params);
                 }
+            });
+    }
+
+    #[test]
+    fn forwards_worktree_setup_status_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                let params = json!({ "workspaceId": "wt-1" });
+                server
+                    .enqueue_result(
+                        1,
+                        json!({
+                            "shouldRun": true,
+                            "script": "pnpm install"
+                        }),
+                    )
+                    .await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                json!({
+                                    "method": "worktree_setup_status",
+                                    "params": params
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "worktree_setup_status");
+                assert_eq!(server.last_params().await, params);
             });
     }
 

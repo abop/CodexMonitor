@@ -32,6 +32,7 @@ function buildArgs(
     threadListLoadingByWorkspace: {},
     threadListPagingByWorkspace: {},
     threadListCursorByWorkspace: {},
+    worktreeSetupStateByWorkspaceId: {},
     pinnedThreadsVersion: 0,
     threadListSortKey: "updated_at",
     onSetThreadListSortKey: vi.fn(),

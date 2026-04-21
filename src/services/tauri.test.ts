@@ -83,6 +83,7 @@ import {
   runCodexLogin,
   applyWorktreeChanges,
   cancelCodexLogin,
+  getWorktreeSetupStatus,
   setWorkspaceRuntimeCodexArgs,
   readWorkspaceFile,
 } from "./tauri";
@@ -211,6 +212,36 @@ describe("tauri invoke wrappers", () => {
         body: JSON.stringify({
           method: "read_workspace_file",
           params: { workspaceId: "ws-1", path: "src/main.ts" },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("routes getWorktreeSetupStatus through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: { shouldRun: true, script: "pnpm install" },
+        }),
+      }),
+    );
+
+    await expect(getWorktreeSetupStatus("wt-1")).resolves.toEqual({
+      shouldRun: true,
+      script: "pnpm install",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "worktree_setup_status",
+          params: { workspaceId: "wt-1" },
         }),
       }),
     );

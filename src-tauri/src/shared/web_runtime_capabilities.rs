@@ -17,6 +17,7 @@ const BRIDGE_ALLOWED_RPC_METHODS: &[&str] = &[
     "read_global_codex_config_toml",
     "codex_doctor_current_config",
     "experimental_feature_list",
+    "worktree_setup_status",
     "set_workspace_runtime_codex_args",
     "list_threads",
     "start_thread",
@@ -109,6 +110,7 @@ pub(crate) struct OperationsCapabilities {
     pub(crate) doctor_report: bool,
     pub(crate) feature_flags: bool,
     pub(crate) account_login: bool,
+    pub(crate) worktree_setup_status: bool,
     pub(crate) agents_settings: bool,
 }
 
@@ -134,6 +136,7 @@ pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
             doctor_report: true,
             feature_flags: true,
             account_login: true,
+            worktree_setup_status: true,
             agents_settings: true,
         },
     }

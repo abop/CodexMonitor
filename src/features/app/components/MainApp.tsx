@@ -36,6 +36,7 @@ import { useCopyThread } from "@threads/hooks/useCopyThread";
 import { useTerminalController } from "@/features/terminal/hooks/useTerminalController";
 import { useWorkspaceLaunchScript } from "@app/hooks/useWorkspaceLaunchScript";
 import { useWorkspaceLaunchScripts } from "@app/hooks/useWorkspaceLaunchScripts";
+import { useWorktreeSetupStatusMap } from "@app/hooks/useWorktreeSetupStatusMap";
 import { useWorktreeSetupScript } from "@app/hooks/useWorktreeSetupScript";
 import { effectiveCommitMessageModelId } from "@/features/git/utils/commitMessageModelSelection";
 import { useMobileServerSetup } from "@/features/mobile/hooks/useMobileServerSetup";
@@ -875,12 +876,20 @@ export default function MainApp() {
     openTerminal,
     onDebug: addDebugEntry,
   });
+  const {
+    worktreeSetupStateByWorkspaceId,
+    refreshWorktreeSetupStatuses,
+  } = useWorktreeSetupStatusMap({
+    workspaces,
+    enabled: runtimeCapabilities.operations.worktreeSetupStatus,
+  });
 
   const handleWorktreeCreated = useCallback(
     async (worktree: WorkspaceInfo, _parentWorkspace?: WorkspaceInfo) => {
       await worktreeSetupScriptState.maybeRunWorktreeSetupScript(worktree);
+      refreshWorktreeSetupStatuses();
     },
-    [worktreeSetupScriptState],
+    [refreshWorktreeSetupStatuses, worktreeSetupScriptState],
   );
 
   const { exitDiffView, selectWorkspace, selectHome } = useWorkspaceSelection({
@@ -1617,6 +1626,7 @@ export default function MainApp() {
     threadListLoadingByWorkspace,
     threadListPagingByWorkspace,
     threadListCursorByWorkspace,
+    worktreeSetupStateByWorkspaceId,
     pinnedThreadsVersion,
     threadListSortKey,
     onSetThreadListSortKey: handleSetThreadListSortKey,

@@ -29,6 +29,7 @@ const DESKTOP_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
     doctorReport: true,
     featureFlags: true,
     accountLogin: true,
+    worktreeSetupStatus: true,
     agentsSettings: true,
   },
 };
@@ -54,6 +55,7 @@ const WEB_SAFE_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
     doctorReport: false,
     featureFlags: false,
     accountLogin: false,
+    worktreeSetupStatus: false,
     agentsSettings: false,
   },
 };

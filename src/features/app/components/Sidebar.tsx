@@ -39,6 +39,7 @@ import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { getUsageLabels } from "../utils/usageLabels";
 import { formatRelativeTimeShort } from "../../../utils/time";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
+import type { WorktreeSetupStateLabel } from "@app/hooks/useWorktreeSetupStatusMap";
 
 const COLLAPSED_GROUPS_STORAGE_KEY = "codexmonitor.collapsedGroups";
 const UNGROUPED_COLLAPSE_ID = "__ungrouped__";
@@ -101,6 +102,7 @@ type SidebarProps = {
   groupedWorkspaces: WorkspaceGroupSection[];
   hasWorkspaceGroups: boolean;
   deletingWorktreeIds: Set<string>;
+  worktreeSetupStateByWorkspaceId?: Record<string, WorktreeSetupStateLabel | undefined>;
   newAgentDraftWorkspaceId?: string | null;
   startingDraftThreadWorkspaceId?: string | null;
   threadsByWorkspace: Record<string, ThreadSummary[]>;
@@ -163,6 +165,7 @@ export const Sidebar = memo(function Sidebar({
   groupedWorkspaces,
   hasWorkspaceGroups,
   deletingWorktreeIds,
+  worktreeSetupStateByWorkspaceId = {},
   newAgentDraftWorkspaceId = null,
   startingDraftThreadWorkspaceId = null,
   threadsByWorkspace,
@@ -977,6 +980,7 @@ export const Sidebar = memo(function Sidebar({
                   normalizedQuery={normalizedQuery}
                   renderHighlightedName={renderHighlightedName}
                   isWorkspaceMatch={isWorkspaceMatch}
+                  worktreeSetupStateByWorkspaceId={worktreeSetupStateByWorkspaceId}
                   deletingWorktreeIds={deletingWorktreeIds}
                   threadsByWorkspace={threadsByWorkspace}
                   threadStatusById={threadStatusById}

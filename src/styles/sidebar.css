@@ -1583,6 +1583,32 @@
   text-overflow: ellipsis;
 }
 
+.worktree-setup-status {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  width: fit-content;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.worktree-setup-status-pending {
+  color: var(--status-warning);
+  border-color: color-mix(in srgb, var(--status-warning) 34%, transparent);
+  background: color-mix(in srgb, var(--status-warning) 12%, transparent);
+}
+
+.worktree-setup-status-launched {
+  color: var(--status-success);
+  border-color: color-mix(in srgb, var(--status-success) 34%, transparent);
+  background: color-mix(in srgb, var(--status-success) 12%, transparent);
+}
+
 .worktree-row.deleting .worktree-label {
   color: var(--text-faint);
 }

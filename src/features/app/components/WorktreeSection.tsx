@@ -1,6 +1,7 @@
 import Layers from "lucide-react/dist/esm/icons/layers";
 import type { MouseEvent, ReactNode } from "react";
 
+import type { WorktreeSetupStateLabel } from "@app/hooks/useWorktreeSetupStatusMap";
 import type { ThreadSummary, WorkspaceInfo } from "../../../types";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
 import { ThreadList } from "./ThreadList";
@@ -17,6 +18,7 @@ type ThreadRowsResult = {
 
 type WorktreeSectionProps = {
   worktrees: WorkspaceInfo[];
+  worktreeSetupStateByWorkspaceId?: Record<string, WorktreeSetupStateLabel | undefined>;
   deletingWorktreeIds: Set<string>;
   threadsByWorkspace: Record<string, ThreadSummary[]>;
   threadStatusById: ThreadStatusById;
@@ -61,6 +63,7 @@ type WorktreeSectionProps = {
 
 export function WorktreeSection({
   worktrees,
+  worktreeSetupStateByWorkspaceId = {},
   deletingWorktreeIds,
   threadsByWorkspace,
   threadStatusById,
@@ -148,6 +151,7 @@ export function WorktreeSection({
               worktree={worktree}
               isActive={worktree.id === activeWorkspaceId}
               isDeleting={deletingWorktreeIds.has(worktree.id)}
+              worktreeSetupState={worktreeSetupStateByWorkspaceId[worktree.id]}
               onSelectWorkspace={onSelectWorkspace}
               onShowWorktreeMenu={onShowWorktreeMenu}
               onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}

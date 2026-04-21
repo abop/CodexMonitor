@@ -56,4 +56,42 @@ describe("WorktreeSection", () => {
       screen.queryByRole("button", { name: "Load older..." }),
     ).toBeNull();
   });
+
+  it("renders worktree setup status labels when available", () => {
+    render(
+      <WorktreeSection
+        worktrees={[worktree]}
+        worktreeSetupStateByWorkspaceId={{ [worktree.id]: "pending" }}
+        deletingWorktreeIds={new Set()}
+        threadsByWorkspace={{ [worktree.id]: [] }}
+        threadStatusById={{}}
+        threadListLoadingByWorkspace={{ [worktree.id]: false }}
+        threadListPagingByWorkspace={{ [worktree.id]: false }}
+        threadListCursorByWorkspace={{ [worktree.id]: null }}
+        expandedWorkspaces={new Set()}
+        activeWorkspaceId={null}
+        activeThreadId={null}
+        getThreadRows={() => ({
+          pinnedRows: [],
+          unpinnedRows: [],
+          totalRoots: 0,
+          hasMoreRoots: false,
+        })}
+        getThreadTime={() => null}
+        isThreadPinned={() => false}
+        getPinTimestamp={() => null}
+        pinnedThreadsVersion={0}
+        onSelectWorkspace={vi.fn()}
+        onConnectWorkspace={vi.fn()}
+        onToggleWorkspaceCollapse={vi.fn()}
+        onSelectThread={vi.fn()}
+        onShowThreadMenu={vi.fn()}
+        onShowWorktreeMenu={vi.fn()}
+        onToggleExpanded={vi.fn()}
+        onLoadOlderThreads={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Setup pending")).toBeTruthy();
+  });
 });

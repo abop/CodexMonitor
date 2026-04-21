@@ -27,6 +27,7 @@ This document describes the current capability split between the desktop app and
 - Codex doctor report in the reduced web Codex settings section when the connected bridge advertises `operations.doctorReport`.
 - Read-only `Features` settings visibility when the connected web bridge advertises `operations.featureFlags`.
 - Read-only `Environments` settings visibility for remote worktree roots and per-project setup scripts/worktrees folders.
+- Read-only worktree setup status visibility in shared sidebar worktree cards when the connected bridge advertises `operations.worktreeSetupStatus`.
 
 ## Desktop-Only Workflows
 
@@ -49,7 +50,6 @@ This document describes the current capability split between the desktop app and
 - Local workspace path validation.
 - Clone-from-workspace flow.
 - Worktree creation.
-- Worktree setup status and setup-run tracking.
 - Workspace `AGENTS.md` editing. Web currently supports read-only preview and refresh only when `files.workspaceAgents` is available.
 - Global `AGENTS.md` editing. Web currently supports read-only preview and refresh only when `files.globalAgents` is available.
 - Global Codex config editing. Web currently supports read-only preview and refresh only when `files.globalConfig` is available.
@@ -93,6 +93,7 @@ This document describes the current capability split between the desktop app and
 - Hidden in web settings: `Dictation`, `Shortcuts`, `Open in`, and `Server`. `Agents`, `Codex`, and `Features` appear only when the connected bridge advertises the matching read-only capabilities.
 - The `Codex` settings section appears in web only when the connected bridge advertises global file visibility or doctor-report visibility, and it remains a reduced read-only view for runtime summary, diagnostics, and files.
 - The `Features` settings section appears in web only when the connected bridge advertises `operations.featureFlags`, and it remains a reduced read-only view of Codex-returned feature states.
+- Worktree cards show read-only `Setup pending` / `Setup launched` status pills only when the connected bridge advertises `operations.worktreeSetupStatus`.
 - Web bridge selection lives in the sidebar rail and is web-only.
 - Web realtime only subscribes to `app-server-event`. Terminal, dictation, updater, tray, and menu event channels remain desktop-only.
 
@@ -108,6 +109,7 @@ This document describes the current capability split between the desktop app and
 - Home usage orchestration and capability-aware empty state: `src/features/app/orchestration/useWorkspaceOrchestration.ts`, `src/features/home/components/HomeUsageSection.tsx`
 - Account-switch capability gating and auth flow: `src/features/app/hooks/useWebRuntimeCapabilities.ts`, `src/features/app/hooks/useAccountSwitching.ts`, `src/features/app/components/Sidebar.tsx`
 - Web settings section filter and read-only environment/agents/Codex visibility: `src/features/settings/components/settingsViewConstants.ts`, `src/features/settings/components/sections/SettingsEnvironmentsSection.tsx`, `src/features/settings/components/sections/SettingsAgentsSection.tsx`
+- Worktree setup status capability and shared sidebar rendering: `src/features/app/hooks/useWorktreeSetupStatusMap.ts`, `src/features/app/components/WorktreeCard.tsx`, `src/features/app/components/Sidebar.tsx`
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
 - Workspace `AGENTS.md` runtime gating and web read-only behavior: `src/features/workspaces/components/WorkspaceHome.tsx`
 - Global Codex file web read-only behavior: `src/features/settings/components/sections/SettingsCodexSection.tsx`

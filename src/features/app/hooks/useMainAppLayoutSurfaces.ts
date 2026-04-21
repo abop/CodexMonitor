@@ -44,6 +44,9 @@ type UseMainAppLayoutSurfacesArgs = {
   threadListLoadingByWorkspace: SidebarProps["threadListLoadingByWorkspace"];
   threadListPagingByWorkspace: SidebarProps["threadListPagingByWorkspace"];
   threadListCursorByWorkspace: SidebarProps["threadListCursorByWorkspace"];
+  worktreeSetupStateByWorkspaceId: NonNullable<
+    SidebarProps["worktreeSetupStateByWorkspaceId"]
+  >;
   pinnedThreadsVersion: number;
   threadListSortKey: SidebarProps["threadListSortKey"];
   onSetThreadListSortKey: SidebarProps["onSetThreadListSortKey"];
@@ -249,6 +252,7 @@ function buildPrimarySurface({
   threadListLoadingByWorkspace,
   threadListPagingByWorkspace,
   threadListCursorByWorkspace,
+  worktreeSetupStateByWorkspaceId,
   pinnedThreadsVersion,
   threadListSortKey,
   onSetThreadListSortKey,
@@ -393,6 +397,7 @@ function buildPrimarySurface({
       threadListLoadingByWorkspace,
       threadListPagingByWorkspace,
       threadListCursorByWorkspace,
+      worktreeSetupStateByWorkspaceId,
       pinnedThreadsVersion,
       threadListSortKey,
       onSetThreadListSortKey,
@@ -971,6 +976,7 @@ export function useMainAppLayoutSurfaces({
   threadListLoadingByWorkspace,
   threadListPagingByWorkspace,
   threadListCursorByWorkspace,
+  worktreeSetupStateByWorkspaceId,
   pinnedThreadsVersion,
   threadListSortKey,
   onSetThreadListSortKey,
@@ -1135,6 +1141,7 @@ export function useMainAppLayoutSurfaces({
     threadListLoadingByWorkspace,
     threadListPagingByWorkspace,
     threadListCursorByWorkspace,
+    worktreeSetupStateByWorkspaceId,
     pinnedThreadsVersion,
     threadListSortKey,
     onSetThreadListSortKey,

@@ -370,8 +370,9 @@ export type WorktreeSetupStatus = {
 export async function getWorktreeSetupStatus(
   workspaceId: string,
 ): Promise<WorktreeSetupStatus> {
-  requireDesktopRuntime("Worktree setup");
-  return invoke<WorktreeSetupStatus>("worktree_setup_status", { workspaceId });
+  return invokeSupportedRpc<WorktreeSetupStatus>("worktree_setup_status", {
+    workspaceId,
+  });
 }
 
 export async function markWorktreeSetupRan(workspaceId: string): Promise<void> {

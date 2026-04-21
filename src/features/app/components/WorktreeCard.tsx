@@ -1,11 +1,13 @@
 import type { MouseEvent } from "react";
 
+import type { WorktreeSetupStateLabel } from "@app/hooks/useWorktreeSetupStatusMap";
 import type { WorkspaceInfo } from "../../../types";
 
 type WorktreeCardProps = {
   worktree: WorkspaceInfo;
   isActive: boolean;
   isDeleting?: boolean;
+  worktreeSetupState?: WorktreeSetupStateLabel;
   onSelectWorkspace: (id: string) => void;
   onShowWorktreeMenu: (event: MouseEvent, worktree: WorkspaceInfo) => void;
   onToggleWorkspaceCollapse: (workspaceId: string, collapsed: boolean) => void;
@@ -17,6 +19,7 @@ export function WorktreeCard({
   worktree,
   isActive,
   isDeleting = false,
+  worktreeSetupState,
   onSelectWorkspace,
   onShowWorktreeMenu,
   onToggleWorkspaceCollapse,
@@ -29,6 +32,18 @@ export function WorktreeCard({
   const worktreeMeta =
     worktreeBranch && worktreeBranch !== worktreeLabel ? worktreeBranch : null;
   const contentCollapsedClass = worktreeCollapsed ? " collapsed" : "";
+  const worktreeSetupLabel =
+    worktreeSetupState === "pending"
+      ? "Setup pending"
+      : worktreeSetupState === "launched"
+        ? "Setup launched"
+        : null;
+  const worktreeSetupTitle =
+    worktreeSetupState === "pending"
+      ? "A setup script is configured for this worktree and has not been launched yet."
+      : worktreeSetupState === "launched"
+        ? "A setup script is configured for this worktree and has already been launched once."
+        : null;
 
   return (
     <div className={`worktree-card${isDeleting ? " deleting" : ""}`}>
@@ -60,6 +75,14 @@ export function WorktreeCard({
         <div className="worktree-copy">
           <div className="worktree-label">{worktreeLabel}</div>
           {worktreeMeta && <div className="worktree-meta">{worktreeMeta}</div>}
+          {worktreeSetupLabel ? (
+            <div
+              className={`worktree-setup-status worktree-setup-status-${worktreeSetupState}`}
+              title={worktreeSetupTitle ?? undefined}
+            >
+              {worktreeSetupLabel}
+            </div>
+          ) : null}
         </div>
         <div className="worktree-actions">
           {isDeleting ? (

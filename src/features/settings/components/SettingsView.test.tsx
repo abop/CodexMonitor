@@ -1056,6 +1056,7 @@ describe("SettingsView web build", () => {
             doctorReport: false,
             featureFlags: false,
             accountLogin: false,
+            worktreeSetupStatus: false,
             agentsSettings: false,
           },
         }}
@@ -1141,6 +1142,7 @@ describe("SettingsView web build", () => {
             doctorReport: false,
             featureFlags: false,
             accountLogin: false,
+            worktreeSetupStatus: false,
             agentsSettings: false,
           },
         }}
@@ -1223,6 +1225,7 @@ describe("SettingsView web build", () => {
         doctorReport: false,
         featureFlags: false,
         accountLogin: false,
+        worktreeSetupStatus: false,
         agentsSettings: true,
       },
     } as unknown as NonNullable<ComponentProps<typeof SettingsView>["runtimeCapabilities"]>;
@@ -1339,6 +1342,7 @@ describe("SettingsView web build", () => {
             doctorReport: true,
             featureFlags: false,
             accountLogin: false,
+            worktreeSetupStatus: false,
             agentsSettings: false,
           },
         }}
@@ -1463,6 +1467,7 @@ describe("SettingsView web build", () => {
             doctorReport: false,
             featureFlags: true,
             accountLogin: false,
+            worktreeSetupStatus: false,
             agentsSettings: false,
           },
         }}

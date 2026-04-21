@@ -23,6 +23,7 @@ export type WebRuntimeCapabilities = {
     doctorReport: boolean;
     featureFlags: boolean;
     accountLogin: boolean;
+    worktreeSetupStatus: boolean;
     agentsSettings: boolean;
   };
 };
@@ -78,6 +79,7 @@ function isWebRuntimeCapabilities(
     isBoolean(operations.doctorReport) &&
     isBoolean(operations.featureFlags) &&
     isBoolean(operations.accountLogin) &&
+    isBoolean(operations.worktreeSetupStatus) &&
     isBoolean(operations.agentsSettings)
   );
 }

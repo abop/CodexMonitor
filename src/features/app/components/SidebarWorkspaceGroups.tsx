@@ -4,6 +4,7 @@ import Copy from "lucide-react/dist/esm/icons/copy";
 import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import Plus from "lucide-react/dist/esm/icons/plus";
 
+import type { WorktreeSetupStateLabel } from "@app/hooks/useWorktreeSetupStatusMap";
 import type { ThreadSummary, WorkspaceInfo } from "../../../types";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
 import {
@@ -36,6 +37,7 @@ type SidebarWorkspaceGroupsProps = {
   normalizedQuery: string;
   renderHighlightedName: (name: string) => ReactNode;
   isWorkspaceMatch: (workspace: WorkspaceInfo) => boolean;
+  worktreeSetupStateByWorkspaceId?: Record<string, WorktreeSetupStateLabel | undefined>;
   deletingWorktreeIds: Set<string>;
   threadsByWorkspace: Record<string, ThreadSummary[]>;
   threadStatusById: ThreadStatusById;
@@ -105,6 +107,7 @@ function SidebarWorkspaceEntry({
   normalizedQuery,
   renderHighlightedName,
   isWorkspaceMatch,
+  worktreeSetupStateByWorkspaceId,
   deletingWorktreeIds,
   threadsByWorkspace,
   threadStatusById,
@@ -287,6 +290,7 @@ function SidebarWorkspaceEntry({
       {visibleClones.length > 0 && (
         <WorktreeSection
           worktrees={visibleClones}
+          worktreeSetupStateByWorkspaceId={worktreeSetupStateByWorkspaceId}
           deletingWorktreeIds={deletingWorktreeIds}
           threadsByWorkspace={threadsByWorkspace}
           threadStatusById={threadStatusById}
@@ -321,6 +325,7 @@ function SidebarWorkspaceEntry({
       {worktrees.length > 0 && (
         <WorktreeSection
           worktrees={worktrees}
+          worktreeSetupStateByWorkspaceId={worktreeSetupStateByWorkspaceId}
           deletingWorktreeIds={deletingWorktreeIds}
           threadsByWorkspace={threadsByWorkspace}
           threadStatusById={threadStatusById}
