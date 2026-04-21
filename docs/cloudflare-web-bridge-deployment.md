@@ -433,17 +433,32 @@ Use this order in production:
 
 ## 14. macOS `launchctl` setup
 
-This section shows a user-login startup setup where all three processes are managed the same way:
+This section shows a user-level startup setup where all three processes are managed the same way:
 
 - daemon
 - web bridge
 - `cloudflared`
+
+These examples assume the machine is not running this stack in a GUI login session.
+For a background user session, load the agents into `user/$(id -u)` and set:
+
+```xml
+<key>LimitLoadToSessionType</key>
+<string>Background</string>
+```
+
+Why this matters:
+
+- `gui/$(id -u)` is for GUI sessions only
+- a background user session created by SSH or other non-GUI login paths will reject the GUI-targeted examples
+- the bridge should not start until the daemon is already listening, so the examples below use small local wrapper scripts instead of launching the binaries directly
 
 ### 14.1 Recommended log and runtime directories
 
 ```bash
 mkdir -p "$REPO_DIR/.deploy/log"
 mkdir -p "$REPO_DIR/.deploy/data"
+mkdir -p "$REPO_DIR/.deploy/bin"
 mkdir -p "$HOME/Library/LaunchAgents"
 mkdir -p "$HOME/Library/Logs/CodexMonitor"
 ```
@@ -453,7 +468,89 @@ Privacy note:
 - keep real tokens, account identifiers, and credential file paths out of screenshots, chat logs, and checked-in files
 - in plist files, replace placeholder values with your real local values only on the target machine
 
-### 14.2 Daemon plist
+### 14.2 Local env file and wrapper scripts
+
+Keep local-only values in `"$REPO_DIR/.deploy/"`.
+
+Create `"$REPO_DIR/.deploy/codexmonitor-login.env"`:
+
+```bash
+REPO_DIR="$REPO_DIR"
+WEB_HOST="$WEB_HOST"
+BRIDGE_HOST="$BRIDGE_HOST"
+TUNNEL_NAME="$TUNNEL_NAME"
+DAEMON_LISTEN="$DAEMON_LISTEN"
+BRIDGE_LISTEN="$BRIDGE_LISTEN"
+DATA_DIR="$DATA_DIR"
+LOG_DIR="$LOG_DIR"
+DAEMON_TOKEN="$DAEMON_TOKEN"
+TUNNEL_CONFIG="$HOME/.cloudflared/config.yml"
+CF_LOG_DIR="$HOME/Library/Logs/CodexMonitor"
+```
+
+Create `"$REPO_DIR/.deploy/bin/start-daemon.sh"`:
+
+```zsh
+#!/bin/zsh
+set -euo pipefail
+
+source "$REPO_DIR/.deploy/codexmonitor-login.env"
+mkdir -p "$DATA_DIR" "$LOG_DIR"
+
+exec env CODEX_MONITOR_DAEMON_TOKEN="$DAEMON_TOKEN" \
+  "$REPO_DIR/src-tauri/target/release/codex_monitor_daemon" \
+  --listen "$DAEMON_LISTEN" \
+  --data-dir "$DATA_DIR"
+```
+
+Create `"$REPO_DIR/.deploy/bin/start-bridge.sh"`:
+
+```zsh
+#!/bin/zsh
+set -euo pipefail
+
+source "$REPO_DIR/.deploy/codexmonitor-login.env"
+mkdir -p "$DATA_DIR" "$LOG_DIR"
+
+daemon_host="${DAEMON_LISTEN%:*}"
+daemon_port="${DAEMON_LISTEN##*:}"
+
+until nc -z "$daemon_host" "$daemon_port" >/dev/null 2>&1; do
+  sleep 1
+done
+
+exec env \
+  CODEX_MONITOR_WEB_BRIDGE_LISTEN="$BRIDGE_LISTEN" \
+  CODEX_MONITOR_WEB_BRIDGE_DAEMON_HOST="$DAEMON_LISTEN" \
+  CODEX_MONITOR_WEB_BRIDGE_DAEMON_TOKEN="$DAEMON_TOKEN" \
+  CODEX_MONITOR_WEB_BRIDGE_REQUIRE_CF_ACCESS_HEADER=true \
+  CODEX_MONITOR_WEB_BRIDGE_ALLOWED_ORIGINS="https://$WEB_HOST" \
+  "$REPO_DIR/src-tauri/target/release/codex_monitor_web_bridge"
+```
+
+Create `"$REPO_DIR/.deploy/bin/start-tunnel.sh"`:
+
+```zsh
+#!/bin/zsh
+set -euo pipefail
+
+source "$REPO_DIR/.deploy/codexmonitor-login.env"
+mkdir -p "$CF_LOG_DIR"
+
+exec cloudflared --config "$TUNNEL_CONFIG" tunnel run
+```
+
+Make them executable:
+
+```bash
+chmod 600 "$REPO_DIR/.deploy/codexmonitor-login.env"
+chmod 700 \
+  "$REPO_DIR/.deploy/bin/start-daemon.sh" \
+  "$REPO_DIR/.deploy/bin/start-bridge.sh" \
+  "$REPO_DIR/.deploy/bin/start-tunnel.sh"
+```
+
+### 14.3 Daemon plist
 
 Create `~/Library/LaunchAgents/com.codexmonitor.daemon.plist`:
 
@@ -467,28 +564,21 @@ Create `~/Library/LaunchAgents/com.codexmonitor.daemon.plist`:
 
     <key>ProgramArguments</key>
     <array>
-      <string>/Users/you/workspace/CodexMonitor/src-tauri/target/release/codex_monitor_daemon</string>
-      <string>--listen</string>
-      <string>127.0.0.1:4732</string>
-      <string>--data-dir</string>
-      <string>/Users/you/workspace/CodexMonitor/.deploy/data</string>
+      <string>/Users/you/workspace/CodexMonitor/.deploy/bin/start-daemon.sh</string>
     </array>
-
-    <key>EnvironmentVariables</key>
-    <dict>
-      <key>CODEX_MONITOR_DAEMON_TOKEN</key>
-      <string>replace-with-your-token</string>
-      <key>PATH</key>
-      <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
-    </dict>
 
     <key>WorkingDirectory</key>
     <string>/Users/you/workspace/CodexMonitor</string>
+
+    <key>LimitLoadToSessionType</key>
+    <string>Background</string>
 
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
 
     <key>StandardOutPath</key>
     <string>/Users/you/workspace/CodexMonitor/.deploy/log/daemon.stdout.log</string>
@@ -501,12 +591,12 @@ Create `~/Library/LaunchAgents/com.codexmonitor.daemon.plist`:
 Load it:
 
 ```bash
-launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.codexmonitor.daemon.plist"
-launchctl enable "gui/$(id -u)/com.codexmonitor.daemon"
-launchctl kickstart -k "gui/$(id -u)/com.codexmonitor.daemon"
+launchctl bootstrap "user/$(id -u)" "$HOME/Library/LaunchAgents/com.codexmonitor.daemon.plist"
+launchctl enable "user/$(id -u)/com.codexmonitor.daemon"
+launchctl kickstart -k "user/$(id -u)/com.codexmonitor.daemon"
 ```
 
-### 14.3 Bridge plist
+### 14.4 Bridge plist
 
 Create `~/Library/LaunchAgents/com.codexmonitor.web-bridge.plist`:
 
@@ -520,32 +610,21 @@ Create `~/Library/LaunchAgents/com.codexmonitor.web-bridge.plist`:
 
     <key>ProgramArguments</key>
     <array>
-      <string>/Users/you/workspace/CodexMonitor/src-tauri/target/release/codex_monitor_web_bridge</string>
+      <string>/Users/you/workspace/CodexMonitor/.deploy/bin/start-bridge.sh</string>
     </array>
-
-    <key>EnvironmentVariables</key>
-    <dict>
-      <key>CODEX_MONITOR_WEB_BRIDGE_LISTEN</key>
-      <string>127.0.0.1:8787</string>
-      <key>CODEX_MONITOR_WEB_BRIDGE_DAEMON_HOST</key>
-      <string>127.0.0.1:4732</string>
-      <key>CODEX_MONITOR_WEB_BRIDGE_DAEMON_TOKEN</key>
-      <string>replace-with-your-token</string>
-      <key>CODEX_MONITOR_WEB_BRIDGE_REQUIRE_CF_ACCESS_HEADER</key>
-      <string>true</string>
-      <key>CODEX_MONITOR_WEB_BRIDGE_ALLOWED_ORIGINS</key>
-      <string>https://monitor.example.com</string>
-      <key>PATH</key>
-      <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
-    </dict>
 
     <key>WorkingDirectory</key>
     <string>/Users/you/workspace/CodexMonitor</string>
+
+    <key>LimitLoadToSessionType</key>
+    <string>Background</string>
 
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
 
     <key>StandardOutPath</key>
     <string>/Users/you/workspace/CodexMonitor/.deploy/log/bridge.stdout.log</string>
@@ -558,12 +637,12 @@ Create `~/Library/LaunchAgents/com.codexmonitor.web-bridge.plist`:
 Load it:
 
 ```bash
-launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.codexmonitor.web-bridge.plist"
-launchctl enable "gui/$(id -u)/com.codexmonitor.web-bridge"
-launchctl kickstart -k "gui/$(id -u)/com.codexmonitor.web-bridge"
+launchctl bootstrap "user/$(id -u)" "$HOME/Library/LaunchAgents/com.codexmonitor.web-bridge.plist"
+launchctl enable "user/$(id -u)/com.codexmonitor.web-bridge"
+launchctl kickstart -k "user/$(id -u)/com.codexmonitor.web-bridge"
 ```
 
-### 14.4 Tunnel plist
+### 14.5 Tunnel plist
 
 Create `~/Library/LaunchAgents/com.codexmonitor.cloudflare-bridge-tunnel.plist`:
 
@@ -577,27 +656,21 @@ Create `~/Library/LaunchAgents/com.codexmonitor.cloudflare-bridge-tunnel.plist`:
 
     <key>ProgramArguments</key>
     <array>
-      <string>/opt/homebrew/bin/cloudflared</string>
-      <string>tunnel</string>
-      <string>--config</string>
-      <string>/Users/you/.cloudflared/config.yml</string>
-      <string>run</string>
-      <string>codex-monitor-bridge</string>
+      <string>/Users/you/workspace/CodexMonitor/.deploy/bin/start-tunnel.sh</string>
     </array>
 
     <key>WorkingDirectory</key>
     <string>/Users/you/workspace/CodexMonitor</string>
 
-    <key>EnvironmentVariables</key>
-    <dict>
-      <key>PATH</key>
-      <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
-    </dict>
+    <key>LimitLoadToSessionType</key>
+    <string>Background</string>
 
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
 
     <key>StandardOutPath</key>
     <string>/Users/you/Library/Logs/CodexMonitor/cloudflared.stdout.log</string>
@@ -610,12 +683,50 @@ Create `~/Library/LaunchAgents/com.codexmonitor.cloudflare-bridge-tunnel.plist`:
 Load it:
 
 ```bash
-launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.codexmonitor.cloudflare-bridge-tunnel.plist"
-launchctl enable "gui/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel"
-launchctl kickstart -k "gui/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel"
+launchctl bootstrap "user/$(id -u)" "$HOME/Library/LaunchAgents/com.codexmonitor.cloudflare-bridge-tunnel.plist"
+launchctl enable "user/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel"
+launchctl kickstart -k "user/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel"
 ```
 
-### 14.5 Alternative: `cloudflared service install`
+### 14.6 Optional helper script
+
+If you want one local helper that reloads all three agents:
+
+```zsh
+#!/bin/zsh
+set -euo pipefail
+
+uid="$(id -u)"
+domain="user/$uid"
+plist_dir="$HOME/Library/LaunchAgents"
+
+plists=(
+  "$plist_dir/com.codexmonitor.daemon.plist"
+  "$plist_dir/com.codexmonitor.web-bridge.plist"
+  "$plist_dir/com.codexmonitor.cloudflare-bridge-tunnel.plist"
+)
+
+labels=(
+  "com.codexmonitor.daemon"
+  "com.codexmonitor.web-bridge"
+  "com.codexmonitor.cloudflare-bridge-tunnel"
+)
+
+for plist in "${plists[@]}"; do
+  launchctl bootout "$domain" "$plist" >/dev/null 2>&1 || true
+done
+
+for plist in "${plists[@]}"; do
+  launchctl bootstrap "$domain" "$plist"
+done
+
+for label in "${labels[@]}"; do
+  launchctl enable "$domain/$label"
+  launchctl kickstart -k "$domain/$label"
+done
+```
+
+### 14.7 Alternative: `cloudflared service install`
 
 If you prefer Cloudflare's own macOS service wrapper for the tunnel, you can use:
 
@@ -645,26 +756,26 @@ Cloudflare documents the macOS logs here:
 /Library/Logs/com.cloudflare.cloudflared.out.log
 ```
 
-### 14.6 Login-time vs boot-time on macOS
+### 14.8 Login-time vs boot-time on macOS
 
 - `~/Library/LaunchAgents` runs in the logged-in user's session.
 - `/Library/LaunchDaemons` runs at boot, but then every path and permission must also work without an interactive login.
 
-If this machine is a headless server and no user session is guaranteed, prefer boot-time services:
+If this machine is a headless server and no user session is guaranteed at all, prefer boot-time services:
 
 - `sudo cloudflared service install` for `cloudflared`, or a root-owned LaunchDaemon if you want to manage all three processes the same way
 - `/Library/LaunchDaemons` for the CodexMonitor daemon and bridge
 
-If this machine is your own logged-in Mac mini or desktop, the user-level `LaunchAgents` examples above are usually simpler.
+If this machine keeps a background user session and you want the processes owned by that user, the `LaunchAgents` examples above are sufficient.
 
 ## 15. Validation checklist
 
 After everything is up:
 
 ```bash
-launchctl print "gui/$(id -u)/com.codexmonitor.daemon" | head
-launchctl print "gui/$(id -u)/com.codexmonitor.web-bridge" | head
-launchctl print "gui/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel" | head
+launchctl print "user/$(id -u)/com.codexmonitor.daemon" | head
+launchctl print "user/$(id -u)/com.codexmonitor.web-bridge" | head
+launchctl print "user/$(id -u)/com.codexmonitor.cloudflare-bridge-tunnel" | head
 lsof -nP -iTCP:4732 -sTCP:LISTEN
 lsof -nP -iTCP:8787 -sTCP:LISTEN
 cloudflared tunnel info "$TUNNEL_NAME"
@@ -700,6 +811,8 @@ Expected result:
 - If `CODEX_MONITOR_WEB_BRIDGE_REQUIRE_CF_ACCESS_HEADER=true` but `Protect with Access` is not enabled, bridge requests will fail with `401`.
 - If you build with the wrong command and skip `npm run build:web`, the deployed frontend may come up in the wrong runtime and web-only behavior can disappear.
 - If the tunnel DNS record exists but `cloudflared` is not running, users will see a tunnel/DNS failure instead of reaching the bridge.
+- If you are not in a GUI session, `launchctl bootstrap gui/$(id -u)` is the wrong target. Use `user/$(id -u)` and `LimitLoadToSessionType=Background`.
+- If the bridge launches before the daemon is listening, the bridge may exit immediately with `Connection refused`. Use a small wrapper that waits on `"$DAEMON_LISTEN"` before starting the bridge.
 - If you use a deeper hostname than your certificate covers, TLS will fail even if the tunnel and DNS record are correct.
 - Do not expose the daemon directly on a public interface. The public hostname should terminate at Cloudflare Tunnel and forward only to the bridge.
 

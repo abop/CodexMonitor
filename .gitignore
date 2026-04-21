@@ -30,6 +30,7 @@ CodexMonitor.zip
 .codex-worktrees/
 .worktrees/
 .codexmonitor/
+.deploy/
 .agent/
 .agents/
 .claude/
