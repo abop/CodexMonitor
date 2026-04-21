@@ -1178,6 +1178,39 @@ describe("useThreads UX integration", () => {
     expect(result.current.threadParentById["thread-review-1"]).toBe("thread-parent");
   });
 
+  it("links detached uncommitted review thread to its parent", async () => {
+    vi.mocked(startReview).mockResolvedValue({
+      result: { reviewThreadId: "thread-review-1" },
+    });
+
+    const { result } = renderHook(() =>
+      useThreads({
+        activeWorkspace: workspace,
+        onWorkspaceConnected: vi.fn(),
+        reviewDeliveryMode: "detached",
+      }),
+    );
+
+    act(() => {
+      result.current.setActiveThreadId("thread-parent");
+    });
+
+    await act(async () => {
+      await result.current.startUncommittedReview("ws-1");
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(startReview)).toHaveBeenCalledWith(
+        "ws-1",
+        "thread-parent",
+        { type: "uncommittedChanges" },
+        "detached",
+      );
+    });
+
+    expect(result.current.threadParentById["thread-review-1"]).toBe("thread-parent");
+  });
+
   it("keeps detached collab review threads under the original parent", async () => {
     vi.mocked(startReview).mockResolvedValue({
       result: { reviewThreadId: "thread-review-1" },

@@ -796,6 +796,122 @@ describe("useThreadMessaging telemetry", () => {
     );
   });
 
+  it("dispatches formatted MCP status lines on success", async () => {
+    vi.mocked(listMcpServerStatusService).mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            name: "github",
+            authStatus: "authorized",
+            tools: {
+              mcp__github__search: {},
+              mcp__github__issues: {},
+            },
+            resources: [{}],
+            resourceTemplates: [{}, {}],
+          },
+        ],
+      },
+    } as Awaited<ReturnType<typeof listMcpServerStatusService>>);
+    const dispatch = vi.fn();
+
+    const { result } = renderHook(() =>
+      useThreadMessaging({
+        activeWorkspace: workspace,
+        activeThreadId: "thread-1",
+        accessMode: "current",
+        model: null,
+        effort: null,
+        collaborationMode: null,
+        reviewDeliveryMode: "inline",
+        steerEnabled: false,
+        customPrompts: [],
+        threadStatusById: {},
+        activeTurnIdByThread: {},
+        rateLimitsByWorkspace: {},
+        pendingInterruptsRef: { current: new Set<string>() },
+        dispatch,
+        getCustomName: vi.fn(() => undefined),
+        markProcessing: vi.fn(),
+        markReviewing: vi.fn(),
+        setActiveTurnId: vi.fn(),
+        recordThreadActivity: vi.fn(),
+        safeMessageActivity: vi.fn(),
+        onDebug: vi.fn(),
+        pushThreadErrorMessage: vi.fn(),
+        ensureThreadForActiveWorkspace: vi.fn(async () => "thread-1"),
+        ensureThreadForWorkspace: vi.fn(async () => "thread-1"),
+        refreshThread: vi.fn(async () => null),
+        forkThreadForWorkspace: vi.fn(async () => null),
+        updateThreadParent: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await result.current.startMcp("/mcp");
+    });
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "addAssistantMessage",
+      threadId: "thread-1",
+      text: [
+        "MCP tools:",
+        "- github (auth: authorized)",
+        "  tools: issues, search",
+        "  resources: 1, templates: 2",
+      ].join("\n"),
+    });
+  });
+
+  it("dispatches MCP error summary when listing servers fails", async () => {
+    vi.mocked(listMcpServerStatusService).mockRejectedValueOnce(
+      new Error("failed to connect"),
+    );
+    const dispatch = vi.fn();
+
+    const { result } = renderHook(() =>
+      useThreadMessaging({
+        activeWorkspace: workspace,
+        activeThreadId: "thread-1",
+        accessMode: "current",
+        model: null,
+        effort: null,
+        collaborationMode: null,
+        reviewDeliveryMode: "inline",
+        steerEnabled: false,
+        customPrompts: [],
+        threadStatusById: {},
+        activeTurnIdByThread: {},
+        rateLimitsByWorkspace: {},
+        pendingInterruptsRef: { current: new Set<string>() },
+        dispatch,
+        getCustomName: vi.fn(() => undefined),
+        markProcessing: vi.fn(),
+        markReviewing: vi.fn(),
+        setActiveTurnId: vi.fn(),
+        recordThreadActivity: vi.fn(),
+        safeMessageActivity: vi.fn(),
+        onDebug: vi.fn(),
+        pushThreadErrorMessage: vi.fn(),
+        ensureThreadForActiveWorkspace: vi.fn(async () => "thread-1"),
+        ensureThreadForWorkspace: vi.fn(async () => "thread-1"),
+        refreshThread: vi.fn(async () => null),
+        forkThreadForWorkspace: vi.fn(async () => null),
+        updateThreadParent: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await result.current.startMcp("/mcp");
+    });
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "addAssistantMessage",
+      threadId: "thread-1",
+      text: "MCP tools:\n- failed to connect",
+    });
+  });
+
   it("names detached commit review child threads from commit context", async () => {
     vi.mocked(startReviewService).mockResolvedValueOnce({
       result: {
