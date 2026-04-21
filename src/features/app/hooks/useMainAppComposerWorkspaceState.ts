@@ -16,6 +16,7 @@ import { useWorkspaceFileListing } from "@app/hooks/useWorkspaceFileListing";
 import { useWorkspaceAgentMd } from "@/features/workspaces/hooks/useWorkspaceAgentMd";
 import { useWorkspaceHome } from "@/features/workspaces/hooks/useWorkspaceHome";
 import type { WebRuntimeCapabilities } from "@/services/bridge/http";
+import type { CommandCapabilities } from "@/features/composer/hooks/useComposerAutocompleteState";
 
 const RECENT_THREAD_LIMIT = 8;
 
@@ -187,7 +188,7 @@ export function useMainAppComposerWorkspaceState({
     ? threadStatusById[activeThreadId]?.isReviewing ?? false
     : false;
   const activeTurnId = activeThreadId ? activeTurnIdByThread[activeThreadId] ?? null : null;
-  const commandCapabilities = useMemo(
+  const commandCapabilities = useMemo<CommandCapabilities>(
     () => ({
       fork: threadControls.fork,
       compact: threadControls.compact,

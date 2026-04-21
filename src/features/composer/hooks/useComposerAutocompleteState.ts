@@ -13,7 +13,7 @@ import { isComposingEvent } from "../../../utils/keys";
 import type { WebRuntimeCapabilities } from "@/services/bridge/http";
 
 type Skill = { name: string; description?: string };
-type CommandCapabilities = Pick<
+export type CommandCapabilities = Pick<
   WebRuntimeCapabilities["threadControls"],
   "fork" | "compact" | "review" | "mcp"
 >;

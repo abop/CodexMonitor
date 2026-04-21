@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   fetchBridgeCapabilities,
   type WebRuntimeCapabilities,
@@ -55,25 +55,17 @@ const WEB_SAFE_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
 };
 
 export function useWebRuntimeCapabilities() {
-  const initialRuntimeConfig = readRuntimeConfig();
-  const runtime = initialRuntimeConfig.runtime;
-  const [bridgeBaseUrl, setBridgeBaseUrl] = useState(
-    initialRuntimeConfig.bridgeBaseUrl,
+  const runtime = readRuntimeConfig().runtime;
+  const bridgeBaseUrl = useSyncExternalStore(
+    subscribeRuntimeBridgeBaseUrl,
+    () => readRuntimeConfig().bridgeBaseUrl,
+    () => readRuntimeConfig().bridgeBaseUrl,
   );
   const [capabilities, setCapabilities] = useState<WebRuntimeCapabilities>(
     runtime === "web"
       ? WEB_SAFE_RUNTIME_CAPABILITIES
       : DESKTOP_RUNTIME_CAPABILITIES,
   );
-
-  useEffect(() => {
-    if (runtime !== "web") {
-      return undefined;
-    }
-    return subscribeRuntimeBridgeBaseUrl((nextBridgeBaseUrl) => {
-      setBridgeBaseUrl(nextBridgeBaseUrl);
-    });
-  }, [runtime]);
 
   useEffect(() => {
     if (runtime !== "web") {

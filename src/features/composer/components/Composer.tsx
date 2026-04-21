@@ -44,7 +44,7 @@ import { ComposerMetaBar } from "./ComposerMetaBar";
 import { ComposerQueue } from "./ComposerQueue";
 import { isMacPlatform } from "../../../utils/platformPaths";
 import type { CodexArgsOption } from "../../threads/utils/codexArgsProfiles";
-import type { WebRuntimeCapabilities } from "@/services/bridge/http";
+import type { CommandCapabilities } from "../hooks/useComposerAutocompleteState";
 
 type ComposerProps = {
   onSend: (
@@ -59,10 +59,7 @@ type ComposerProps = {
   appsEnabled: boolean;
   isProcessing: boolean;
   steerAvailable: boolean;
-  commandCapabilities?: Pick<
-    WebRuntimeCapabilities["threadControls"],
-    "fork" | "compact" | "review" | "mcp"
-  >;
+  commandCapabilities?: CommandCapabilities;
   followUpMessageBehavior: FollowUpMessageBehavior;
   composerFollowUpHintEnabled: boolean;
   collaborationModes: { id: string; label: string }[];
