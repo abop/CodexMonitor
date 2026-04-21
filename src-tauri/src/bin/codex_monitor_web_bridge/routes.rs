@@ -1,4 +1,7 @@
 use crate::auth::require_bridge_headers;
+use crate::shared::web_runtime_capabilities::{
+    bridge_all_allowed_rpc_methods, bridge_capabilities_v1,
+};
 use crate::state::BridgeState;
 use axum::extract::ws::{Message, WebSocketUpgrade};
 use axum::extract::State;
@@ -9,63 +12,6 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-const ALLOWED_RPC_METHODS: &[&str] = &[
-    "list_workspaces",
-    "add_workspace",
-    "add_workspace_from_git_url",
-    "connect_workspace",
-    "remove_workspace",
-    "remove_worktree",
-    "rename_worktree",
-    "rename_worktree_upstream",
-    "apply_worktree_changes",
-    "set_workspace_runtime_codex_args",
-    "list_threads",
-    "start_thread",
-    "read_thread",
-    "resume_thread",
-    "set_thread_name",
-    "archive_thread",
-    "send_user_message",
-    "turn_interrupt",
-    "thread_live_subscribe",
-    "thread_live_unsubscribe",
-    "get_git_status",
-    "get_git_diffs",
-    "get_git_log",
-    "list_git_branches",
-    "get_git_commit_diff",
-    "get_git_remote",
-    "stage_git_file",
-    "stage_git_all",
-    "unstage_git_file",
-    "revert_git_file",
-    "revert_git_all",
-    "commit_git",
-    "fetch_git",
-    "pull_git",
-    "push_git",
-    "sync_git",
-    "checkout_git_branch",
-    "create_git_branch",
-    "get_app_settings",
-    "update_app_settings",
-    "get_config_model",
-    "model_list",
-    "collaboration_mode_list",
-    "skills_list",
-    "apps_list",
-    "prompts_list",
-    "prompts_create",
-    "prompts_update",
-    "prompts_delete",
-    "prompts_move",
-    "account_rate_limits",
-    "account_read",
-    "respond_to_server_request",
-    "remember_approval_rule",
-];
 
 #[derive(Deserialize)]
 struct RpcRequest {
@@ -91,6 +37,7 @@ struct RpcErrorBody {
 
 pub(crate) fn build_router(state: BridgeState) -> Router {
     Router::new()
+        .route("/api/capabilities", get(capabilities_handler))
         .route("/api/rpc", post(rpc_handler).options(preflight_handler))
         .route("/ws", get(ws_handler))
         .with_state(state)
@@ -143,7 +90,10 @@ fn apply_cors_headers(
             HeaderValue::from_static("POST, OPTIONS"),
         );
         if let Some(request_headers) = headers.get(header::ACCESS_CONTROL_REQUEST_HEADERS) {
-            response_headers.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, request_headers.clone());
+            response_headers.insert(
+                header::ACCESS_CONTROL_ALLOW_HEADERS,
+                request_headers.clone(),
+            );
         } else {
             response_headers.insert(
                 header::ACCESS_CONTROL_ALLOW_HEADERS,
@@ -185,6 +135,20 @@ async fn preflight_handler(
     ))
 }
 
+async fn capabilities_handler(
+    State(state): State<BridgeState>,
+    headers: HeaderMap,
+) -> Result<Response, Response> {
+    let allowed_origin = resolve_allowed_origin(&headers, &state)
+        .map_err(|error| error_response(&headers, None, error))?;
+
+    Ok(apply_cors_headers(
+        &headers,
+        allowed_origin,
+        Json(bridge_capabilities_v1()),
+    ))
+}
+
 async fn rpc_handler(
     State(state): State<BridgeState>,
     headers: HeaderMap,
@@ -195,18 +159,25 @@ async fn rpc_handler(
     require_bridge_headers(&headers, state.config.require_cf_access_header)
         .map_err(|error| error_response(&headers, allowed_origin.clone(), error))?;
 
-    if !ALLOWED_RPC_METHODS.contains(&request.method.as_str()) {
-        return Err(error_response(&headers, allowed_origin.clone(), (
-            StatusCode::FORBIDDEN,
-            "bridge denied method".to_string(),
-        )));
+    if !bridge_all_allowed_rpc_methods().contains(&request.method.as_str()) {
+        return Err(error_response(
+            &headers,
+            allowed_origin.clone(),
+            (StatusCode::FORBIDDEN, "bridge denied method".to_string()),
+        ));
     }
 
     let result = state
         .daemon_client
         .call(&request.method, request.params)
         .await
-        .map_err(|message| error_response(&headers, allowed_origin.clone(), (StatusCode::BAD_GATEWAY, message)))?;
+        .map_err(|message| {
+            error_response(
+                &headers,
+                allowed_origin.clone(),
+                (StatusCode::BAD_GATEWAY, message),
+            )
+        })?;
 
     Ok(apply_cors_headers(
         &headers,
@@ -265,7 +236,7 @@ mod tests {
     use crate::config::BridgeConfig;
     use crate::daemon_client::test_client_pair;
     use crate::state::BridgeState;
-    use axum::body::Body;
+    use axum::body::{to_bytes, Body};
     use axum::http::{header, HeaderValue, Request, StatusCode};
     use serde_json::json;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -282,6 +253,113 @@ mod tests {
             },
             daemon_client,
         }
+    }
+
+    #[test]
+    fn returns_bridge_capabilities() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let app = build_router(test_state());
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("GET")
+                            .uri("/api/capabilities")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+                assert_eq!(
+                    serde_json::from_slice::<serde_json::Value>(&body).unwrap(),
+                    json!({
+                        "version": 1,
+                        "methods": [
+                            "list_workspaces",
+                            "add_workspace",
+                            "add_workspace_from_git_url",
+                            "connect_workspace",
+                            "remove_workspace",
+                            "remove_worktree",
+                            "rename_worktree",
+                            "rename_worktree_upstream",
+                            "apply_worktree_changes",
+                            "set_workspace_runtime_codex_args",
+                            "list_threads",
+                            "start_thread",
+                            "read_thread",
+                            "resume_thread",
+                            "set_thread_name",
+                            "archive_thread",
+                            "send_user_message",
+                            "turn_interrupt",
+                            "turn_steer",
+                            "fork_thread",
+                            "compact_thread",
+                            "thread_live_subscribe",
+                            "thread_live_unsubscribe",
+                            "get_git_status",
+                            "get_git_diffs",
+                            "get_git_log",
+                            "list_git_branches",
+                            "get_git_commit_diff",
+                            "get_git_remote",
+                            "stage_git_file",
+                            "stage_git_all",
+                            "unstage_git_file",
+                            "revert_git_file",
+                            "revert_git_all",
+                            "commit_git",
+                            "fetch_git",
+                            "pull_git",
+                            "push_git",
+                            "sync_git",
+                            "checkout_git_branch",
+                            "create_git_branch",
+                            "get_app_settings",
+                            "update_app_settings",
+                            "get_config_model",
+                            "model_list",
+                            "collaboration_mode_list",
+                            "skills_list",
+                            "apps_list",
+                            "prompts_list",
+                            "prompts_create",
+                            "prompts_update",
+                            "prompts_delete",
+                            "prompts_move",
+                            "account_rate_limits",
+                            "account_read",
+                            "respond_to_server_request",
+                            "remember_approval_rule"
+                        ],
+                        "threadControls": {
+                            "steer": true,
+                            "fork": true,
+                            "compact": true,
+                            "review": false,
+                            "mcp": false
+                        },
+                        "files": {
+                            "workspaceTree": false,
+                            "workspaceAgents": false,
+                            "globalAgents": false,
+                            "globalConfig": false
+                        },
+                        "operations": {
+                            "usageSnapshot": false,
+                            "doctorReport": false,
+                            "featureFlags": false
+                        }
+                    })
+                );
+            });
     }
 
     #[test]
@@ -306,6 +384,70 @@ mod tests {
                     .unwrap();
 
                 assert_eq!(response.status(), StatusCode::FORBIDDEN);
+            });
+    }
+
+    #[test]
+    fn forwards_thread_control_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let requests = [
+                    (
+                        "turn_steer",
+                        json!({
+                            "workspaceId": "ws-1",
+                            "threadId": "thread-1",
+                            "turnId": "turn-1",
+                            "text": "please revise",
+                            "images": [],
+                            "appMentions": []
+                        }),
+                    ),
+                    (
+                        "fork_thread",
+                        json!({
+                            "workspaceId": "ws-1",
+                            "threadId": "thread-1"
+                        }),
+                    ),
+                    (
+                        "compact_thread",
+                        json!({
+                            "workspaceId": "ws-1",
+                            "threadId": "thread-1"
+                        }),
+                    ),
+                ];
+
+                for (method, params) in requests {
+                    let (client, mut server) = test_client_pair().await;
+                    server.enqueue_result(1, json!({})).await;
+                    let app = build_router(test_state_with_client(client));
+                    let response = app
+                        .oneshot(
+                            Request::builder()
+                                .method("POST")
+                                .uri("/api/rpc")
+                                .header("content-type", "application/json")
+                                .header("cf-access-jwt-assertion", "present")
+                                .body(Body::from(
+                                    json!({ "method": method, "params": params }).to_string(),
+                                ))
+                                .unwrap(),
+                        )
+                        .await
+                        .unwrap();
+
+                    assert_eq!(
+                        response.status(),
+                        StatusCode::OK,
+                        "{method} should be allowed"
+                    );
+                    assert_eq!(server.last_method().await, method);
+                }
             });
     }
 
@@ -509,7 +651,11 @@ mod tests {
                         .await
                         .unwrap();
 
-                    assert_eq!(response.status(), StatusCode::OK, "{method} should be allowed");
+                    assert_eq!(
+                        response.status(),
+                        StatusCode::OK,
+                        "{method} should be allowed"
+                    );
                     assert_eq!(server.last_method().await, method);
                 }
             });
@@ -545,10 +691,7 @@ mod tests {
                             "newBranch": "feature/new"
                         }),
                     ),
-                    (
-                        "apply_worktree_changes",
-                        json!({ "workspaceId": "wt-1" }),
-                    ),
+                    ("apply_worktree_changes", json!({ "workspaceId": "wt-1" })),
                     (
                         "set_workspace_runtime_codex_args",
                         json!({
@@ -577,7 +720,11 @@ mod tests {
                         .await
                         .unwrap();
 
-                    assert_eq!(response.status(), StatusCode::OK, "{method} should be allowed");
+                    assert_eq!(
+                        response.status(),
+                        StatusCode::OK,
+                        "{method} should be allowed"
+                    );
                     assert_eq!(server.last_method().await, method);
                 }
             });
