@@ -22,6 +22,7 @@ This document describes the current capability split between the desktop app and
 - Prompt list, create, update, delete, and move.
 - Models, collaboration modes, skills, apps, account info, and rate-limit reads.
 - Home usage snapshot when the connected web bridge advertises `operations.usageSnapshot`.
+- Codex doctor report in the reduced web Codex settings section when the connected bridge advertises `operations.doctorReport`.
 
 ## Desktop-Only Workflows
 
@@ -61,7 +62,7 @@ This document describes the current capability split between the desktop app and
 - Dictation model management and live dictation.
 - Terminal sessions.
 - Codex login and account switch flow.
-- Codex doctor.
+- Custom-bin/custom-args Codex doctor. Web currently supports a read-only report using the server's current config only when `operations.doctorReport` is available.
 - Codex update.
 - Experimental feature flag management.
 - Tailscale status and mobile-access daemon controls.
@@ -85,7 +86,7 @@ This document describes the current capability split between the desktop app and
 
 - Web settings only surface `Projects`, `Display`, `Composer`, `Git`, and `About`.
 - Hidden in web settings: `Environments`, `Dictation`, `Shortcuts`, `Open in`, `Server`, `Agents`, and `Features`.
-- The `Codex` settings section appears in web only when the connected bridge advertises global file visibility, and it remains a reduced read-only view for those files.
+- The `Codex` settings section appears in web only when the connected bridge advertises global file visibility or doctor-report visibility, and it remains a reduced read-only view for those diagnostics/files.
 - Web bridge selection lives in the sidebar rail and is web-only.
 - Web realtime only subscribes to `app-server-event`. Terminal, dictation, updater, tray, and menu event channels remain desktop-only.
 
@@ -104,3 +105,4 @@ This document describes the current capability split between the desktop app and
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
 - Workspace `AGENTS.md` runtime gating and web read-only behavior: `src/features/workspaces/components/WorkspaceHome.tsx`
 - Global Codex file web read-only behavior: `src/features/settings/components/sections/SettingsCodexSection.tsx`
+- Web doctor-report routing: `src/services/tauri.ts`

@@ -79,6 +79,7 @@ import {
   removeWorktree,
   renameWorktree,
   renameWorktreeUpstream,
+  runCodexDoctor,
   applyWorktreeChanges,
   setWorkspaceRuntimeCodexArgs,
   readWorkspaceFile,
@@ -341,6 +342,46 @@ describe("tauri invoke wrappers", () => {
       expect.objectContaining({
         body: JSON.stringify({
           method: "read_global_codex_config_toml",
+          params: {},
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("routes runCodexDoctor through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: {
+            ok: true,
+            codexBin: null,
+            version: "1.0.0",
+            appServerOk: true,
+            details: null,
+            path: null,
+            nodeOk: true,
+            nodeVersion: "v22.0.0",
+            nodeDetails: null,
+          },
+        }),
+      }),
+    );
+
+    await expect(runCodexDoctor("/tmp/custom-codex", "--profile test")).resolves.toMatchObject({
+      ok: true,
+      version: "1.0.0",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "codex_doctor_current_config",
           params: {},
         }),
       }),
@@ -1442,6 +1483,28 @@ describe("tauri invoke wrappers", () => {
       kind: "config",
       workspaceId: undefined,
       content: "model = \"gpt-5\"",
+    });
+  });
+
+  it("invokes codex_doctor on desktop", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({
+      ok: true,
+      codexBin: "/tmp/custom-codex",
+      version: "1.0.0",
+      appServerOk: true,
+      details: null,
+      path: null,
+      nodeOk: true,
+      nodeVersion: "v22.0.0",
+      nodeDetails: null,
+    });
+
+    await runCodexDoctor("/tmp/custom-codex", "--profile test");
+
+    expect(invokeMock).toHaveBeenCalledWith("codex_doctor", {
+      codexBin: "/tmp/custom-codex",
+      codexArgs: "--profile test",
     });
   });
 

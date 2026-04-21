@@ -140,10 +140,14 @@ export function useSettingsViewOrchestration({
   const dictationReady = dictationModelStatus?.state === "ready";
   const isSectionEnabled = (section: CodexSection) =>
     !visibleSections || visibleSections.includes(section);
-  const codexReadOnlyFilesMode = Boolean(
+  const codexReadOnlyWebMode = Boolean(
     webRuntime &&
       runtimeCapabilities &&
-      (runtimeCapabilities.files.globalAgents || runtimeCapabilities.files.globalConfig),
+      (
+        runtimeCapabilities.files.globalAgents ||
+        runtimeCapabilities.files.globalConfig ||
+        runtimeCapabilities.operations.doctorReport
+      ),
   );
 
   const {
@@ -215,7 +219,7 @@ export function useSettingsViewOrchestration({
     onRunDoctor,
     onRunCodexUpdate,
     enabled: isSectionEnabled("codex"),
-    readOnlyFilesMode: codexReadOnlyFilesMode,
+    readOnlyFilesMode: codexReadOnlyWebMode,
     globalAgentsEnabled: isSectionEnabled("codex")
       ? webRuntime
         ? Boolean(runtimeCapabilities?.files.globalAgents)
@@ -224,6 +228,11 @@ export function useSettingsViewOrchestration({
     globalConfigEnabled: isSectionEnabled("codex")
       ? webRuntime
         ? Boolean(runtimeCapabilities?.files.globalConfig)
+        : true
+      : false,
+    doctorReportEnabled: isSectionEnabled("codex")
+      ? webRuntime
+        ? Boolean(runtimeCapabilities?.operations.doctorReport)
         : true
       : false,
   });

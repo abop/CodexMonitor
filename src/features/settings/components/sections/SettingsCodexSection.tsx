@@ -34,6 +34,7 @@ type SettingsCodexSectionProps = {
     result: CodexUpdateResult | null;
   };
   readOnlyFilesMode: boolean;
+  doctorReportVisible: boolean;
   globalAgentsVisible: boolean;
   globalAgentsReadOnly: boolean;
   globalAgentsMeta: string;
@@ -128,6 +129,7 @@ export function SettingsCodexSection({
   doctorState,
   codexUpdateState,
   readOnlyFilesMode,
+  doctorReportVisible,
   globalAgentsVisible,
   globalAgentsReadOnly,
   globalAgentsMeta,
@@ -244,8 +246,49 @@ export function SettingsCodexSection({
     return (
       <SettingsSection
         title="Codex"
-        subtitle="Inspect remote global Codex files. Editing and other Codex controls remain desktop-only in the web build."
+        subtitle="Inspect remote Codex files and diagnostics. Editing and other Codex controls remain desktop-only in the web build."
       >
+        {doctorReportVisible ? (
+          <>
+            <div className="settings-field-actions">
+              <button
+                type="button"
+                className="ghost settings-button-compact"
+                onClick={() => {
+                  void onRunDoctor();
+                }}
+                disabled={doctorState.status === "running"}
+              >
+                <Stethoscope aria-hidden />
+                {doctorState.status === "running" ? "Running..." : "Run doctor"}
+              </button>
+            </div>
+
+            {doctorState.result && (
+              <div className={`settings-doctor ${doctorState.result.ok ? "ok" : "error"}`}>
+                <div className="settings-doctor-title">
+                  {doctorState.result.ok ? "Codex looks good" : "Codex issue detected"}
+                </div>
+                <div className="settings-doctor-body">
+                  <div>Version: {doctorState.result.version ?? "unknown"}</div>
+                  <div>App-server: {doctorState.result.appServerOk ? "ok" : "failed"}</div>
+                  <div>
+                    Node:{" "}
+                    {doctorState.result.nodeOk
+                      ? `ok (${doctorState.result.nodeVersion ?? "unknown"})`
+                      : "missing"}
+                  </div>
+                  {doctorState.result.details && <div>{doctorState.result.details}</div>}
+                  {doctorState.result.nodeDetails && <div>{doctorState.result.nodeDetails}</div>}
+                  {doctorState.result.path && (
+                    <div className="settings-doctor-path">PATH: {doctorState.result.path}</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        ) : null}
+
         {globalAgentsVisible ? (
           <FileEditorCard
             title="Global AGENTS.md"

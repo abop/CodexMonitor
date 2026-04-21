@@ -169,6 +169,7 @@ fn can_retry_after_disconnect(method: &str) -> bool {
             | "list_git_roots"
             | "list_mcp_server_status"
             | "list_threads"
+            | "codex_doctor_current_config"
             | "local_usage_snapshot"
             | "list_workspace_files"
             | "list_workspaces"

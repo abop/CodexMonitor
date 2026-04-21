@@ -88,7 +88,11 @@ export function getWebVisibleSettingsSections(
 ): readonly CodexSection[] {
   const sections: CodexSection[] = [...SETTINGS_WEB_BASE_SECTION_IDS];
 
-  if (runtimeCapabilities?.files.globalAgents || runtimeCapabilities?.files.globalConfig) {
+  if (
+    runtimeCapabilities?.files.globalAgents ||
+    runtimeCapabilities?.files.globalConfig ||
+    runtimeCapabilities?.operations.doctorReport
+  ) {
     sections.push("codex");
   }
 

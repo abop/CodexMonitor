@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppSettings, WorkspaceInfo } from "@/types";
+import type { AppSettings, CodexDoctorResult, WorkspaceInfo } from "@/types";
 import {
   connectWorkspace,
   getAppBuildType,
@@ -271,7 +271,7 @@ const baseSettings: AppSettings = {
   globalWorktreesFolder: null,
 };
 
-const createDoctorResult = () => ({
+const createDoctorResult = (overrides: Partial<CodexDoctorResult> = {}) => ({
   ok: true,
   codexBin: null,
   version: null,
@@ -281,6 +281,7 @@ const createDoctorResult = () => ({
   nodeOk: true,
   nodeVersion: null,
   nodeDetails: null,
+  ...overrides,
 });
 
 const createUpdateResult = () => ({
@@ -1181,6 +1182,84 @@ describe("SettingsView web build", () => {
     expect(screen.getAllByTitle("Save").every((button) => button.hasAttribute("disabled"))).toBe(
       true,
     );
+
+    expect(getModelListMock).not.toHaveBeenCalled();
+    expect(getConfigModelMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a reduced read-only Codex section in web when only doctor report is available", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+    const onRunDoctor = vi.fn().mockResolvedValue(
+      createDoctorResult({
+        version: "1.2.3",
+      }),
+    );
+
+    render(
+      <SettingsView
+        workspaceGroups={[]}
+        groupedWorkspaces={[]}
+        ungroupedLabel="Ungrouped"
+        onClose={vi.fn()}
+        onMoveWorkspace={vi.fn()}
+        onDeleteWorkspace={vi.fn()}
+        onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        reduceTransparency={false}
+        onToggleTransparency={vi.fn()}
+        appSettings={baseSettings}
+        openAppIconById={{}}
+        onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
+        onRunDoctor={onRunDoctor}
+        onRunCodexUpdate={vi.fn().mockResolvedValue(createUpdateResult())}
+        onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+        scaleShortcutTitle="Scale shortcut"
+        scaleShortcutText="Use Command +/-"
+        onTestNotificationSound={vi.fn()}
+        onTestSystemNotification={vi.fn()}
+        dictationModelStatus={null}
+        onDownloadDictationModel={vi.fn()}
+        onCancelDictationDownload={vi.fn()}
+        onRemoveDictationModel={vi.fn()}
+        runtimeCapabilities={{
+          files: {
+            workspaceTree: true,
+            workspaceAgents: true,
+            globalAgents: false,
+            globalConfig: false,
+          },
+          operations: {
+            usageSnapshot: true,
+            doctorReport: true,
+            featureFlags: false,
+          },
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Codex" })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Codex" }));
+
+    expect(screen.queryByLabelText("Default Codex path")).toBeNull();
+    expect(screen.queryByLabelText("Codex args")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
+    expect(screen.queryByPlaceholderText("Add global instructions for Codex agents…")).toBeNull();
+    expect(screen.queryByPlaceholderText("Edit the global Codex config.toml…")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Run doctor" }));
+
+    await waitFor(() => {
+      expect(onRunDoctor).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("Codex looks good")).toBeTruthy();
+      expect(screen.getByText("Version: 1.2.3")).toBeTruthy();
+    });
 
     expect(getModelListMock).not.toHaveBeenCalled();
     expect(getConfigModelMock).not.toHaveBeenCalled();

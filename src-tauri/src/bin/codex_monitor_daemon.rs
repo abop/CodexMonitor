@@ -1299,6 +1299,10 @@ impl DaemonState {
         codex_aux_core::codex_doctor_core(&self.app_settings, codex_bin, codex_args).await
     }
 
+    async fn codex_doctor_current_config(&self) -> Result<Value, String> {
+        codex_aux_core::codex_doctor_core(&self.app_settings, None, None).await
+    }
+
     async fn generate_commit_message(
         &self,
         workspace_id: String,

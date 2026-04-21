@@ -20,6 +20,7 @@ type UseSettingsCodexSectionArgs = {
   readOnlyFilesMode?: boolean;
   globalAgentsEnabled?: boolean;
   globalConfigEnabled?: boolean;
+  doctorReportEnabled?: boolean;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
   onRunDoctor: (
     codexBin: string | null,
@@ -52,6 +53,7 @@ export type SettingsCodexSectionProps = {
     result: CodexUpdateResult | null;
   };
   readOnlyFilesMode: boolean;
+  doctorReportVisible: boolean;
   globalAgentsVisible: boolean;
   globalAgentsReadOnly: boolean;
   globalAgentsMeta: string;
@@ -91,6 +93,7 @@ export const useSettingsCodexSection = ({
   readOnlyFilesMode = false,
   globalAgentsEnabled = enabled,
   globalConfigEnabled = enabled,
+  doctorReportEnabled = enabled,
   onUpdateAppSettings,
   onRunDoctor,
   onRunCodexUpdate,
@@ -283,6 +286,7 @@ export const useSettingsCodexSection = ({
     doctorState,
     codexUpdateState,
     readOnlyFilesMode,
+    doctorReportVisible: doctorReportEnabled,
     globalAgentsVisible: globalAgentsEnabled,
     globalAgentsReadOnly: readOnlyFilesMode,
     globalAgentsMeta: globalAgentsEditorMeta.meta,

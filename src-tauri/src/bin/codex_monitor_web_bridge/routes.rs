@@ -347,6 +347,15 @@ mod tests {
     }
 
     #[test]
+    fn advertises_doctor_report_operation_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.operations.doctor_report);
+        assert!(methods.contains(&"codex_doctor_current_config"));
+    }
+
+    #[test]
     fn rejects_methods_outside_the_allowlist() {
         tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -727,6 +736,57 @@ mod tests {
 
                 assert_eq!(response.status(), StatusCode::OK);
                 assert_eq!(server.last_method().await, "local_usage_snapshot");
+                assert_eq!(server.last_params().await, params);
+            });
+    }
+
+    #[test]
+    fn forwards_doctor_report_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                let params = json!({});
+                server
+                    .enqueue_result(
+                        1,
+                        json!({
+                            "ok": true,
+                            "codexBin": null,
+                            "version": "1.0.0",
+                            "appServerOk": true,
+                            "details": null,
+                            "path": null,
+                            "nodeOk": true,
+                            "nodeVersion": "v22.0.0",
+                            "nodeDetails": null
+                        }),
+                    )
+                    .await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                json!({
+                                    "method": "codex_doctor_current_config",
+                                    "params": params
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "codex_doctor_current_config");
                 assert_eq!(server.last_params().await, params);
             });
     }

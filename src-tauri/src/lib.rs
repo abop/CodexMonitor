@@ -195,6 +195,7 @@ pub fn run() {
             tray::set_tray_recent_threads,
             tray::set_tray_session_usage,
             codex::codex_doctor,
+            codex::codex_doctor_current_config,
             codex::codex_update,
             workspaces::list_workspaces,
             workspaces::is_workspace_path_dir,

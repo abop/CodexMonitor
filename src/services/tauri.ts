@@ -1015,7 +1015,9 @@ export async function runCodexDoctor(
   codexBin: string | null,
   codexArgs: string | null,
 ): Promise<CodexDoctorResult> {
-  requireDesktopRuntime("Codex doctor");
+  if (isWebRuntime()) {
+    return invokeSupportedRpc<CodexDoctorResult>("codex_doctor_current_config");
+  }
   return invoke<CodexDoctorResult>("codex_doctor", { codexBin, codexArgs });
 }
 

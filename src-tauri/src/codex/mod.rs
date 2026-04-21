@@ -62,6 +62,13 @@ pub(crate) async fn codex_doctor(
 }
 
 #[tauri::command]
+pub(crate) async fn codex_doctor_current_config(
+    state: State<'_, AppState>,
+) -> Result<Value, String> {
+    crate::shared::codex_aux_core::codex_doctor_core(&state.app_settings, None, None).await
+}
+
+#[tauri::command]
 pub(crate) async fn codex_update(
     codex_bin: Option<String>,
     codex_args: Option<String>,
