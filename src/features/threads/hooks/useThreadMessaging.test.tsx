@@ -11,6 +11,7 @@ import {
   listMcpServerStatus as listMcpServerStatusService,
   compactThread as compactThreadService,
 } from "@services/tauri";
+import { isWebRuntime } from "@services/runtime";
 import type { WorkspaceInfo } from "@/types";
 import { useThreadMessaging } from "./useThreadMessaging";
 
@@ -28,6 +29,10 @@ vi.mock("@services/tauri", () => ({
   getAppsList: vi.fn(),
   listMcpServerStatus: vi.fn(),
   compactThread: vi.fn(),
+}));
+
+vi.mock("@services/runtime", () => ({
+  isWebRuntime: vi.fn(() => false),
 }));
 
 vi.mock("./useReviewPrompt", () => ({
@@ -68,6 +73,7 @@ describe("useThreadMessaging telemetry", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isWebRuntime).mockReturnValue(false);
     vi.mocked(sendUserMessageService).mockResolvedValue({
       result: {
         turn: { id: "turn-1" },
@@ -156,6 +162,67 @@ describe("useThreadMessaging telemetry", () => {
     );
     expect(ensureWorkspaceRuntimeCodexArgs).toHaveBeenCalledTimes(1);
     expect(ensureWorkspaceRuntimeCodexArgs).toHaveBeenCalledWith("ws-1", "thread-1");
+  });
+
+  it("refreshes the thread after a successful web send", async () => {
+    const refreshThread = vi.fn(async () => null);
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.useFakeTimers();
+
+    try {
+      const { result } = renderHook(() =>
+        useThreadMessaging({
+          activeWorkspace: workspace,
+          activeThreadId: "thread-1",
+          accessMode: "current",
+          model: null,
+          effort: null,
+          collaborationMode: null,
+          reviewDeliveryMode: "inline",
+          steerEnabled: false,
+          customPrompts: [],
+          threadStatusById: {},
+          activeTurnIdByThread: {},
+          rateLimitsByWorkspace: {},
+          pendingInterruptsRef: { current: new Set<string>() },
+          dispatch: vi.fn(),
+          getCustomName: vi.fn(() => undefined),
+          markProcessing: vi.fn(),
+          markReviewing: vi.fn(),
+          setActiveTurnId: vi.fn(),
+          recordThreadActivity: vi.fn(),
+          safeMessageActivity: vi.fn(),
+          onDebug: vi.fn(),
+          pushThreadErrorMessage: vi.fn(),
+          ensureThreadForActiveWorkspace: vi.fn(async () => "thread-1"),
+          ensureThreadForWorkspace: vi.fn(async () => "thread-1"),
+          refreshThread,
+          forkThreadForWorkspace: vi.fn(async () => null),
+          updateThreadParent: vi.fn(),
+        }),
+      );
+
+      await act(async () => {
+        await result.current.sendUserMessageToThread(
+          workspace,
+          "thread-1",
+          "hello from web",
+          [],
+        );
+      });
+
+      expect(refreshThread).toHaveBeenCalledTimes(1);
+      expect(refreshThread).toHaveBeenCalledWith("ws-1", "thread-1");
+
+      await act(async () => {
+        vi.advanceTimersByTime(750);
+      });
+
+      expect(refreshThread).toHaveBeenCalledTimes(2);
+      expect(refreshThread).toHaveBeenNthCalledWith(2, "ws-1", "thread-1");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("forwards explicit app mentions to turn/start", async () => {

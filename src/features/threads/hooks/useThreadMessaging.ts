@@ -21,6 +21,7 @@ import {
   getAppsList as getAppsListService,
   listMcpServerStatus as listMcpServerStatusService,
 } from "@services/tauri";
+import { isWebRuntime } from "@services/runtime";
 import { expandCustomPromptText } from "@utils/customPrompts";
 import {
   asString,
@@ -131,6 +132,27 @@ export function useThreadMessaging({
   registerDetachedReviewChild,
   renameThread,
 }: UseThreadMessagingOptions) {
+  const scheduleWebThreadRefresh = useCallback(
+    (workspaceId: string, threadId: string) => {
+      if (!isWebRuntime()) {
+        return;
+      }
+
+      const runRefresh = () => {
+        void refreshThread(workspaceId, threadId).catch(() => {
+          // In web mode, fall back to explicit thread refreshes so the UI
+          // still catches up when bridge live events arrive late or drop.
+        });
+      };
+
+      runRefresh();
+      globalThis.setTimeout(() => {
+        runRefresh();
+      }, 750);
+    },
+    [refreshThread],
+  );
+
   const sendMessageToThread = useCallback(
     async (
       workspace: WorkspaceInfo,
@@ -297,6 +319,7 @@ export function useThreadMessaging({
           if (steeredTurnId) {
             setActiveTurnId(threadId, steeredTurnId);
           }
+          scheduleWebThreadRefresh(workspace.id, threadId);
           return { status: "sent" };
         }
         const result = (response?.result ?? response) as Record<string, unknown>;
@@ -312,6 +335,7 @@ export function useThreadMessaging({
           return { status: "blocked" };
         }
         setActiveTurnId(threadId, turnId);
+        scheduleWebThreadRefresh(workspace.id, threadId);
         return { status: "sent" };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -356,6 +380,7 @@ export function useThreadMessaging({
       pushThreadErrorMessage,
       recordThreadActivity,
       safeMessageActivity,
+      scheduleWebThreadRefresh,
       setActiveTurnId,
       steerEnabled,
       threadStatusById,

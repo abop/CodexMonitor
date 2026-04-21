@@ -264,6 +264,88 @@ describe("events subscriptions", () => {
     cleanup();
   });
 
+  it("reconnects the bridge websocket after an unexpected close while listeners remain", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+
+    const sockets: Array<{
+      close: ReturnType<typeof vi.fn>;
+      handlers: Record<string, EventListener>;
+    }> = [];
+    vi.stubGlobal(
+      "WebSocket",
+      vi.fn(() => {
+        const handlers: Record<string, EventListener> = {};
+        const socket = {
+          addEventListener: vi.fn((type: string, handler: EventListener) => {
+            handlers[type] = handler;
+          }),
+          close: vi.fn(),
+        };
+        sockets.push({ close: socket.close, handlers });
+        return socket;
+      }),
+    );
+
+    try {
+      const cleanup = subscribeAppServerEvents(() => {});
+
+      expect(WebSocket).toHaveBeenCalledTimes(1);
+
+      sockets[0]?.handlers.close?.(new Event("close"));
+
+      vi.advanceTimersByTime(1000);
+
+      expect(WebSocket).toHaveBeenCalledTimes(2);
+
+      cleanup();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not reconnect the bridge websocket after cleanup removes the last listener", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+
+    const sockets: Array<{
+      close: ReturnType<typeof vi.fn>;
+      handlers: Record<string, EventListener>;
+    }> = [];
+    vi.stubGlobal(
+      "WebSocket",
+      vi.fn(() => {
+        const handlers: Record<string, EventListener> = {};
+        const socket = {
+          addEventListener: vi.fn((type: string, handler: EventListener) => {
+            handlers[type] = handler;
+          }),
+          close: vi.fn(),
+        };
+        sockets.push({ close: socket.close, handlers });
+        return socket;
+      }),
+    );
+
+    try {
+      const cleanup = subscribeAppServerEvents(() => {});
+
+      expect(WebSocket).toHaveBeenCalledTimes(1);
+
+      cleanup();
+
+      sockets[0]?.handlers.close?.(new Event("close"));
+      vi.advanceTimersByTime(1000);
+
+      expect(WebSocket).toHaveBeenCalledTimes(1);
+      expect(sockets[0]?.close).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("treats non app-server desktop events as no-ops in web runtime", () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
