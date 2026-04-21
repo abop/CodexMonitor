@@ -19,6 +19,7 @@ This document describes the current capability split between the desktop app and
 - Workspace file listing, text preview, and file snippet insertion into the composer when the connected bridge advertises file-tree support.
 - Workspace `AGENTS.md` preview and refresh in Workspace Home when the connected bridge advertises `files.workspaceAgents`.
 - Global `AGENTS.md` and global `config.toml` preview and refresh in the web Codex settings section when the connected bridge advertises `files.globalAgents` / `files.globalConfig`.
+- Read-only remote `codexBin` / `codexArgs` runtime summary in the reduced web Codex settings section from shared app settings.
 - Prompt list, create, update, delete, and move.
 - Models, collaboration modes, skills, apps, account info, and rate-limit reads.
 - Home usage snapshot when the connected web bridge advertises `operations.usageSnapshot`.
@@ -86,7 +87,7 @@ This document describes the current capability split between the desktop app and
 
 - Web settings only surface `Projects`, `Display`, `Composer`, `Git`, and `About`.
 - Hidden in web settings: `Environments`, `Dictation`, `Shortcuts`, `Open in`, `Server`, `Agents`, and `Features`.
-- The `Codex` settings section appears in web only when the connected bridge advertises global file visibility or doctor-report visibility, and it remains a reduced read-only view for those diagnostics/files.
+- The `Codex` settings section appears in web only when the connected bridge advertises global file visibility or doctor-report visibility, and it remains a reduced read-only view for runtime summary, diagnostics, and files.
 - Web bridge selection lives in the sidebar rail and is web-only.
 - Web realtime only subscribes to `app-server-event`. Terminal, dictation, updater, tray, and menu event channels remain desktop-only.
 

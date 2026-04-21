@@ -1211,7 +1211,11 @@ describe("SettingsView web build", () => {
         onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
         reduceTransparency={false}
         onToggleTransparency={vi.fn()}
-        appSettings={baseSettings}
+        appSettings={{
+          ...baseSettings,
+          codexBin: "/srv/bin/codex",
+          codexArgs: "--profile remote --dangerously-bypass-approvals",
+        }}
         openAppIconById={{}}
         onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
         onRunDoctor={onRunDoctor}
@@ -1247,6 +1251,17 @@ describe("SettingsView web build", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Codex" }));
 
+    expect(screen.getByText("Default Codex path")).toBeTruthy();
+    expect(screen.getByText("/srv/bin/codex")).toBeTruthy();
+    expect(screen.getByText("Default Codex args")).toBeTruthy();
+    expect(
+      screen.getByText("--profile remote --dangerously-bypass-approvals"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "These values come from the connected server's shared Codex app-server settings.",
+      ),
+    ).toBeTruthy();
     expect(screen.queryByLabelText("Default Codex path")).toBeNull();
     expect(screen.queryByLabelText("Codex args")).toBeNull();
     expect(screen.queryByRole("button", { name: "Update" })).toBeNull();

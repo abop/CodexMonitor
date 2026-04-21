@@ -161,6 +161,8 @@ export function SettingsCodexSection({
   onRefreshGlobalConfig,
   onSaveGlobalConfig,
 }: SettingsCodexSectionProps) {
+  const reducedCodexPathSummary = codexPathDraft.trim() || "PATH resolution";
+  const reducedCodexArgsSummary = codexArgsDraft.trim() || "No extra args";
   const latestModelSlug = defaultModels[0]?.model ?? null;
   const savedModelSlug = useMemo(
     () => coerceSavedModelSlug(appSettings.lastComposerModelId, defaultModels),
@@ -246,8 +248,25 @@ export function SettingsCodexSection({
     return (
       <SettingsSection
         title="Codex"
-        subtitle="Inspect remote Codex files and diagnostics. Editing and other Codex controls remain desktop-only in the web build."
+        subtitle="Inspect remote Codex runtime settings, files, and diagnostics. Editing and other Codex controls remain desktop-only in the web build."
       >
+        <div className="settings-field">
+          <div className="settings-field-label">Default Codex path</div>
+          <div className="settings-help">
+            <code>{reducedCodexPathSummary}</code>
+          </div>
+
+          <div className="settings-field-label">Default Codex args</div>
+          <div className="settings-help">
+            <code>{reducedCodexArgsSummary}</code>
+          </div>
+
+          <div className="settings-help">
+            These values come from the connected server&apos;s shared Codex app-server
+            settings.
+          </div>
+        </div>
+
         {doctorReportVisible ? (
           <>
             <div className="settings-field-actions">
