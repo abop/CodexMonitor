@@ -348,4 +348,17 @@ describe("useMainAppLayoutSurfaces", () => {
 
     expect(surfaces.git.gitDiffPanelProps.onReviewUncommittedChanges).toBeUndefined();
   });
+
+  it("wires the git review entry point and falls back to the active workspace id", () => {
+    const args = buildArgs(true);
+
+    const surfaces = useMainAppLayoutSurfaces(args);
+
+    expect(surfaces.git.gitDiffPanelProps.onReviewUncommittedChanges).toBeDefined();
+
+    surfaces.git.gitDiffPanelProps.onReviewUncommittedChanges?.(undefined);
+
+    expect(args.startUncommittedReview).toHaveBeenCalledTimes(1);
+    expect(args.startUncommittedReview).toHaveBeenCalledWith("ws-1");
+  });
 });
