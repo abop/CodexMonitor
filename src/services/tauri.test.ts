@@ -762,6 +762,31 @@ describe("tauri invoke wrappers", () => {
     });
   });
 
+  it("routes forkThread through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: {} }),
+      }),
+    );
+
+    await forkThread("ws-9", "thread-9");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "fork_thread",
+          params: { workspaceId: "ws-9", threadId: "thread-9" },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("fork_thread", expect.anything());
+  });
+
   it("maps workspaceId and threadId for compact_thread", async () => {
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockResolvedValueOnce({});
@@ -772,6 +797,31 @@ describe("tauri invoke wrappers", () => {
       workspaceId: "ws-10",
       threadId: "thread-10",
     });
+  });
+
+  it("routes compactThread through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: {} }),
+      }),
+    );
+
+    await compactThread("ws-10", "thread-10");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "compact_thread",
+          params: { workspaceId: "ws-10", threadId: "thread-10" },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("compact_thread", expect.anything());
   });
 
   it("maps workspaceId/threadId/name for set_thread_name", async () => {
@@ -1437,6 +1487,43 @@ describe("tauri invoke wrappers", () => {
       text: "continue",
       images: ["image.png"],
     });
+  });
+
+  it("routes steerTurn through bridgeRpc in web runtime and preserves images", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: {} }),
+      }),
+    );
+
+    await steerTurn(
+      "ws-4",
+      "thread-1",
+      "turn-2",
+      "continue",
+      ["data:image/png;base64,abc"],
+    );
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "turn_steer",
+          params: {
+            workspaceId: "ws-4",
+            threadId: "thread-1",
+            turnId: "turn-2",
+            text: "continue",
+            images: ["data:image/png;base64,abc"],
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("turn_steer", expect.anything());
   });
 
   it("converts image paths before turn_steer in remote mode", async () => {

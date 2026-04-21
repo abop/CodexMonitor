@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bridgeRpc, testBridgeConnection } from "./http";
+import { bridgeRpc, fetchBridgeCapabilities, testBridgeConnection } from "./http";
 
 describe("bridgeRpc", () => {
   it("posts method and params to /api/rpc", async () => {
@@ -94,6 +94,56 @@ describe("bridgeRpc", () => {
       "https://bridge.example.com/api/rpc",
       expect.objectContaining({
         body: JSON.stringify({ method: "list_workspaces", params: {} }),
+        credentials: "include",
+      }),
+    );
+  });
+
+  it("fetches bridge capabilities from /api/capabilities", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        version: 1,
+        methods: ["list_workspaces", "turn_steer"],
+        threadControls: {
+          steer: true,
+          fork: true,
+          compact: true,
+          review: false,
+          mcp: false,
+        },
+        files: {
+          workspaceTree: false,
+          workspaceAgents: false,
+          globalAgents: false,
+          globalConfig: false,
+        },
+        operations: {
+          usageSnapshot: false,
+          doctorReport: false,
+          featureFlags: false,
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchBridgeCapabilities({ baseUrl: "https://bridge.example.com" }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        version: 1,
+        threadControls: expect.objectContaining({
+          steer: true,
+          fork: true,
+          compact: true,
+        }),
+      }),
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/capabilities",
+      expect.objectContaining({
+        method: "GET",
         credentials: "include",
       }),
     );

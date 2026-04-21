@@ -40,63 +40,6 @@ function isMissingTauriInvokeError(error: unknown) {
   );
 }
 
-const WEB_SUPPORTED_RPC_METHODS = new Set([
-  "list_workspaces",
-  "add_workspace",
-  "add_workspace_from_git_url",
-  "connect_workspace",
-  "remove_workspace",
-  "remove_worktree",
-  "rename_worktree",
-  "rename_worktree_upstream",
-  "apply_worktree_changes",
-  "set_workspace_runtime_codex_args",
-  "list_threads",
-  "start_thread",
-  "read_thread",
-  "resume_thread",
-  "set_thread_name",
-  "archive_thread",
-  "send_user_message",
-  "turn_interrupt",
-  "thread_live_subscribe",
-  "thread_live_unsubscribe",
-  "get_git_status",
-  "get_git_diffs",
-  "get_git_log",
-  "list_git_branches",
-  "get_git_commit_diff",
-  "get_git_remote",
-  "stage_git_file",
-  "stage_git_all",
-  "unstage_git_file",
-  "revert_git_file",
-  "revert_git_all",
-  "commit_git",
-  "fetch_git",
-  "pull_git",
-  "push_git",
-  "sync_git",
-  "checkout_git_branch",
-  "create_git_branch",
-  "get_app_settings",
-  "update_app_settings",
-  "get_config_model",
-  "model_list",
-  "collaboration_mode_list",
-  "skills_list",
-  "apps_list",
-  "prompts_list",
-  "prompts_create",
-  "prompts_update",
-  "prompts_delete",
-  "prompts_move",
-  "account_rate_limits",
-  "account_read",
-  "respond_to_server_request",
-  "remember_approval_rule",
-]);
-
 type RpcParams = Record<string, unknown>;
 
 function bridgeConfigOrThrow() {
@@ -122,9 +65,6 @@ async function invokeSupportedRpc<T>(
   params?: RpcParams,
 ): Promise<T> {
   if (isWebRuntime()) {
-    if (!WEB_SUPPORTED_RPC_METHODS.has(command)) {
-      throw new Error(`${command} is unavailable in the web build.`);
-    }
     return bridgeRpc<T>(bridgeConfigOrThrow(), command, params);
   }
   if (params === undefined) {
@@ -531,13 +471,11 @@ export async function startThread(workspaceId: string) {
 }
 
 export async function forkThread(workspaceId: string, threadId: string) {
-  requireDesktopRuntime("Fork threads");
-  return invoke<any>("fork_thread", { workspaceId, threadId });
+  return invokeSupportedRpc<any>("fork_thread", { workspaceId, threadId });
 }
 
 export async function compactThread(workspaceId: string, threadId: string) {
-  requireDesktopRuntime("Compact threads");
-  return invoke<any>("compact_thread", { workspaceId, threadId });
+  return invokeSupportedRpc<any>("compact_thread", { workspaceId, threadId });
 }
 
 function isInlineImageUrl(image: string) {
@@ -642,7 +580,6 @@ export async function steerTurn(
   appMentions?: AppMention[],
 ) {
   const normalizedImages = await normalizeImagesForRpc(images);
-  requireDesktopRuntime("Steer turns");
   const payload: Record<string, unknown> = {
     workspaceId,
     threadId,
@@ -653,7 +590,7 @@ export async function steerTurn(
   if (appMentions && appMentions.length > 0) {
     payload.appMentions = appMentions;
   }
-  return invoke("turn_steer", payload);
+  return invokeSupportedRpc("turn_steer", payload);
 }
 
 export async function startReview(

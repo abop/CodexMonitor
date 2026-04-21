@@ -1,5 +1,28 @@
-type BridgeConfig = {
+export type BridgeConfig = {
   baseUrl: string;
+};
+
+export type WebRuntimeCapabilities = {
+  version: 1;
+  methods: string[];
+  threadControls: {
+    steer: boolean;
+    fork: boolean;
+    compact: boolean;
+    review: boolean;
+    mcp: boolean;
+  };
+  files: {
+    workspaceTree: boolean;
+    workspaceAgents: boolean;
+    globalAgents: boolean;
+    globalConfig: boolean;
+  };
+  operations: {
+    usageSnapshot: boolean;
+    doctorReport: boolean;
+    featureFlags: boolean;
+  };
 };
 
 type JsonRpcPayload = {
@@ -38,6 +61,17 @@ export async function bridgeRpc<T>(
   }
 
   return payload.result as T;
+}
+
+export async function fetchBridgeCapabilities(
+  config: BridgeConfig,
+): Promise<WebRuntimeCapabilities> {
+  const response = await fetch(`${config.baseUrl}/api/capabilities`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  return (await response.json()) as WebRuntimeCapabilities;
 }
 
 export async function testBridgeConnection(config: BridgeConfig) {
