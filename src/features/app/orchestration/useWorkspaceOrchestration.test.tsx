@@ -37,8 +37,11 @@ describe("useWorkspaceInsightsOrchestration", () => {
   });
 
   it("disables local usage polling when the runtime capability is unavailable", () => {
-    renderHook(() => useWorkspaceInsightsOrchestration(makeOptions()));
+    const { result } = renderHook(() =>
+      useWorkspaceInsightsOrchestration(makeOptions()),
+    );
 
     expect(vi.mocked(useLocalUsage)).toHaveBeenCalledWith(false, null);
+    expect(result.current.usageSnapshotAvailable).toBe(false);
   });
 });

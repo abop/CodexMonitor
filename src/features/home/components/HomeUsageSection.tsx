@@ -22,6 +22,7 @@ type HomeUsageSectionProps = {
   isLoadingLocalUsage: boolean;
   localUsageError: string | null;
   localUsageSnapshot: LocalUsageSnapshot | null;
+  usageSnapshotAvailable: boolean;
   onRefreshLocalUsage: () => void;
   onUsageMetricChange: (metric: UsageMetric) => void;
   onUsageWorkspaceChange: (workspaceId: string | null) => void;
@@ -50,6 +51,7 @@ export function HomeUsageSection({
   isLoadingLocalUsage,
   localUsageError,
   localUsageSnapshot,
+  usageSnapshotAvailable,
   onRefreshLocalUsage,
   onUsageMetricChange,
   onUsageWorkspaceChange,
@@ -96,7 +98,10 @@ export function HomeUsageSection({
       ? `Usage week ${chartDays[0]?.day} to ${chartDays[chartDays.length - 1]?.day}`
       : "Usage week";
   const showUsageSkeleton = isLoadingLocalUsage && !localUsageSnapshot;
-  const showUsageEmpty = !isLoadingLocalUsage && !localUsageSnapshot;
+  const showUsageUnavailable =
+    !isLoadingLocalUsage && !localUsageSnapshot && !usageSnapshotAvailable;
+  const showUsageEmpty =
+    !isLoadingLocalUsage && !localUsageSnapshot && usageSnapshotAvailable;
 
   return (
     <div className="home-usage">
@@ -112,7 +117,7 @@ export function HomeUsageSection({
                 : "home-usage-refresh"
             }
             onClick={onRefreshLocalUsage}
-            disabled={isLoadingLocalUsage}
+            disabled={isLoadingLocalUsage || !usageSnapshotAvailable}
             aria-label="Refresh usage"
             title="Refresh usage"
           >
@@ -135,7 +140,7 @@ export function HomeUsageSection({
               className="home-usage-select"
               value={usageWorkspaceId ?? ""}
               onChange={(event) => onUsageWorkspaceChange(event.target.value || null)}
-              disabled={usageWorkspaceOptions.length === 0}
+              disabled={!usageSnapshotAvailable || usageWorkspaceOptions.length === 0}
             >
               <option value="">All workspaces</option>
               {usageWorkspaceOptions.map((option) => (
@@ -158,6 +163,7 @@ export function HomeUsageSection({
               }
               onClick={() => onUsageMetricChange("tokens")}
               aria-pressed={usageMetric === "tokens"}
+              disabled={!usageSnapshotAvailable}
             >
               Tokens
             </button>
@@ -170,6 +176,7 @@ export function HomeUsageSection({
               }
               onClick={() => onUsageMetricChange("time")}
               aria-pressed={usageMetric === "time"}
+              disabled={!usageSnapshotAvailable}
             >
               Time
             </button>
@@ -189,6 +196,16 @@ export function HomeUsageSection({
           <div className="home-usage-chart-card">
             <span className="home-latest-skeleton home-usage-skeleton-chart" />
           </div>
+        </div>
+      ) : showUsageUnavailable ? (
+        <div className="home-usage-empty">
+          <div className="home-usage-empty-title">Usage snapshot unavailable</div>
+          <div className="home-usage-empty-subtitle">
+            This runtime does not advertise usage snapshot support yet.
+          </div>
+          {localUsageError && (
+            <div className="home-usage-error">{localUsageError}</div>
+          )}
         </div>
       ) : showUsageEmpty ? (
         <div className="home-usage-empty">

@@ -1050,6 +1050,7 @@ export default function MainApp() {
   const {
     latestAgentRuns,
     isLoadingLatestAgents,
+    usageSnapshotAvailable,
     usageMetric,
     setUsageMetric,
     usageWorkspaceId,
@@ -1644,6 +1645,7 @@ export default function MainApp() {
     activeTokenUsage,
     latestAgentRuns,
     isLoadingLatestAgents,
+    usageSnapshotAvailable,
     localUsageSnapshot,
     isLoadingLocalUsage,
     localUsageError,

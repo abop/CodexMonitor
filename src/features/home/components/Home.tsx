@@ -17,6 +17,7 @@ type HomeProps = {
   onAddWorkspaceFromUrl: () => void;
   latestAgentRuns: LatestAgentRun[];
   isLoadingLatestAgents: boolean;
+  usageSnapshotAvailable: boolean;
   localUsageSnapshot: LocalUsageSnapshot | null;
   isLoadingLocalUsage: boolean;
   localUsageError: string | null;
@@ -37,6 +38,7 @@ export function Home({
   onAddWorkspaceFromUrl,
   latestAgentRuns,
   isLoadingLatestAgents,
+  usageSnapshotAvailable,
   localUsageSnapshot,
   isLoadingLocalUsage,
   localUsageError,
@@ -74,6 +76,7 @@ export function Home({
         isLoadingLocalUsage={isLoadingLocalUsage}
         localUsageError={localUsageError}
         localUsageSnapshot={localUsageSnapshot}
+        usageSnapshotAvailable={usageSnapshotAvailable}
         onRefreshLocalUsage={onRefreshLocalUsage}
         onUsageMetricChange={onUsageMetricChange}
         onUsageWorkspaceChange={onUsageWorkspaceChange}

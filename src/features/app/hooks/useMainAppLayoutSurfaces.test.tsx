@@ -67,6 +67,7 @@ function buildArgs(
     activeTokenUsage: null,
     latestAgentRuns: [],
     isLoadingLatestAgents: false,
+    usageSnapshotAvailable: true,
     localUsageSnapshot: null,
     isLoadingLocalUsage: false,
     localUsageError: null,

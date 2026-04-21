@@ -72,6 +72,7 @@ type UseMainAppLayoutSurfacesArgs = {
   activeTokenUsage: ComposerProps["contextUsage"];
   latestAgentRuns: LayoutNodesOptions["primary"]["homeProps"]["latestAgentRuns"];
   isLoadingLatestAgents: LayoutNodesOptions["primary"]["homeProps"]["isLoadingLatestAgents"];
+  usageSnapshotAvailable: LayoutNodesOptions["primary"]["homeProps"]["usageSnapshotAvailable"];
   localUsageSnapshot: LayoutNodesOptions["primary"]["homeProps"]["localUsageSnapshot"];
   isLoadingLocalUsage: LayoutNodesOptions["primary"]["homeProps"]["isLoadingLocalUsage"];
   localUsageError: LayoutNodesOptions["primary"]["homeProps"]["localUsageError"];
@@ -274,6 +275,7 @@ function buildPrimarySurface({
   activeTokenUsage,
   latestAgentRuns,
   isLoadingLatestAgents,
+  usageSnapshotAvailable,
   localUsageSnapshot,
   isLoadingLocalUsage,
   localUsageError,
@@ -586,6 +588,7 @@ function buildPrimarySurface({
       onAddWorkspaceFromUrl: openWorkspaceFromUrlPrompt,
       latestAgentRuns,
       isLoadingLatestAgents,
+      usageSnapshotAvailable,
       localUsageSnapshot,
       isLoadingLocalUsage,
       localUsageError,
@@ -993,6 +996,7 @@ export function useMainAppLayoutSurfaces({
   activeTokenUsage,
   latestAgentRuns,
   isLoadingLatestAgents,
+  usageSnapshotAvailable,
   localUsageSnapshot,
   isLoadingLocalUsage,
   localUsageError,
@@ -1155,6 +1159,7 @@ export function useMainAppLayoutSurfaces({
     activeTokenUsage,
     latestAgentRuns,
     isLoadingLatestAgents,
+    usageSnapshotAvailable,
     localUsageSnapshot,
     isLoadingLocalUsage,
     localUsageError,

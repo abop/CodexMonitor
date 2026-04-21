@@ -13,6 +13,7 @@ const baseProps = {
   onAddWorkspaceFromUrl: vi.fn(),
   latestAgentRuns: [],
   isLoadingLatestAgents: false,
+  usageSnapshotAvailable: true,
   localUsageSnapshot: null,
   isLoadingLocalUsage: false,
   localUsageError: null,
@@ -363,5 +364,33 @@ describe("Home", () => {
     expect(screen.getByText("120")).toBeTruthy();
     expect(screen.getByText(/user@example\.com/)).toBeTruthy();
     expect(screen.getByText("No usage data yet")).toBeTruthy();
+  });
+
+  it("shows capability-aware usage guidance when usage snapshot support is unavailable", () => {
+    render(
+      <Home
+        {...baseProps}
+        usageSnapshotAvailable={false}
+      />,
+    );
+
+    expect(screen.getByText("Usage snapshot unavailable")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "This runtime does not advertise usage snapshot support yet.",
+      ),
+    ).toBeTruthy();
+
+    expect(
+      (screen.getByRole("button", { name: "Refresh usage" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect((screen.getByRole("combobox") as HTMLSelectElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Tokens" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Time" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });

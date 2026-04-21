@@ -96,14 +96,13 @@ This document describes the current capability split between the desktop app and
 ## Current Shared-UI Gaps
 
 - The sidebar account switcher can render in shared UI, but the login and switch flow still depends on desktop-only commands.
-- The home usage panel now suppresses unsupported polling in web runtime, but it still falls back to the generic empty state instead of a capability-specific explanation when `operations.usageSnapshot` is unavailable.
 
 ## Source of Truth
 
 - Runtime RPC wrapper routing and desktop-only guards: `src/services/tauri.ts`
 - Bridge capability catalog: `src-tauri/src/shared/web_runtime_capabilities.rs`
 - Web realtime event surface: `src/services/events.ts`
-- Home usage orchestration and runtime gating: `src/features/app/orchestration/useWorkspaceOrchestration.ts`
+- Home usage orchestration and capability-aware empty state: `src/features/app/orchestration/useWorkspaceOrchestration.ts`, `src/features/home/components/HomeUsageSection.tsx`
 - Web settings section filter and capability-aware Codex visibility: `src/features/settings/components/settingsViewConstants.ts`
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
 - Workspace `AGENTS.md` runtime gating and web read-only behavior: `src/features/workspaces/components/WorkspaceHome.tsx`

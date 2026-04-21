@@ -136,6 +136,7 @@ export function useWorkspaceInsightsOrchestration({
   return {
     latestAgentRuns,
     isLoadingLatestAgents,
+    usageSnapshotAvailable: usageSnapshotEnabled,
     usageMetric,
     setUsageMetric,
     usageWorkspaceId,
