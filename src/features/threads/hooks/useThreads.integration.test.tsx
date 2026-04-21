@@ -27,9 +27,6 @@ type AppServerHandlers = Parameters<typeof useAppServerEvents>[0];
 
 let handlers: AppServerHandlers | null = null;
 
-const legacyWebBuildErrorPattern =
-  /desktop-only|desktop app|web build|unavailable in the web build/i;
-
 vi.mock("@app/hooks/useAppServerEvents", () => ({
   useAppServerEvents: (incoming: AppServerHandlers) => {
     handlers = incoming;
@@ -955,7 +952,9 @@ describe("useThreads UX integration", () => {
     expect(interruptMock).not.toHaveBeenCalledWith("ws-1", "thread-1", "pending");
   });
 
-  it("forks through the bridge and keeps the forked thread resumable", async () => {
+  it("orchestrates a web-runtime fork and keeps the forked thread resumable", async () => {
+    // Transport-level bridge routing is covered in src/services/tauri.test.ts.
+    // This spec only verifies useThreads orchestration after a successful web-runtime service call.
     vi.mocked(isWebRuntime).mockReturnValue(true);
     vi.mocked(forkThread).mockResolvedValue({
       result: { thread: { id: "thread-fork-1" } },
@@ -992,15 +991,6 @@ describe("useThreads UX integration", () => {
       expect(result.current.activeThreadId).toBe("thread-fork-1");
     });
 
-    expect(
-      result.current.activeItems.some(
-        (item) =>
-          item.kind === "message" &&
-          item.role === "assistant" &&
-          legacyWebBuildErrorPattern.test(item.text),
-      ),
-    ).toBe(false);
-
     vi.mocked(resumeThread).mockClear();
     act(() => {
       result.current.setActiveThreadId("thread-fork-1");
@@ -1013,7 +1003,7 @@ describe("useThreads UX integration", () => {
     expect(resumeThread).not.toHaveBeenCalled();
   });
 
-  it("compacts through the bridge without surfacing desktop-only errors", async () => {
+  it("keeps web-runtime compact success from appending an assistant error message", async () => {
     vi.mocked(isWebRuntime).mockReturnValue(true);
     vi.mocked(compactThread).mockResolvedValue(
       {} as Awaited<ReturnType<typeof compactThread>>,
@@ -1028,24 +1018,35 @@ describe("useThreads UX integration", () => {
 
     act(() => {
       result.current.setActiveThreadId("thread-compact");
+      handlers?.onAgentMessageCompleted?.({
+        workspaceId: "ws-1",
+        threadId: "thread-compact",
+        itemId: "local-assistant-compact",
+        text: "Existing compact note",
+      });
     });
+
+    const assistantMessagesBefore = result.current.activeItems.filter(
+      (item) => item.kind === "message" && item.role === "assistant",
+    );
 
     await act(async () => {
       await result.current.startCompact("/compact");
     });
 
     expect(compactThread).toHaveBeenCalledWith("ws-1", "thread-compact");
+    const assistantMessagesAfter = result.current.activeItems.filter(
+      (item) => item.kind === "message" && item.role === "assistant",
+    );
+    expect(assistantMessagesAfter).toHaveLength(assistantMessagesBefore.length);
     expect(
-      result.current.activeItems.some(
-        (item) =>
-          item.kind === "message" &&
-          item.role === "assistant" &&
-          legacyWebBuildErrorPattern.test(item.text),
+      assistantMessagesAfter.some(
+        (item) => item.text === "Existing compact note",
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it("uses turn steer after request user input when the turn is still active", async () => {
+  it("keeps web-runtime steer success from appending an assistant error message", async () => {
     vi.mocked(isWebRuntime).mockReturnValue(true);
     vi.spyOn(globalThis, "setTimeout").mockImplementation(
       (() => 0) as typeof setTimeout,
@@ -1067,6 +1068,12 @@ describe("useThreads UX integration", () => {
 
     act(() => {
       result.current.setActiveThreadId("thread-1");
+      handlers?.onAgentMessageCompleted?.({
+        workspaceId: "ws-1",
+        threadId: "thread-1",
+        itemId: "local-assistant-steer",
+        text: "Existing steer note",
+      });
       handlers?.onTurnStarted?.("ws-1", "thread-1", "turn-1");
       handlers?.onRequestUserInput?.({
         workspace_id: "ws-1",
@@ -1095,14 +1102,11 @@ describe("useThreads UX integration", () => {
       [],
     );
     expect(sendUserMessageService).not.toHaveBeenCalled();
-    expect(
-      result.current.activeItems.some(
-        (item) =>
-          item.kind === "message" &&
-          item.role === "assistant" &&
-          legacyWebBuildErrorPattern.test(item.text),
-      ),
-    ).toBe(false);
+    const assistantMessagesAfter = result.current.activeItems.filter(
+      (item) => item.kind === "message" && item.role === "assistant",
+    );
+    expect(assistantMessagesAfter).toHaveLength(1);
+    expect(assistantMessagesAfter[0]?.text).toBe("Existing steer note");
   });
 
   it("links detached review thread to its parent", async () => {
