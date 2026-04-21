@@ -15,6 +15,7 @@ import { useComposerInsert } from "@app/hooks/useComposerInsert";
 import { useWorkspaceFileListing } from "@app/hooks/useWorkspaceFileListing";
 import { useWorkspaceAgentMd } from "@/features/workspaces/hooks/useWorkspaceAgentMd";
 import { useWorkspaceHome } from "@/features/workspaces/hooks/useWorkspaceHome";
+import type { WebRuntimeCapabilities } from "@/services/bridge/http";
 
 const RECENT_THREAD_LIMIT = 8;
 
@@ -48,6 +49,7 @@ type UseMainAppComposerWorkspaceStateArgs = {
     >;
     userInputRequests: RequestUserInputRequest[];
   };
+  runtimeCapabilities: Pick<WebRuntimeCapabilities, "threadControls">;
   settings: Pick<
     AppSettings,
     | "steerEnabled"
@@ -95,6 +97,7 @@ export function useMainAppComposerWorkspaceState({
   view,
   workspace,
   thread,
+  runtimeCapabilities,
   settings,
   models,
   refs,
@@ -123,6 +126,7 @@ export function useMainAppComposerWorkspaceState({
     threadStatusById,
     userInputRequests,
   } = thread;
+  const { threadControls } = runtimeCapabilities;
   const {
     models: modelOptions,
     selectedModelId,
@@ -183,7 +187,17 @@ export function useMainAppComposerWorkspaceState({
     ? threadStatusById[activeThreadId]?.isReviewing ?? false
     : false;
   const activeTurnId = activeThreadId ? activeTurnIdByThread[activeThreadId] ?? null : null;
-  const steerAvailable = settings.steerEnabled && Boolean(activeTurnId);
+  const commandCapabilities = useMemo(
+    () => ({
+      fork: threadControls.fork,
+      compact: threadControls.compact,
+      review: threadControls.review,
+      mcp: threadControls.mcp,
+    }),
+    [threadControls.compact, threadControls.fork, threadControls.mcp, threadControls.review],
+  );
+  const steerAvailable =
+    settings.steerEnabled && Boolean(activeTurnId) && threadControls.steer;
   const hasUserInputRequestForActiveThread = Boolean(
     activeThreadId &&
       userInputRequests.some(
@@ -318,6 +332,7 @@ export function useMainAppComposerWorkspaceState({
     isReviewing,
     activeTurnId,
     steerAvailable,
+    commandCapabilities,
     queuePausedReason,
     canInsertComposerText,
     handleInsertComposerText,

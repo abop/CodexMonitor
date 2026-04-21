@@ -161,6 +161,41 @@ describe("useComposerAutocompleteState slash commands", () => {
       "status",
     ]);
   });
+
+  it("filters unsupported slash commands before sorting", () => {
+    const text = "/";
+    const selectionStart = text.length;
+    const textareaRef = createRef<HTMLTextAreaElement>();
+    textareaRef.current = {
+      focus: vi.fn(),
+      setSelectionRange: vi.fn(),
+    } as unknown as HTMLTextAreaElement;
+
+    const { result } = renderHook(() =>
+      useComposerAutocompleteState({
+        text,
+        selectionStart,
+        disabled: false,
+        appsEnabled: false,
+        commandCapabilities: {
+          fork: false,
+          compact: false,
+          review: false,
+          mcp: false,
+        },
+        skills: [],
+        apps: [],
+        prompts: [],
+        files: [],
+        textareaRef,
+        setText: vi.fn(),
+        setSelectionStart: vi.fn(),
+      }),
+    );
+
+    const labels = result.current.autocompleteMatches.map((item) => item.label);
+    expect(labels).toEqual(["fast", "new", "resume", "status"]);
+  });
 });
 
 describe("useComposerAutocompleteState $ completions", () => {

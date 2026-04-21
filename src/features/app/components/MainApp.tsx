@@ -51,6 +51,7 @@ import { useMainAppWorkspaceActions } from "@app/hooks/useMainAppWorkspaceAction
 import { useMainAppWorkspaceLifecycle } from "@app/hooks/useMainAppWorkspaceLifecycle";
 import { useMainAppMobileThreadRefresh } from "@app/hooks/useMainAppMobileThreadRefresh";
 import { useHomeAccount } from "@app/hooks/useHomeAccount";
+import { useWebRuntimeCapabilities } from "@app/hooks/useWebRuntimeCapabilities";
 import type {
   ComposerEditorSettings,
   ServiceTier,
@@ -1093,6 +1094,7 @@ export default function MainApp() {
   const activePlan = activeThreadId
     ? planByThread[activeThreadId] ?? null
     : null;
+  const runtimeCapabilities = useWebRuntimeCapabilities();
   const hasActivePlan = Boolean(
     activePlan && (activePlan.steps.length > 0 || activePlan.explanation)
   );
@@ -1120,6 +1122,7 @@ export default function MainApp() {
       activeTurnIdByThread,
       userInputRequests,
     },
+    runtimeCapabilities,
     settings: {
       steerEnabled: appSettings.steerEnabled,
       followUpMessageBehavior: appSettings.followUpMessageBehavior,
@@ -1542,6 +1545,7 @@ export default function MainApp() {
           onSelectInstance: handleSelectWorkspaceInstance,
           skills,
           appsEnabled: appSettings.experimentalAppsEnabled,
+          commandCapabilities: composerWorkspaceState.commandCapabilities,
           apps,
           prompts,
           files,

@@ -35,6 +35,7 @@ import { WorkspaceHomeGitInitBanner } from "./WorkspaceHomeGitInitBanner";
 import { buildIconPath } from "./workspaceHomeHelpers";
 import { useWorkspaceHomeSuggestionsStyle } from "../hooks/useWorkspaceHomeSuggestionsStyle";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
+import type { WebRuntimeCapabilities } from "@/services/bridge/http";
 
 type WorkspaceHomeProps = {
   workspace: WorkspaceInfo;
@@ -70,6 +71,10 @@ type WorkspaceHomeProps = {
   onSelectInstance: (workspaceId: string, threadId: string) => void;
   skills: SkillOption[];
   appsEnabled: boolean;
+  commandCapabilities?: Pick<
+    WebRuntimeCapabilities["threadControls"],
+    "fork" | "compact" | "review" | "mcp"
+  >;
   apps: AppOption[];
   prompts: CustomPromptOption[];
   files: string[];
@@ -133,6 +138,7 @@ export function WorkspaceHome({
   onSelectInstance,
   skills,
   appsEnabled,
+  commandCapabilities,
   apps,
   prompts,
   files,
@@ -198,6 +204,7 @@ export function WorkspaceHome({
     selectionStart,
     disabled: isSubmitting,
     appsEnabled,
+    commandCapabilities,
     skills,
     apps,
     prompts,

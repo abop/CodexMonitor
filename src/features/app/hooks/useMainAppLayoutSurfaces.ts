@@ -478,6 +478,7 @@ function buildPrimarySurface({
           queuePausedReason: composerWorkspaceState.queuePausedReason,
           sendLabel: pullRequestComposer.composerSendLabel ?? "Send",
           steerAvailable: composerWorkspaceState.steerAvailable,
+          commandCapabilities: composerWorkspaceState.commandCapabilities,
           followUpMessageBehavior: appSettings.followUpMessageBehavior,
           composerFollowUpHintEnabled: appSettings.composerFollowUpHintEnabled,
           isProcessing: composerWorkspaceState.isProcessing,

@@ -44,6 +44,7 @@ import { ComposerMetaBar } from "./ComposerMetaBar";
 import { ComposerQueue } from "./ComposerQueue";
 import { isMacPlatform } from "../../../utils/platformPaths";
 import type { CodexArgsOption } from "../../threads/utils/codexArgsProfiles";
+import type { WebRuntimeCapabilities } from "@/services/bridge/http";
 
 type ComposerProps = {
   onSend: (
@@ -58,6 +59,10 @@ type ComposerProps = {
   appsEnabled: boolean;
   isProcessing: boolean;
   steerAvailable: boolean;
+  commandCapabilities?: Pick<
+    WebRuntimeCapabilities["threadControls"],
+    "fork" | "compact" | "review" | "mcp"
+  >;
   followUpMessageBehavior: FollowUpMessageBehavior;
   composerFollowUpHintEnabled: boolean;
   collaborationModes: { id: string; label: string }[];
@@ -167,6 +172,7 @@ export const Composer = memo(function Composer({
   appsEnabled,
   isProcessing,
   steerAvailable,
+  commandCapabilities,
   followUpMessageBehavior,
   composerFollowUpHintEnabled,
   collaborationModes,
@@ -317,6 +323,7 @@ export const Composer = memo(function Composer({
     selectionStart,
     disabled,
     appsEnabled,
+    commandCapabilities,
     skills,
     apps,
     prompts,

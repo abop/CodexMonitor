@@ -10,13 +10,19 @@ import {
   getPromptArgumentHint,
 } from "../../../utils/customPrompts";
 import { isComposingEvent } from "../../../utils/keys";
+import type { WebRuntimeCapabilities } from "@/services/bridge/http";
 
 type Skill = { name: string; description?: string };
+type CommandCapabilities = Pick<
+  WebRuntimeCapabilities["threadControls"],
+  "fork" | "compact" | "review" | "mcp"
+>;
 type UseComposerAutocompleteStateArgs = {
   text: string;
   selectionStart: number | null;
   disabled: boolean;
   appsEnabled: boolean;
+  commandCapabilities?: CommandCapabilities;
   skills: Skill[];
   apps: AppOption[];
   prompts: CustomPromptOption[];
@@ -32,6 +38,12 @@ type UseComposerAutocompleteStateArgs = {
 
 const MAX_FILE_SUGGESTIONS = 500;
 const FILE_TRIGGER_PREFIX = new RegExp("^(?:\\s|[\"'`]|\\(|\\[|\\{)$");
+const DEFAULT_COMMAND_CAPABILITIES: CommandCapabilities = {
+  fork: true,
+  compact: true,
+  review: true,
+  mcp: true,
+};
 
 function isFileTriggerActive(text: string, cursor: number | null) {
   if (!text || cursor === null) {
@@ -75,6 +87,7 @@ export function useComposerAutocompleteState({
   selectionStart,
   disabled,
   appsEnabled,
+  commandCapabilities = DEFAULT_COMMAND_CAPABILITIES,
   skills,
   apps,
   prompts,
@@ -215,8 +228,24 @@ export function useComposerAutocompleteState({
         group: "Slash",
       });
     }
-    return commands.sort((a, b) => a.label.localeCompare(b.label));
-  }, [appsEnabled]);
+    return commands
+      .filter((command) => {
+        if (command.id === "fork") {
+          return commandCapabilities.fork;
+        }
+        if (command.id === "compact") {
+          return commandCapabilities.compact;
+        }
+        if (command.id === "review") {
+          return commandCapabilities.review;
+        }
+        if (command.id === "mcp") {
+          return commandCapabilities.mcp;
+        }
+        return true;
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [appsEnabled, commandCapabilities]);
 
   const slashItems = useMemo<AutocompleteItem[]>(
     () => [...slashCommandItems, ...promptItems],

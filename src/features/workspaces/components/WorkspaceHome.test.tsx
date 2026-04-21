@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceInfo } from "../../../types";
 import { WorkspaceHome } from "./WorkspaceHome";
 
+const useComposerAutocompleteStateMock = vi.fn();
+
 vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: () => {
     throw new Error("convertFileSrc is unavailable in web runtime");
@@ -25,18 +27,7 @@ vi.mock("../../composer/hooks/useComposerImages", () => ({
 }));
 
 vi.mock("../../composer/hooks/useComposerAutocompleteState", () => ({
-  useComposerAutocompleteState: () => ({
-    isAutocompleteOpen: false,
-    autocompleteMatches: [],
-    autocompleteAnchorIndex: null,
-    highlightIndex: null,
-    setHighlightIndex: vi.fn(),
-    applyAutocomplete: vi.fn(),
-    handleInputKeyDown: vi.fn(),
-    handleTextChange: vi.fn(),
-    handleSelectionChange: vi.fn(),
-    fileTriggerActive: false,
-  }),
+  useComposerAutocompleteState: (args: unknown) => useComposerAutocompleteStateMock(args),
 }));
 
 vi.mock("../../composer/hooks/usePromptHistory", () => ({
@@ -71,6 +62,7 @@ vi.mock("../hooks/useWorkspaceHomeSuggestionsStyle", () => ({
 afterEach(() => {
   cleanup();
   vi.unstubAllEnvs();
+  useComposerAutocompleteStateMock.mockReset();
 });
 
 const workspace: WorkspaceInfo = {
@@ -85,6 +77,19 @@ const workspace: WorkspaceInfo = {
 };
 
 function renderWorkspaceHome() {
+  useComposerAutocompleteStateMock.mockReturnValue({
+    isAutocompleteOpen: false,
+    autocompleteMatches: [],
+    autocompleteAnchorIndex: null,
+    highlightIndex: null,
+    setHighlightIndex: vi.fn(),
+    applyAutocomplete: vi.fn(),
+    handleInputKeyDown: vi.fn(),
+    handleTextChange: vi.fn(),
+    handleSelectionChange: vi.fn(),
+    fileTriggerActive: false,
+  });
+
   return render(
     <WorkspaceHome
       workspace={workspace}
@@ -120,6 +125,12 @@ function renderWorkspaceHome() {
       onSelectInstance={vi.fn()}
       skills={[]}
       appsEnabled={false}
+      commandCapabilities={{
+        fork: false,
+        compact: false,
+        review: false,
+        mcp: false,
+      }}
       apps={[]}
       prompts={[]}
       files={[]}
@@ -157,5 +168,22 @@ describe("WorkspaceHome", () => {
     expect(screen.getByText("Project")).toBeTruthy();
     expect(screen.getByText("/tmp/project")).toBeTruthy();
     expect(screen.getByTestId("file-editor-card")).toBeTruthy();
+  });
+
+  it("passes command capabilities through to composer autocomplete", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    renderWorkspaceHome();
+
+    expect(useComposerAutocompleteStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commandCapabilities: {
+          fork: false,
+          compact: false,
+          review: false,
+          mcp: false,
+        },
+      }),
+    );
   });
 });
