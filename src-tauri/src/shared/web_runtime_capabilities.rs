@@ -48,6 +48,7 @@ const BRIDGE_ALLOWED_RPC_METHODS: &[&str] = &[
     "create_git_branch",
     "get_app_settings",
     "update_app_settings",
+    "local_usage_snapshot",
     "get_config_model",
     "model_list",
     "collaboration_mode_list",
@@ -119,7 +120,7 @@ pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
             global_config: false,
         },
         operations: OperationsCapabilities {
-            usage_snapshot: false,
+            usage_snapshot: true,
             doctor_report: false,
             feature_flags: false,
         },

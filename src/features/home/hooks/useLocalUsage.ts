@@ -30,7 +30,7 @@ export function useLocalUsage(enabled: boolean, workspacePath: string | null) {
     inFlightRef.current = null;
     pendingRefreshRef.current = false;
     if (!enabled) {
-      setState((prev) => ({ ...prev, isLoading: false }));
+      setState(emptyState);
     }
   }, [enabled]);
 

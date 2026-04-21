@@ -13,20 +13,19 @@ This document describes the current capability split between the desktop app and
 
 - Workspace list, connect, remove, and add by server path or Git URL.
 - Thread list, start, resume, read, archive, rename, interrupt, approval responses, and request-user-input replies.
+- Thread follow-up controls: `Steer`, fork, compact, `/review` entrypoints, and MCP server status reads.
 - Standard message sending with browser-picked or pasted image attachments.
 - Core Git workflows: status, diffs, log, stage, unstage, revert, commit, fetch, pull, push, sync, branch list, branch create, and branch checkout.
+- Workspace file listing, text preview, and file snippet insertion into the composer when the connected bridge advertises file-tree support.
 - Prompt list, create, update, delete, and move.
 - Models, collaboration modes, skills, apps, account info, and rate-limit reads.
+- Home usage snapshot when the connected web bridge advertises `operations.usageSnapshot`.
 
 ## Desktop-Only Workflows
 
 ### Thread and Review Workflows
 
-- Follow-up `Steer` sends.
-- `/review` workflows, including working tree, branch, commit, detached review threads, and pull request review actions.
-- Thread fork.
-- Thread compact.
-- MCP server status queries.
+- Pull request review discovery flows that depend on GitHub-specific PR listing, diff, comment, or checkout commands.
 
 ### Git and GitHub Workflows
 
@@ -44,7 +43,6 @@ This document describes the current capability split between the desktop app and
 - Clone-from-workspace flow.
 - Worktree creation.
 - Worktree setup status and setup-run tracking.
-- Workspace file listing, file tree preview, and file snippet insertion.
 - Workspace `AGENTS.md` editing.
 - Global `AGENTS.md` editing.
 - Global Codex config editing.
@@ -69,7 +67,6 @@ This document describes the current capability split between the desktop app and
 - Notification sounds.
 - System notifications.
 - App menu accelerators and native menu event integrations.
-- Local usage snapshot on the home view.
 - App build metadata.
 - Mobile runtime detection.
 
@@ -91,14 +88,15 @@ This document describes the current capability split between the desktop app and
 
 ## Current Shared-UI Gaps
 
-- The Composer still exposes the `Queue`/`Steer` preference, but only `Queue` has a working web transport path today.
 - The sidebar account switcher can render in shared UI, but the login and switch flow still depends on desktop-only commands.
-- Home usage data still depends on the desktop-only local usage snapshot command.
+- The home usage panel now suppresses unsupported polling in web runtime, but it still falls back to the generic empty state instead of a capability-specific explanation when `operations.usageSnapshot` is unavailable.
 
 ## Source of Truth
 
-- Runtime RPC allowlist and desktop-only guards: `src/services/tauri.ts`
+- Runtime RPC wrapper routing and desktop-only guards: `src/services/tauri.ts`
+- Bridge capability catalog: `src-tauri/src/shared/web_runtime_capabilities.rs`
 - Web realtime event surface: `src/services/events.ts`
+- Home usage orchestration and runtime gating: `src/features/app/orchestration/useWorkspaceOrchestration.ts`
 - Web settings section filter: `src/features/settings/components/settingsViewConstants.ts`
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
 - Workspace `AGENTS.md` web disablement: `src/features/workspaces/components/WorkspaceHome.tsx`

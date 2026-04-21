@@ -62,6 +62,7 @@ import {
   pickImageFiles,
   pickWorkspacePaths,
   movePrompt,
+  localUsageSnapshot,
   updatePrompt,
   writeGlobalAgentsMd,
   writeGlobalCodexConfigToml,
@@ -207,6 +208,47 @@ describe("tauri invoke wrappers", () => {
         body: JSON.stringify({
           method: "read_workspace_file",
           params: { workspaceId: "ws-1", path: "src/main.ts" },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("routes localUsageSnapshot through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: {
+            updatedAt: 123,
+            days: [],
+            totals: {
+              last7DaysTokens: 0,
+              last30DaysTokens: 0,
+              averageDailyTokens: 0,
+              cacheHitRatePercent: 0,
+              peakDay: null,
+              peakDayTokens: 0,
+            },
+            topModels: [],
+          },
+        }),
+      }),
+    );
+
+    await expect(localUsageSnapshot(30, "/srv/app")).resolves.toMatchObject({
+      updatedAt: 123,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "local_usage_snapshot",
+          params: { days: 30, workspacePath: "/srv/app" },
         }),
       }),
     );

@@ -86,4 +86,28 @@ describe("useLocalUsage", () => {
 
     unmount();
   });
+
+  it("clears stale snapshot state when polling is disabled", async () => {
+    const localUsageSnapshotMock = vi.mocked(localUsageSnapshot);
+    localUsageSnapshotMock.mockResolvedValue(makeSnapshot(7));
+
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useLocalUsage(enabled, "/tmp/codex"),
+      {
+        initialProps: { enabled: true },
+      },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.snapshot?.updatedAt).toBe(7);
+
+    rerender({ enabled: false });
+
+    expect(result.current.snapshot).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.isLoading).toBe(false);
+  });
 });

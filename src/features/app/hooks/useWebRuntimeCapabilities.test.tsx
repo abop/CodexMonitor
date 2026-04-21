@@ -98,7 +98,7 @@ describe("useWebRuntimeCapabilities", () => {
         globalConfig: false,
       },
       operations: {
-        usageSnapshot: false,
+        usageSnapshot: true,
         doctorReport: false,
         featureFlags: false,
       },
@@ -121,6 +121,12 @@ describe("useWebRuntimeCapabilities", () => {
         mcp: true,
       }),
     );
+
+    expect(result.current.operations).toEqual({
+      usageSnapshot: true,
+      doctorReport: false,
+      featureFlags: false,
+    });
   });
 
   it("picks up a bridge URL published during subscription bootstrap", async () => {

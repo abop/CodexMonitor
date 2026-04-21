@@ -311,6 +311,15 @@ mod tests {
     }
 
     #[test]
+    fn advertises_usage_snapshot_operation_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.operations.usage_snapshot);
+        assert!(methods.contains(&"local_usage_snapshot"));
+    }
+
+    #[test]
     fn rejects_methods_outside_the_allowlist() {
         tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -499,6 +508,62 @@ mod tests {
                     assert_eq!(server.last_method().await, method);
                     assert_eq!(server.last_params().await, params);
                 }
+            });
+    }
+
+    #[test]
+    fn forwards_local_usage_snapshot_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                let params = json!({
+                    "days": 30,
+                    "workspacePath": "/srv/app"
+                });
+                server
+                    .enqueue_result(
+                        1,
+                        json!({
+                            "updatedAt": 0,
+                            "days": [],
+                            "totals": {
+                                "last7DaysTokens": 0,
+                                "last30DaysTokens": 0,
+                                "averageDailyTokens": 0,
+                                "cacheHitRatePercent": 0.0,
+                                "peakDay": null,
+                                "peakDayTokens": 0
+                            },
+                            "topModels": []
+                        }),
+                    )
+                    .await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                json!({
+                                    "method": "local_usage_snapshot",
+                                    "params": params
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "local_usage_snapshot");
+                assert_eq!(server.last_params().await, params);
             });
     }
 

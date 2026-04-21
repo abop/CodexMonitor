@@ -1063,6 +1063,7 @@ export default function MainApp() {
     workspacesById,
     hasLoaded,
     showHome,
+    usageSnapshotEnabled: runtimeCapabilities.operations.usageSnapshot,
     threadsByWorkspace,
     lastAgentMessageByThread,
     threadStatusById,
