@@ -12,6 +12,21 @@ const useWorkspaceFileListingMock = vi.hoisted(() =>
   })),
 );
 
+const useWorkspaceAgentMdMock = vi.hoisted(() =>
+  vi.fn(() => ({
+    content: "",
+    exists: false,
+    truncated: false,
+    loading: false,
+    saving: false,
+    error: null,
+    dirty: false,
+    setContent: vi.fn(),
+    refresh: vi.fn(),
+    save: vi.fn(),
+  })),
+);
+
 vi.mock("@/features/messages/utils/messageRenderUtils", () => ({
   computePlanFollowupState: () => ({ shouldShow: false }),
 }));
@@ -32,18 +47,7 @@ vi.mock("@app/hooks/useWorkspaceFileListing", () => ({
 }));
 
 vi.mock("@/features/workspaces/hooks/useWorkspaceAgentMd", () => ({
-  useWorkspaceAgentMd: () => ({
-    content: "",
-    exists: false,
-    truncated: false,
-    loading: false,
-    saving: false,
-    error: null,
-    dirty: false,
-    setContent: vi.fn(),
-    refresh: vi.fn(),
-    save: vi.fn(),
-  }),
+  useWorkspaceAgentMd: useWorkspaceAgentMdMock,
 }));
 
 vi.mock("@/features/workspaces/hooks/useWorkspaceHome", () => ({
@@ -58,6 +62,7 @@ function buildArgs(overrides?: {
   steerEnabled?: boolean;
   steerCapability?: boolean;
   fileTreeCapability?: boolean;
+  workspaceAgentsCapability?: boolean;
 }) {
   const composerInputRef = createRef<HTMLTextAreaElement>();
   const workspaceHomeTextareaRef = createRef<HTMLTextAreaElement>();
@@ -113,7 +118,7 @@ function buildArgs(overrides?: {
       },
       files: {
         workspaceTree: overrides?.fileTreeCapability ?? true,
-        workspaceAgents: false,
+        workspaceAgents: overrides?.workspaceAgentsCapability ?? false,
         globalAgents: false,
         globalConfig: false,
       },
@@ -216,6 +221,18 @@ describe("useMainAppComposerWorkspaceState", () => {
     expect(useWorkspaceFileListingMock).toHaveBeenCalledWith(
       expect.objectContaining({
         runtimeFileTreeAvailable: false,
+      }),
+    );
+  });
+
+  it("passes workspace AGENTS capability through to useWorkspaceAgentMd", () => {
+    renderHook(() =>
+      useMainAppComposerWorkspaceState(buildArgs({ workspaceAgentsCapability: true })),
+    );
+
+    expect(useWorkspaceAgentMdMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        enabled: true,
       }),
     );
   });

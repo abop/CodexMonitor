@@ -6,15 +6,21 @@ import { isWebRuntime } from "@services/runtime";
 
 type UseWorkspaceAgentMdOptions = {
   activeWorkspace: WorkspaceInfo | null;
+  enabled?: boolean;
   onDebug?: (entry: DebugEntry) => void;
 };
 
-export function useWorkspaceAgentMd({ activeWorkspace, onDebug }: UseWorkspaceAgentMdOptions) {
+export function useWorkspaceAgentMd({
+  activeWorkspace,
+  enabled = true,
+  onDebug,
+}: UseWorkspaceAgentMdOptions) {
   const workspaceId = activeWorkspace?.id ?? null;
   const webRuntime = isWebRuntime();
+  const readEnabled = Boolean(workspaceId) && enabled;
 
   const readWithDebug = useCallback(async (): Promise<FileEditorResponse> => {
-    if (!workspaceId || webRuntime) {
+    if (!workspaceId || !enabled) {
       return { exists: false, content: "", truncated: false };
     }
     const requestWorkspaceId = workspaceId;
@@ -46,10 +52,10 @@ export function useWorkspaceAgentMd({ activeWorkspace, onDebug }: UseWorkspaceAg
       });
       throw error;
     }
-  }, [onDebug, webRuntime, workspaceId]);
+  }, [enabled, onDebug, workspaceId]);
 
   const writeWithDebug = useCallback(async (content: string) => {
-    if (!workspaceId || webRuntime) {
+    if (!workspaceId || !enabled || webRuntime) {
       return;
     }
     const requestWorkspaceId = workspaceId;
@@ -80,10 +86,10 @@ export function useWorkspaceAgentMd({ activeWorkspace, onDebug }: UseWorkspaceAg
       });
       throw error;
     }
-  }, [onDebug, webRuntime, workspaceId]);
+  }, [enabled, onDebug, webRuntime, workspaceId]);
 
   return useFileEditor({
-    key: webRuntime ? null : workspaceId,
+    key: readEnabled ? workspaceId : null,
     read: readWithDebug,
     write: writeWithDebug,
     readErrorTitle: "Couldn’t load AGENTS.md",

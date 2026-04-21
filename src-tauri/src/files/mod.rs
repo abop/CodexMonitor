@@ -34,6 +34,31 @@ async fn file_read_impl(
     file_read_core(&state.workspaces, scope, kind, workspace_id).await
 }
 
+async fn read_workspace_agent_md_impl(
+    workspace_id: String,
+    state: &AppState,
+    app: &AppHandle,
+) -> Result<TextFileResponse, String> {
+    if remote_backend::is_remote_mode(state).await {
+        let response = remote_backend::call_remote(
+            state,
+            app.clone(),
+            "read_workspace_agent_md",
+            json!({ "workspaceId": workspace_id }),
+        )
+        .await?;
+        return serde_json::from_value(response).map_err(|err| err.to_string());
+    }
+
+    file_read_core(
+        &state.workspaces,
+        FileScope::Workspace,
+        FileKind::Agents,
+        Some(workspace_id),
+    )
+    .await
+}
+
 async fn file_write_impl(
     scope: FileScope,
     kind: FileKind,
@@ -82,6 +107,15 @@ pub(crate) async fn file_write(
     app: AppHandle,
 ) -> Result<(), String> {
     file_write_impl(scope, kind, workspace_id, content, &*state, &app).await
+}
+
+#[tauri::command]
+pub(crate) async fn read_workspace_agent_md(
+    workspace_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<TextFileResponse, String> {
+    read_workspace_agent_md_impl(workspace_id, &*state, &app).await
 }
 
 #[tauri::command]

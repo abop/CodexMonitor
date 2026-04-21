@@ -1052,7 +1052,9 @@ export async function readWorkspaceFile(
 }
 
 export async function readAgentMd(workspaceId: string): Promise<AgentMdResponse> {
-  return fileRead("workspace", "agents", workspaceId);
+  return invokeSupportedRpc<AgentMdResponse>("read_workspace_agent_md", {
+    workspaceId,
+  });
 }
 
 export async function writeAgentMd(workspaceId: string, content: string): Promise<void> {

@@ -255,6 +255,37 @@ describe("tauri invoke wrappers", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it("routes readAgentMd through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: { exists: true, content: "# Agent", truncated: false },
+        }),
+      }),
+    );
+
+    await expect(readAgentMd("ws-agent")).resolves.toEqual({
+      exists: true,
+      content: "# Agent",
+      truncated: false,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "read_workspace_agent_md",
+          params: { workspaceId: "ws-agent" },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   it("routes web RPC through the saved runtime bridge URL", async () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://env.example.com");
@@ -1287,9 +1318,7 @@ describe("tauri invoke wrappers", () => {
 
     await readAgentMd("ws-agent");
 
-    expect(invokeMock).toHaveBeenCalledWith("file_read", {
-      scope: "workspace",
-      kind: "agents",
+    expect(invokeMock).toHaveBeenCalledWith("read_workspace_agent_md", {
       workspaceId: "ws-agent",
     });
   });

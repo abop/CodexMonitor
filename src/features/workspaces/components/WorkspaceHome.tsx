@@ -92,6 +92,7 @@ type WorkspaceHomeProps = {
   agentMdContent: string;
   agentMdExists: boolean;
   agentMdTruncated: boolean;
+  agentMdAvailable: boolean;
   agentMdLoading: boolean;
   agentMdSaving: boolean;
   agentMdError: string | null;
@@ -156,6 +157,7 @@ export function WorkspaceHome({
   agentMdContent,
   agentMdExists,
   agentMdTruncated,
+  agentMdAvailable,
   agentMdLoading,
   agentMdSaving,
   agentMdError,
@@ -348,6 +350,9 @@ export function WorkspaceHome({
   if (agentMdStatus) {
     agentMdMetaParts.push(agentMdStatus);
   }
+  if (webRuntime && agentMdAvailable) {
+    agentMdMetaParts.push("Read-only");
+  }
   if (agentMdTruncated) {
     agentMdMetaParts.push("Truncated");
   }
@@ -355,10 +360,13 @@ export function WorkspaceHome({
   const agentMdSaveLabel = agentMdExists ? "Save" : "Create";
   const agentMdErrorMessage =
     agentMdError ??
-    (webRuntime ? "Codex file access is unavailable in the web build." : null);
+    (webRuntime && !agentMdAvailable
+      ? "Codex file access is unavailable in the web build."
+      : null);
   const agentMdSaveDisabled =
-    webRuntime || agentMdLoading || agentMdSaving || !agentMdDirty;
-  const agentMdRefreshDisabled = webRuntime || agentMdLoading || agentMdSaving;
+    webRuntime || !agentMdAvailable || agentMdLoading || agentMdSaving || !agentMdDirty;
+  const agentMdRefreshDisabled =
+    agentMdLoading || agentMdSaving || (webRuntime && !agentMdAvailable);
 
   return (
     <div className="workspace-home">
@@ -462,7 +470,8 @@ export function WorkspaceHome({
           error={agentMdErrorMessage}
           value={agentMdContent}
           placeholder="Add workspace instructions for the agent…"
-          disabled={webRuntime || agentMdLoading}
+          disabled={agentMdLoading || (webRuntime && !agentMdAvailable)}
+          readOnly={webRuntime && agentMdAvailable}
           refreshDisabled={agentMdRefreshDisabled}
           saveDisabled={agentMdSaveDisabled}
           saveLabel={agentMdSaveLabel}

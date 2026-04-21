@@ -661,6 +661,19 @@ impl DaemonState {
         .await
     }
 
+    async fn read_workspace_agent_md(
+        &self,
+        workspace_id: String,
+    ) -> Result<file_io::TextFileResponse, String> {
+        files_core::file_read_core(
+            &self.workspaces,
+            file_policy::FileScope::Workspace,
+            file_policy::FileKind::Agents,
+            Some(workspace_id),
+        )
+        .await
+    }
+
     async fn file_read(
         &self,
         scope: file_policy::FileScope,

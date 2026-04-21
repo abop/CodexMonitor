@@ -12,6 +12,7 @@ const BRIDGE_ALLOWED_RPC_METHODS: &[&str] = &[
     "apply_worktree_changes",
     "list_workspace_files",
     "read_workspace_file",
+    "read_workspace_agent_md",
     "set_workspace_runtime_codex_args",
     "list_threads",
     "start_thread",
@@ -115,7 +116,7 @@ pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
         },
         files: FileCapabilities {
             workspace_tree: true,
-            workspace_agents: false,
+            workspace_agents: true,
             global_agents: false,
             global_config: false,
         },

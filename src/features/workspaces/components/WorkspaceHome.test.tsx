@@ -5,6 +5,7 @@ import type { WorkspaceInfo } from "../../../types";
 import { WorkspaceHome } from "./WorkspaceHome";
 
 const useComposerAutocompleteStateMock = vi.fn();
+const fileEditorCardMock = vi.fn();
 
 vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: () => {
@@ -40,7 +41,10 @@ vi.mock("../../composer/hooks/usePromptHistory", () => ({
 }));
 
 vi.mock("../../shared/components/FileEditorCard", () => ({
-  FileEditorCard: () => <div data-testid="file-editor-card" />,
+  FileEditorCard: (props: unknown) => {
+    fileEditorCardMock(props);
+    return <div data-testid="file-editor-card" />;
+  },
 }));
 
 vi.mock("./WorkspaceHomeRunControls", () => ({
@@ -63,6 +67,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllEnvs();
   useComposerAutocompleteStateMock.mockReset();
+  fileEditorCardMock.mockReset();
 });
 
 const workspace: WorkspaceInfo = {
@@ -76,7 +81,9 @@ const workspace: WorkspaceInfo = {
   },
 };
 
-function renderWorkspaceHome() {
+function renderWorkspaceHome(
+  overrides?: Partial<Parameters<typeof WorkspaceHome>[0]>,
+) {
   useComposerAutocompleteStateMock.mockReturnValue({
     isAutocompleteOpen: false,
     autocompleteMatches: [],
@@ -148,6 +155,7 @@ function renderWorkspaceHome() {
       agentMdContent=""
       agentMdExists={false}
       agentMdTruncated={false}
+      agentMdAvailable={false}
       agentMdLoading={false}
       agentMdSaving={false}
       agentMdError={null}
@@ -155,6 +163,7 @@ function renderWorkspaceHome() {
       onAgentMdChange={vi.fn()}
       onAgentMdRefresh={vi.fn()}
       onAgentMdSave={vi.fn()}
+      {...overrides}
     />,
   );
 }
@@ -183,6 +192,25 @@ describe("WorkspaceHome", () => {
           review: false,
           mcp: false,
         },
+      }),
+    );
+  });
+
+  it("renders supported web AGENTS.md as read-only instead of unavailable", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    renderWorkspaceHome({
+      agentMdContent: "# Agent",
+      agentMdExists: true,
+      agentMdAvailable: true,
+    });
+
+    expect(fileEditorCardMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: null,
+        refreshDisabled: false,
+        saveDisabled: true,
+        readOnly: true,
       }),
     );
   });

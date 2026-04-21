@@ -320,6 +320,7 @@ export function useMainAppComposerWorkspaceState({
 
   const agentMdState = useWorkspaceAgentMd({
     activeWorkspace,
+    enabled: fileCapabilities.workspaceAgents,
     onDebug: addDebugEntry,
   });
 
@@ -342,6 +343,7 @@ export function useMainAppComposerWorkspaceState({
     recentThreadInstances,
     recentThreadsUpdatedAt,
     workspaceHomeState,
+    agentMdAvailable: fileCapabilities.workspaceAgents,
     agentMdState,
     ...composerState,
   };

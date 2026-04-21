@@ -1177,6 +1177,7 @@ export default function MainApp() {
     setPrefillDraft,
     clearDraftForThread,
     workspaceHomeState,
+    agentMdAvailable,
     agentMdState,
   } = composerWorkspaceState;
   const {
@@ -1569,6 +1570,7 @@ export default function MainApp() {
           agentMdContent,
           agentMdExists,
           agentMdTruncated,
+          agentMdAvailable,
           agentMdLoading,
           agentMdSaving,
           agentMdError,

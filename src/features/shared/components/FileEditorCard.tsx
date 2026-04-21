@@ -22,6 +22,7 @@ type FileEditorCardProps = {
   placeholder?: string;
   helpText?: ReactNode;
   disabled?: boolean;
+  readOnly?: boolean;
   refreshDisabled?: boolean;
   saveDisabled?: boolean;
   saveLabel: string;
@@ -39,6 +40,7 @@ export function FileEditorCard({
   placeholder,
   helpText,
   disabled,
+  readOnly,
   refreshDisabled,
   saveDisabled,
   saveLabel,
@@ -83,9 +85,9 @@ export function FileEditorCard({
         placeholder={placeholder}
         spellCheck={false}
         disabled={disabled}
+        readOnly={readOnly}
       />
       {helpText ? <div className={classNames.help}>{helpText}</div> : null}
     </div>
   );
 }
-
