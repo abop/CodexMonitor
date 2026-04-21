@@ -850,6 +850,34 @@ describe("tauri invoke wrappers", () => {
     });
   });
 
+  it("routes listMcpServerStatus through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { data: [] } }),
+      }),
+    );
+
+    await listMcpServerStatus("ws-10", "cursor-1", 25);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "list_mcp_server_status",
+          params: {
+            workspaceId: "ws-10",
+            cursor: "cursor-1",
+            limit: 25,
+          },
+        }),
+      }),
+    );
+  });
+
   it("maps workspaceId/cursor/limit/sortKey for list_threads", async () => {
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockResolvedValueOnce({});
@@ -1637,6 +1665,40 @@ describe("tauri invoke wrappers", () => {
       target: { type: "uncommittedChanges" },
       delivery: "detached",
     });
+  });
+
+  it("routes startReview through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ result: { reviewThreadId: "thread-review-1" } }),
+      }),
+    );
+
+    await startReview(
+      "ws-5",
+      "thread-2",
+      { type: "uncommittedChanges" },
+      "detached",
+    );
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "start_review",
+          params: {
+            workspaceId: "ws-5",
+            threadId: "thread-2",
+            target: { type: "uncommittedChanges" },
+            delivery: "detached",
+          },
+        }),
+      }),
+    );
   });
 
   it("nests decisions for server request responses", async () => {

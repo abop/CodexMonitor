@@ -601,12 +601,11 @@ export async function startReview(
   target: ReviewTarget,
   delivery?: "inline" | "detached",
 ) {
-  requireDesktopRuntime("Reviews");
   const payload: Record<string, unknown> = { workspaceId, threadId, target };
   if (delivery) {
     payload.delivery = delivery;
   }
-  return invoke("start_review", payload);
+  return invokeSupportedRpc("start_review", payload);
 }
 
 export async function respondToServerRequest(
@@ -1194,8 +1193,11 @@ export async function listMcpServerStatus(
   cursor?: string | null,
   limit?: number | null,
 ) {
-  requireDesktopRuntime("MCP server status");
-  return invoke<any>("list_mcp_server_status", { workspaceId, cursor, limit });
+  return invokeSupportedRpc<any>("list_mcp_server_status", {
+    workspaceId,
+    cursor,
+    limit,
+  });
 }
 
 export async function resumeThread(workspaceId: string, threadId: string) {
