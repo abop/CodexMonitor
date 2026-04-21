@@ -674,6 +674,26 @@ impl DaemonState {
         .await
     }
 
+    async fn read_global_agents_md(&self) -> Result<file_io::TextFileResponse, String> {
+        files_core::file_read_core(
+            &self.workspaces,
+            file_policy::FileScope::Global,
+            file_policy::FileKind::Agents,
+            None,
+        )
+        .await
+    }
+
+    async fn read_global_codex_config_toml(&self) -> Result<file_io::TextFileResponse, String> {
+        files_core::file_read_core(
+            &self.workspaces,
+            file_policy::FileScope::Global,
+            file_policy::FileKind::Config,
+            None,
+        )
+        .await
+    }
+
     async fn file_read(
         &self,
         scope: file_policy::FileScope,

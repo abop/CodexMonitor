@@ -320,6 +320,24 @@ mod tests {
     }
 
     #[test]
+    fn advertises_global_agent_file_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.files.global_agents);
+        assert!(methods.contains(&"read_global_agents_md"));
+    }
+
+    #[test]
+    fn advertises_global_codex_config_file_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.files.global_config);
+        assert!(methods.contains(&"read_global_codex_config_toml"));
+    }
+
+    #[test]
     fn advertises_usage_snapshot_operation_support() {
         let capabilities = bridge_capabilities_v1();
         let methods = capabilities.methods;
@@ -563,6 +581,96 @@ mod tests {
 
                 assert_eq!(response.status(), StatusCode::OK);
                 assert_eq!(server.last_method().await, "read_workspace_agent_md");
+                assert_eq!(server.last_params().await, params);
+            });
+    }
+
+    #[test]
+    fn forwards_global_agents_read_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                let params = json!({});
+                server
+                    .enqueue_result(
+                        1,
+                        json!({
+                            "exists": true,
+                            "content": "# Global",
+                            "truncated": false
+                        }),
+                    )
+                    .await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                json!({
+                                    "method": "read_global_agents_md",
+                                    "params": params
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "read_global_agents_md");
+                assert_eq!(server.last_params().await, params);
+            });
+    }
+
+    #[test]
+    fn forwards_global_codex_config_read_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                let params = json!({});
+                server
+                    .enqueue_result(
+                        1,
+                        json!({
+                            "exists": true,
+                            "content": "model = \"gpt-5\"",
+                            "truncated": false
+                        }),
+                    )
+                    .await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                json!({
+                                    "method": "read_global_codex_config_toml",
+                                    "params": params
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "read_global_codex_config_toml");
                 assert_eq!(server.last_params().await, params);
             });
     }

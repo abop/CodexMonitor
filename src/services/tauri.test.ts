@@ -286,6 +286,68 @@ describe("tauri invoke wrappers", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it("routes readGlobalAgentsMd through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: { exists: true, content: "# Global", truncated: false },
+        }),
+      }),
+    );
+
+    await expect(readGlobalAgentsMd()).resolves.toEqual({
+      exists: true,
+      content: "# Global",
+      truncated: false,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "read_global_agents_md",
+          params: {},
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("routes readGlobalCodexConfigToml through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: { exists: true, content: "model = \"gpt-5\"", truncated: false },
+        }),
+      }),
+    );
+
+    await expect(readGlobalCodexConfigToml()).resolves.toEqual({
+      exists: true,
+      content: "model = \"gpt-5\"",
+      truncated: false,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "read_global_codex_config_toml",
+          params: {},
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   it("routes web RPC through the saved runtime bridge URL", async () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://env.example.com");
@@ -1343,11 +1405,7 @@ describe("tauri invoke wrappers", () => {
 
     await readGlobalAgentsMd();
 
-    expect(invokeMock).toHaveBeenCalledWith("file_read", {
-      scope: "global",
-      kind: "agents",
-      workspaceId: undefined,
-    });
+    expect(invokeMock).toHaveBeenCalledWith("read_global_agents_md");
   });
 
   it("writes global AGENTS.md", async () => {
@@ -1370,11 +1428,7 @@ describe("tauri invoke wrappers", () => {
 
     await readGlobalCodexConfigToml();
 
-    expect(invokeMock).toHaveBeenCalledWith("file_read", {
-      scope: "global",
-      kind: "config",
-      workspaceId: undefined,
-    });
+    expect(invokeMock).toHaveBeenCalledWith("read_global_codex_config_toml");
   });
 
   it("writes global config.toml", async () => {

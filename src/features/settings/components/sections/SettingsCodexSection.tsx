@@ -33,6 +33,9 @@ type SettingsCodexSectionProps = {
     status: "idle" | "running" | "done";
     result: CodexUpdateResult | null;
   };
+  readOnlyFilesMode: boolean;
+  globalAgentsVisible: boolean;
+  globalAgentsReadOnly: boolean;
   globalAgentsMeta: string;
   globalAgentsError: string | null;
   globalAgentsContent: string;
@@ -40,6 +43,8 @@ type SettingsCodexSectionProps = {
   globalAgentsRefreshDisabled: boolean;
   globalAgentsSaveDisabled: boolean;
   globalAgentsSaveLabel: string;
+  globalConfigVisible: boolean;
+  globalConfigReadOnly: boolean;
   globalConfigMeta: string;
   globalConfigError: string | null;
   globalConfigContent: string;
@@ -62,6 +67,9 @@ type SettingsCodexSectionProps = {
 };
 
 const DEFAULT_REASONING_EFFORT = "medium";
+
+const appendMetaTag = (meta: string | undefined, tag: string) =>
+  meta && meta.trim().length > 0 ? `${meta} · ${tag}` : tag;
 
 const normalizeEffortValue = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -119,6 +127,9 @@ export function SettingsCodexSection({
   isSavingSettings,
   doctorState,
   codexUpdateState,
+  readOnlyFilesMode,
+  globalAgentsVisible,
+  globalAgentsReadOnly,
   globalAgentsMeta,
   globalAgentsError,
   globalAgentsContent,
@@ -126,6 +137,8 @@ export function SettingsCodexSection({
   globalAgentsRefreshDisabled,
   globalAgentsSaveDisabled,
   globalAgentsSaveLabel,
+  globalConfigVisible,
+  globalConfigReadOnly,
   globalConfigMeta,
   globalConfigError,
   globalConfigContent,
@@ -226,6 +239,83 @@ export function SettingsCodexSection({
     selectedModelSlug,
     selectedEffort,
   ]);
+
+  if (readOnlyFilesMode) {
+    return (
+      <SettingsSection
+        title="Codex"
+        subtitle="Inspect remote global Codex files. Editing and other Codex controls remain desktop-only in the web build."
+      >
+        {globalAgentsVisible ? (
+          <FileEditorCard
+            title="Global AGENTS.md"
+            meta={appendMetaTag(globalAgentsMeta, "Read-only")}
+            error={globalAgentsError}
+            value={globalAgentsContent}
+            placeholder="Add global instructions for Codex agents…"
+            disabled={globalAgentsLoading}
+            readOnly={globalAgentsReadOnly}
+            refreshDisabled={globalAgentsRefreshDisabled}
+            saveDisabled={true}
+            saveLabel={globalAgentsSaveLabel}
+            onChange={onSetGlobalAgentsContent}
+            onRefresh={onRefreshGlobalAgents}
+            onSave={onSaveGlobalAgents}
+            helpText={
+              <>
+                Stored at <code>~/.codex/AGENTS.md</code>.
+              </>
+            }
+            classNames={{
+              container: "settings-field settings-agents",
+              header: "settings-agents-header",
+              title: "settings-field-label",
+              actions: "settings-agents-actions",
+              meta: "settings-help settings-help-inline",
+              iconButton: "ghost settings-icon-button",
+              error: "settings-agents-error",
+              textarea: "settings-agents-textarea",
+              help: "settings-help",
+            }}
+          />
+        ) : null}
+
+        {globalConfigVisible ? (
+          <FileEditorCard
+            title="Global config.toml"
+            meta={appendMetaTag(globalConfigMeta, "Read-only")}
+            error={globalConfigError}
+            value={globalConfigContent}
+            placeholder="Edit the global Codex config.toml…"
+            disabled={globalConfigLoading}
+            readOnly={globalConfigReadOnly}
+            refreshDisabled={globalConfigRefreshDisabled}
+            saveDisabled={true}
+            saveLabel={globalConfigSaveLabel}
+            onChange={onSetGlobalConfigContent}
+            onRefresh={onRefreshGlobalConfig}
+            onSave={onSaveGlobalConfig}
+            helpText={
+              <>
+                Stored at <code>~/.codex/config.toml</code>.
+              </>
+            }
+            classNames={{
+              container: "settings-field settings-agents",
+              header: "settings-agents-header",
+              title: "settings-field-label",
+              actions: "settings-agents-actions",
+              meta: "settings-help settings-help-inline",
+              iconButton: "ghost settings-icon-button",
+              error: "settings-agents-error",
+              textarea: "settings-agents-textarea",
+              help: "settings-help",
+            }}
+          />
+        ) : null}
+      </SettingsSection>
+    );
+  }
 
   return (
     <SettingsSection

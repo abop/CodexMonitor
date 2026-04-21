@@ -9,6 +9,7 @@ import type {
   WorkspaceGroup,
   WorkspaceInfo,
 } from "@/types";
+import type { WebRuntimeCapabilities } from "@/services/bridge/http";
 import { useSettingsViewCloseShortcuts } from "@settings/hooks/useSettingsViewCloseShortcuts";
 import { useSettingsViewNavigation } from "@settings/hooks/useSettingsViewNavigation";
 import { useSettingsViewOrchestration } from "@settings/hooks/useSettingsViewOrchestration";
@@ -17,8 +18,8 @@ import { isWebRuntime } from "@services/runtime";
 import { SettingsNav } from "./SettingsNav";
 import type { CodexSection } from "./settingsTypes";
 import {
+  getWebVisibleSettingsSections,
   SETTINGS_SECTION_LABELS,
-  SETTINGS_WEB_SECTION_IDS,
 } from "./settingsViewConstants";
 import { SettingsSectionContainers } from "./sections/SettingsSectionContainers";
 
@@ -69,6 +70,7 @@ export type SettingsViewProps = {
   onCancelDictationDownload?: () => void;
   onRemoveDictationModel?: () => void;
   initialSection?: CodexSection;
+  runtimeCapabilities?: Pick<WebRuntimeCapabilities, "files" | "operations">;
 };
 
 export function SettingsView({
@@ -102,9 +104,12 @@ export function SettingsView({
   onCancelDictationDownload,
   onRemoveDictationModel,
   initialSection,
+  runtimeCapabilities,
 }: SettingsViewProps) {
   const webRuntime = isWebRuntime();
-  const visibleSections = webRuntime ? SETTINGS_WEB_SECTION_IDS : undefined;
+  const visibleSections = webRuntime
+    ? getWebVisibleSettingsSections(runtimeCapabilities)
+    : undefined;
   const {
     activeSection,
     showMobileDetail,
@@ -143,6 +148,8 @@ export function SettingsView({
     onDownloadDictationModel,
     onCancelDictationDownload,
     onRemoveDictationModel,
+    webRuntime,
+    runtimeCapabilities,
   });
 
   useSettingsViewCloseShortcuts(onClose);

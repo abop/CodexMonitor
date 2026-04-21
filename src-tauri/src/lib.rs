@@ -185,6 +185,8 @@ pub fn run() {
             settings::get_codex_config_path,
             files::file_read,
             files::file_write,
+            files::read_global_agents_md,
+            files::read_global_codex_config_toml,
             files::read_workspace_agent_md,
             files::read_image_as_data_url,
             files::write_text_file,

@@ -34,27 +34,69 @@ async fn file_read_impl(
     file_read_core(&state.workspaces, scope, kind, workspace_id).await
 }
 
+async fn read_fixed_file_impl(
+    scope: FileScope,
+    kind: FileKind,
+    workspace_id: Option<String>,
+    remote_method: &'static str,
+    remote_params: serde_json::Value,
+    state: &AppState,
+    app: &AppHandle,
+) -> Result<TextFileResponse, String> {
+    if remote_backend::is_remote_mode(state).await {
+        let response = remote_backend::call_remote(state, app.clone(), remote_method, remote_params)
+            .await?;
+        return serde_json::from_value(response).map_err(|err| err.to_string());
+    }
+
+    file_read_core(&state.workspaces, scope, kind, workspace_id).await
+}
+
 async fn read_workspace_agent_md_impl(
     workspace_id: String,
     state: &AppState,
     app: &AppHandle,
 ) -> Result<TextFileResponse, String> {
-    if remote_backend::is_remote_mode(state).await {
-        let response = remote_backend::call_remote(
-            state,
-            app.clone(),
-            "read_workspace_agent_md",
-            json!({ "workspaceId": workspace_id }),
-        )
-        .await?;
-        return serde_json::from_value(response).map_err(|err| err.to_string());
-    }
-
-    file_read_core(
-        &state.workspaces,
+    read_fixed_file_impl(
         FileScope::Workspace,
         FileKind::Agents,
-        Some(workspace_id),
+        Some(workspace_id.clone()),
+        "read_workspace_agent_md",
+        json!({ "workspaceId": workspace_id }),
+        state,
+        app,
+    )
+    .await
+}
+
+async fn read_global_agents_md_impl(
+    state: &AppState,
+    app: &AppHandle,
+) -> Result<TextFileResponse, String> {
+    read_fixed_file_impl(
+        FileScope::Global,
+        FileKind::Agents,
+        None,
+        "read_global_agents_md",
+        json!({}),
+        state,
+        app,
+    )
+    .await
+}
+
+async fn read_global_codex_config_toml_impl(
+    state: &AppState,
+    app: &AppHandle,
+) -> Result<TextFileResponse, String> {
+    read_fixed_file_impl(
+        FileScope::Global,
+        FileKind::Config,
+        None,
+        "read_global_codex_config_toml",
+        json!({}),
+        state,
+        app,
     )
     .await
 }
@@ -116,6 +158,22 @@ pub(crate) async fn read_workspace_agent_md(
     app: AppHandle,
 ) -> Result<TextFileResponse, String> {
     read_workspace_agent_md_impl(workspace_id, &*state, &app).await
+}
+
+#[tauri::command]
+pub(crate) async fn read_global_agents_md(
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<TextFileResponse, String> {
+    read_global_agents_md_impl(&*state, &app).await
+}
+
+#[tauri::command]
+pub(crate) async fn read_global_codex_config_toml(
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<TextFileResponse, String> {
+    read_global_codex_config_toml_impl(&*state, &app).await
 }
 
 #[tauri::command]

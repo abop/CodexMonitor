@@ -1017,6 +1017,7 @@ export default function MainApp() {
       reduceTransparency,
       setReduceTransparency,
       appSettings,
+      runtimeCapabilities,
       openAppIconById,
       queueSaveSettings,
       handleToggleAutomaticAppUpdateChecks,

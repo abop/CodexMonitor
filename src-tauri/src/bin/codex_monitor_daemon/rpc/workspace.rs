@@ -192,6 +192,10 @@ pub(super) async fn try_handle(
             let request = parse_request_or_err!(params, workspace_rpc::WorkspaceIdRequest);
             Some(serialize_result(state.read_workspace_agent_md(request.workspace_id)).await)
         }
+        "read_global_agents_md" => Some(serialize_result(state.read_global_agents_md()).await),
+        "read_global_codex_config_toml" => {
+            Some(serialize_result(state.read_global_codex_config_toml()).await)
+        }
         "add_clone" => {
             let request = parse_request_or_err!(params, workspace_rpc::AddCloneRequest);
             Some(

@@ -7,6 +7,7 @@ import type {
   WorkspaceGroup,
   WorkspaceSettings,
 } from "@/types";
+import type { WebRuntimeCapabilities } from "@/services/bridge/http";
 import { isMacPlatform, isWindowsPlatform } from "@utils/platformPaths";
 import { useSettingsOpenAppDrafts } from "./useSettingsOpenAppDrafts";
 import { useSettingsShortcutDrafts } from "./useSettingsShortcutDrafts";
@@ -31,6 +32,8 @@ type UseSettingsViewOrchestrationArgs = {
   groupedWorkspaces: GroupedWorkspaces;
   ungroupedLabel: string;
   visibleSections?: readonly CodexSection[];
+  webRuntime?: boolean;
+  runtimeCapabilities?: Pick<WebRuntimeCapabilities, "files" | "operations">;
   reduceTransparency: boolean;
   onToggleTransparency: (value: boolean) => void;
   appSettings: AppSettings;
@@ -75,6 +78,8 @@ export function useSettingsViewOrchestration({
   groupedWorkspaces,
   ungroupedLabel,
   visibleSections,
+  webRuntime = false,
+  runtimeCapabilities,
   reduceTransparency,
   onToggleTransparency,
   appSettings,
@@ -135,6 +140,11 @@ export function useSettingsViewOrchestration({
   const dictationReady = dictationModelStatus?.state === "ready";
   const isSectionEnabled = (section: CodexSection) =>
     !visibleSections || visibleSections.includes(section);
+  const codexReadOnlyFilesMode = Boolean(
+    webRuntime &&
+      runtimeCapabilities &&
+      (runtimeCapabilities.files.globalAgents || runtimeCapabilities.files.globalConfig),
+  );
 
   const {
     openAppDrafts,
@@ -205,6 +215,17 @@ export function useSettingsViewOrchestration({
     onRunDoctor,
     onRunCodexUpdate,
     enabled: isSectionEnabled("codex"),
+    readOnlyFilesMode: codexReadOnlyFilesMode,
+    globalAgentsEnabled: isSectionEnabled("codex")
+      ? webRuntime
+        ? Boolean(runtimeCapabilities?.files.globalAgents)
+        : true
+      : false,
+    globalConfigEnabled: isSectionEnabled("codex")
+      ? webRuntime
+        ? Boolean(runtimeCapabilities?.files.globalConfig)
+        : true
+      : false,
   });
 
   const gitSectionProps = useSettingsGitSection({

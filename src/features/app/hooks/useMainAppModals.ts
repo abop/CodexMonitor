@@ -106,6 +106,7 @@ type UseMainAppModalsArgs = {
     reduceTransparency: boolean;
     setReduceTransparency: (value: boolean) => void;
     appSettings: AppSettings;
+    runtimeCapabilities: NonNullable<SettingsViewProps["runtimeCapabilities"]>;
     openAppIconById: Record<string, string>;
     queueSaveSettings: (next: AppSettings) => Promise<unknown>;
     handleToggleAutomaticAppUpdateChecks: () => void;
@@ -179,6 +180,7 @@ function buildSettingsViewProps({
     reduceTransparency: settings.reduceTransparency,
     onToggleTransparency: settings.setReduceTransparency,
     appSettings: settings.appSettings,
+    runtimeCapabilities: settings.runtimeCapabilities,
     openAppIconById: settings.openAppIconById,
     onUpdateAppSettings: async (next) => {
       await Promise.resolve(settings.queueSaveSettings(next));

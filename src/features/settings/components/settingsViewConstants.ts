@@ -1,4 +1,5 @@
 import type { AppSettings } from "@/types";
+import type { WebRuntimeCapabilities } from "@/services/bridge/http";
 import type { CodexSection, ShortcutDraftKey, ShortcutSettingKey } from "./settingsTypes";
 
 export const DICTATION_MODELS = [
@@ -72,13 +73,27 @@ export const COMPOSER_PRESET_CONFIGS: Record<
 
 export const SETTINGS_MOBILE_BREAKPOINT_PX = 720;
 export const DEFAULT_REMOTE_HOST = "127.0.0.1:4732";
-export const SETTINGS_WEB_SECTION_IDS = [
+type SettingsWebRuntimeCapabilities = Pick<WebRuntimeCapabilities, "files" | "operations">;
+
+const SETTINGS_WEB_BASE_SECTION_IDS = [
   "projects",
   "display",
   "composer",
   "git",
   "about",
 ] as const satisfies readonly CodexSection[];
+
+export function getWebVisibleSettingsSections(
+  runtimeCapabilities?: SettingsWebRuntimeCapabilities,
+): readonly CodexSection[] {
+  const sections: CodexSection[] = [...SETTINGS_WEB_BASE_SECTION_IDS];
+
+  if (runtimeCapabilities?.files.globalAgents || runtimeCapabilities?.files.globalConfig) {
+    sections.push("codex");
+  }
+
+  return sections;
+}
 
 export const SETTINGS_SECTION_LABELS: Record<CodexSection, string> = {
   projects: "Projects",

@@ -18,6 +18,7 @@ This document describes the current capability split between the desktop app and
 - Core Git workflows: status, diffs, log, stage, unstage, revert, commit, fetch, pull, push, sync, branch list, branch create, and branch checkout.
 - Workspace file listing, text preview, and file snippet insertion into the composer when the connected bridge advertises file-tree support.
 - Workspace `AGENTS.md` preview and refresh in Workspace Home when the connected bridge advertises `files.workspaceAgents`.
+- Global `AGENTS.md` and global `config.toml` preview and refresh in the web Codex settings section when the connected bridge advertises `files.globalAgents` / `files.globalConfig`.
 - Prompt list, create, update, delete, and move.
 - Models, collaboration modes, skills, apps, account info, and rate-limit reads.
 - Home usage snapshot when the connected web bridge advertises `operations.usageSnapshot`.
@@ -45,8 +46,8 @@ This document describes the current capability split between the desktop app and
 - Worktree creation.
 - Worktree setup status and setup-run tracking.
 - Workspace `AGENTS.md` editing. Web currently supports read-only preview and refresh only when `files.workspaceAgents` is available.
-- Global `AGENTS.md` editing.
-- Global Codex config editing.
+- Global `AGENTS.md` editing. Web currently supports read-only preview and refresh only when `files.globalAgents` is available.
+- Global Codex config editing. Web currently supports read-only preview and refresh only when `files.globalConfig` is available.
 - Agent role management and agent config editing/generation.
 - Prompt folder reveal.
 - Open workspace paths in local editors or commands.
@@ -83,7 +84,8 @@ This document describes the current capability split between the desktop app and
 ## Web-Only Runtime Differences
 
 - Web settings only surface `Projects`, `Display`, `Composer`, `Git`, and `About`.
-- Hidden in web settings: `Environments`, `Dictation`, `Shortcuts`, `Open in`, `Server`, `Agents`, `Codex`, and `Features`.
+- Hidden in web settings: `Environments`, `Dictation`, `Shortcuts`, `Open in`, `Server`, `Agents`, and `Features`.
+- The `Codex` settings section appears in web only when the connected bridge advertises global file visibility, and it remains a reduced read-only view for those files.
 - Web bridge selection lives in the sidebar rail and is web-only.
 - Web realtime only subscribes to `app-server-event`. Terminal, dictation, updater, tray, and menu event channels remain desktop-only.
 
@@ -98,6 +100,7 @@ This document describes the current capability split between the desktop app and
 - Bridge capability catalog: `src-tauri/src/shared/web_runtime_capabilities.rs`
 - Web realtime event surface: `src/services/events.ts`
 - Home usage orchestration and runtime gating: `src/features/app/orchestration/useWorkspaceOrchestration.ts`
-- Web settings section filter: `src/features/settings/components/settingsViewConstants.ts`
+- Web settings section filter and capability-aware Codex visibility: `src/features/settings/components/settingsViewConstants.ts`
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
 - Workspace `AGENTS.md` runtime gating and web read-only behavior: `src/features/workspaces/components/WorkspaceHome.tsx`
+- Global Codex file web read-only behavior: `src/features/settings/components/sections/SettingsCodexSection.tsx`

@@ -231,15 +231,6 @@ export type DeleteAgentInput = {
 type FileScope = "workspace" | "global";
 type FileKind = "agents" | "config";
 
-async function fileRead(
-  scope: FileScope,
-  kind: FileKind,
-  workspaceId?: string,
-): Promise<TextFileResponse> {
-  requireDesktopRuntime("Codex file access");
-  return invoke<TextFileResponse>("file_read", { scope, kind, workspaceId });
-}
-
 async function fileWrite(
   scope: FileScope,
   kind: FileKind,
@@ -256,7 +247,7 @@ export async function readImageAsDataUrl(path: string): Promise<string> {
 }
 
 export async function readGlobalAgentsMd(): Promise<GlobalAgentsResponse> {
-  return fileRead("global", "agents");
+  return invokeSupportedRpc<GlobalAgentsResponse>("read_global_agents_md");
 }
 
 export async function writeGlobalAgentsMd(content: string): Promise<void> {
@@ -264,7 +255,9 @@ export async function writeGlobalAgentsMd(content: string): Promise<void> {
 }
 
 export async function readGlobalCodexConfigToml(): Promise<GlobalCodexConfigResponse> {
-  return fileRead("global", "config");
+  return invokeSupportedRpc<GlobalCodexConfigResponse>(
+    "read_global_codex_config_toml",
+  );
 }
 
 export async function writeGlobalCodexConfigToml(content: string): Promise<void> {

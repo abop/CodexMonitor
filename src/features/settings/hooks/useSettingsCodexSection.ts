@@ -17,6 +17,9 @@ type UseSettingsCodexSectionArgs = {
   appSettings: AppSettings;
   projects: WorkspaceInfo[];
   enabled?: boolean;
+  readOnlyFilesMode?: boolean;
+  globalAgentsEnabled?: boolean;
+  globalConfigEnabled?: boolean;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
   onRunDoctor: (
     codexBin: string | null,
@@ -48,6 +51,9 @@ export type SettingsCodexSectionProps = {
     status: "idle" | "running" | "done";
     result: CodexUpdateResult | null;
   };
+  readOnlyFilesMode: boolean;
+  globalAgentsVisible: boolean;
+  globalAgentsReadOnly: boolean;
   globalAgentsMeta: string;
   globalAgentsError: string | null;
   globalAgentsContent: string;
@@ -55,6 +61,8 @@ export type SettingsCodexSectionProps = {
   globalAgentsRefreshDisabled: boolean;
   globalAgentsSaveDisabled: boolean;
   globalAgentsSaveLabel: string;
+  globalConfigVisible: boolean;
+  globalConfigReadOnly: boolean;
   globalConfigMeta: string;
   globalConfigError: string | null;
   globalConfigContent: string;
@@ -80,6 +88,9 @@ export const useSettingsCodexSection = ({
   appSettings,
   projects,
   enabled = true,
+  readOnlyFilesMode = false,
+  globalAgentsEnabled = enabled,
+  globalConfigEnabled = enabled,
   onUpdateAppSettings,
   onRunDoctor,
   onRunCodexUpdate,
@@ -102,7 +113,7 @@ export const useSettingsCodexSection = ({
     error: defaultModelsError,
     connectedWorkspaceCount: defaultModelsConnectedWorkspaceCount,
     refresh: refreshDefaultModels,
-  } = useSettingsDefaultModels(projects, { enabled });
+  } = useSettingsDefaultModels(projects, { enabled: enabled && !readOnlyFilesMode });
 
   const {
     content: globalAgentsContent,
@@ -115,7 +126,7 @@ export const useSettingsCodexSection = ({
     setContent: setGlobalAgentsContent,
     refresh: refreshGlobalAgents,
     save: saveGlobalAgents,
-  } = useGlobalAgentsMd({ enabled });
+  } = useGlobalAgentsMd({ enabled: globalAgentsEnabled });
 
   const {
     content: globalConfigContent,
@@ -128,7 +139,7 @@ export const useSettingsCodexSection = ({
     setContent: setGlobalConfigContent,
     refresh: refreshGlobalConfig,
     save: saveGlobalConfig,
-  } = useGlobalCodexConfigToml({ enabled });
+  } = useGlobalCodexConfigToml({ enabled: globalConfigEnabled });
 
   const globalAgentsEditorMeta = buildEditorContentMeta({
     isLoading: globalAgentsLoading,
@@ -271,20 +282,25 @@ export const useSettingsCodexSection = ({
     isSavingSettings,
     doctorState,
     codexUpdateState,
+    readOnlyFilesMode,
+    globalAgentsVisible: globalAgentsEnabled,
+    globalAgentsReadOnly: readOnlyFilesMode,
     globalAgentsMeta: globalAgentsEditorMeta.meta,
     globalAgentsError,
     globalAgentsContent,
     globalAgentsLoading,
     globalAgentsRefreshDisabled: globalAgentsEditorMeta.refreshDisabled,
-    globalAgentsSaveDisabled: globalAgentsEditorMeta.saveDisabled,
-    globalAgentsSaveLabel: globalAgentsEditorMeta.saveLabel,
+    globalAgentsSaveDisabled: readOnlyFilesMode || globalAgentsEditorMeta.saveDisabled,
+    globalAgentsSaveLabel: readOnlyFilesMode ? "Save" : globalAgentsEditorMeta.saveLabel,
+    globalConfigVisible: globalConfigEnabled,
+    globalConfigReadOnly: readOnlyFilesMode,
     globalConfigMeta: globalConfigEditorMeta.meta,
     globalConfigError,
     globalConfigContent,
     globalConfigLoading,
     globalConfigRefreshDisabled: globalConfigEditorMeta.refreshDisabled,
-    globalConfigSaveDisabled: globalConfigEditorMeta.saveDisabled,
-    globalConfigSaveLabel: globalConfigEditorMeta.saveLabel,
+    globalConfigSaveDisabled: readOnlyFilesMode || globalConfigEditorMeta.saveDisabled,
+    globalConfigSaveLabel: readOnlyFilesMode ? "Save" : globalConfigEditorMeta.saveLabel,
     onSetCodexPathDraft: setCodexPathDraft,
     onSetCodexArgsDraft: setCodexArgsDraft,
     onSetGlobalAgentsContent: setGlobalAgentsContent,

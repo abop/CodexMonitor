@@ -1043,6 +1043,19 @@ describe("SettingsView web build", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        runtimeCapabilities={{
+          files: {
+            workspaceTree: true,
+            workspaceAgents: true,
+            globalAgents: false,
+            globalConfig: false,
+          },
+          operations: {
+            usageSnapshot: true,
+            doctorReport: false,
+            featureFlags: false,
+          },
+        }}
       />,
     );
 
@@ -1059,6 +1072,115 @@ describe("SettingsView web build", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+
+    expect(getModelListMock).not.toHaveBeenCalled();
+    expect(getConfigModelMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a reduced read-only Codex section in web when global file capabilities are available", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+    readGlobalAgentsMdMock.mockResolvedValue({
+      exists: true,
+      content: "# Global",
+      truncated: false,
+    });
+    readGlobalCodexConfigTomlMock.mockResolvedValue({
+      exists: true,
+      content: "model = \"gpt-5\"",
+      truncated: false,
+    });
+
+    render(
+      <SettingsView
+        workspaceGroups={[]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Ungrouped",
+            workspaces: [workspace({ id: "w-web", name: "Web Workspace", connected: true })],
+          },
+        ]}
+        ungroupedLabel="Ungrouped"
+        onClose={vi.fn()}
+        onMoveWorkspace={vi.fn()}
+        onDeleteWorkspace={vi.fn()}
+        onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        reduceTransparency={false}
+        onToggleTransparency={vi.fn()}
+        appSettings={baseSettings}
+        openAppIconById={{}}
+        onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
+        onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
+        onRunCodexUpdate={vi.fn().mockResolvedValue(createUpdateResult())}
+        onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+        scaleShortcutTitle="Scale shortcut"
+        scaleShortcutText="Use Command +/-"
+        onTestNotificationSound={vi.fn()}
+        onTestSystemNotification={vi.fn()}
+        dictationModelStatus={null}
+        onDownloadDictationModel={vi.fn()}
+        onCancelDictationDownload={vi.fn()}
+        onRemoveDictationModel={vi.fn()}
+        runtimeCapabilities={{
+          files: {
+            workspaceTree: true,
+            workspaceAgents: true,
+            globalAgents: true,
+            globalConfig: true,
+          },
+          operations: {
+            usageSnapshot: true,
+            doctorReport: false,
+            featureFlags: false,
+          },
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Codex" })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Codex" }));
+
+    await waitFor(() => {
+      expect(readGlobalAgentsMdMock).toHaveBeenCalled();
+      expect(readGlobalCodexConfigTomlMock).toHaveBeenCalled();
+      expect(
+        screen.getByPlaceholderText("Add global instructions for Codex agents…"),
+      ).toBeTruthy();
+      expect(
+        screen.getByPlaceholderText("Edit the global Codex config.toml…"),
+      ).toBeTruthy();
+    });
+
+    expect(screen.queryByRole("button", { name: "Run doctor" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
+    expect(screen.queryByLabelText("Default Codex path")).toBeNull();
+    expect(screen.queryByLabelText("Review mode")).toBeNull();
+
+    const globalAgentsTextarea = screen.getByPlaceholderText(
+      "Add global instructions for Codex agents…",
+    ) as HTMLTextAreaElement;
+    const globalConfigTextarea = screen.getByPlaceholderText(
+      "Edit the global Codex config.toml…",
+    ) as HTMLTextAreaElement;
+
+    expect(globalAgentsTextarea.readOnly).toBe(true);
+    expect(globalAgentsTextarea.disabled).toBe(false);
+    expect(globalConfigTextarea.readOnly).toBe(true);
+    expect(globalConfigTextarea.disabled).toBe(false);
+    expect(screen.getAllByTitle("Refresh")).toHaveLength(2);
+    expect(screen.getAllByText("Read-only")).toHaveLength(2);
+    expect(screen.queryAllByTitle("Create")).toHaveLength(0);
+    expect(screen.getAllByTitle("Save").every((button) => button.hasAttribute("disabled"))).toBe(
+      true,
+    );
 
     expect(getModelListMock).not.toHaveBeenCalled();
     expect(getConfigModelMock).not.toHaveBeenCalled();
