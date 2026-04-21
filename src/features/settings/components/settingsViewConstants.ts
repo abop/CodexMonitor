@@ -96,6 +96,10 @@ export function getWebVisibleSettingsSections(
     sections.push("codex");
   }
 
+  if (runtimeCapabilities?.operations.featureFlags) {
+    sections.push("features");
+  }
+
   return sections;
 }
 

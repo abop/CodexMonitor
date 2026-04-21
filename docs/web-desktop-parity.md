@@ -24,6 +24,7 @@ This document describes the current capability split between the desktop app and
 - Models, collaboration modes, skills, apps, account info, and rate-limit reads.
 - Home usage snapshot when the connected web bridge advertises `operations.usageSnapshot`.
 - Codex doctor report in the reduced web Codex settings section when the connected bridge advertises `operations.doctorReport`.
+- Read-only `Features` settings visibility when the connected web bridge advertises `operations.featureFlags`.
 
 ## Desktop-Only Workflows
 
@@ -85,9 +86,10 @@ This document describes the current capability split between the desktop app and
 
 ## Web-Only Runtime Differences
 
-- Web settings only surface `Projects`, `Display`, `Composer`, `Git`, and `About`.
-- Hidden in web settings: `Environments`, `Dictation`, `Shortcuts`, `Open in`, `Server`, `Agents`, and `Features`.
+- Web settings only surface `Projects`, `Display`, `Composer`, `Git`, and `About` by default.
+- Hidden in web settings: `Environments`, `Dictation`, `Shortcuts`, `Open in`, `Server`, and `Agents`. `Codex` and `Features` appear only when the connected bridge advertises the matching read-only capabilities.
 - The `Codex` settings section appears in web only when the connected bridge advertises global file visibility or doctor-report visibility, and it remains a reduced read-only view for runtime summary, diagnostics, and files.
+- The `Features` settings section appears in web only when the connected bridge advertises `operations.featureFlags`, and it remains a reduced read-only view of Codex-returned feature states.
 - Web bridge selection lives in the sidebar rail and is web-only.
 - Web realtime only subscribes to `app-server-event`. Terminal, dictation, updater, tray, and menu event channels remain desktop-only.
 

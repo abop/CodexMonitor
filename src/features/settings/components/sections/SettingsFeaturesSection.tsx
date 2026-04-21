@@ -81,6 +81,7 @@ function featureSubtitle(feature: CodexFeature): string {
 
 export function SettingsFeaturesSection({
   appSettings,
+  readOnlyMode,
   hasFeatureWorkspace,
   openConfigError,
   featureError,
@@ -96,61 +97,77 @@ export function SettingsFeaturesSection({
   return (
     <SettingsSection
       title="Features"
-      subtitle="Manage stable and experimental Codex features."
+      subtitle={
+        readOnlyMode
+          ? "Inspect stable and experimental Codex features. Changes remain desktop-only in the web build."
+          : "Manage stable and experimental Codex features."
+      }
     >
-      <SettingsToggleRow
-        title="Config file"
-        subtitle={`Open the Codex config in ${fileManagerName()}.`}
-      >
-        <button type="button" className="ghost" onClick={onOpenConfig}>
-          {openInFileManagerLabel()}
-        </button>
-      </SettingsToggleRow>
-      {openConfigError && <div className="settings-help">{openConfigError}</div>}
+      {readOnlyMode ? (
+        <div className="settings-help">
+          Feature state is read-only in the web build.
+        </div>
+      ) : (
+        <>
+          <SettingsToggleRow
+            title="Config file"
+            subtitle={`Open the Codex config in ${fileManagerName()}.`}
+          >
+            <button type="button" className="ghost" onClick={onOpenConfig}>
+              {openInFileManagerLabel()}
+            </button>
+          </SettingsToggleRow>
+          {openConfigError && <div className="settings-help">{openConfigError}</div>}
+        </>
+      )}
       <SettingsSubsection
         title="Stable Features"
         subtitle="Production-ready features enabled by default."
       />
-      <SettingsToggleRow
-        title="Personality"
-        subtitle={
-          <>
-            Choose Codex communication style (writes top-level <code>personality</code> in
-            config.toml).
-          </>
-        }
-      >
-        <select
-          id="features-personality-select"
-          className="settings-select"
-          value={appSettings.personality}
-          onChange={(event) =>
-            void onUpdateAppSettings({
-              ...appSettings,
-              personality: event.target.value as (typeof appSettings)["personality"],
-            })
-          }
-          aria-label="Personality"
-        >
-          <option value="friendly">Friendly</option>
-          <option value="pragmatic">Pragmatic</option>
-        </select>
-      </SettingsToggleRow>
-      <SettingsToggleRow
-        title="Pause queued messages when a response is required"
-        subtitle="Keep queued messages paused while Codex is waiting for plan accept/changes or your answers."
-      >
-        <SettingsToggleSwitch
-          pressed={appSettings.pauseQueuedMessagesWhenResponseRequired}
-          onClick={() =>
-            void onUpdateAppSettings({
-              ...appSettings,
-              pauseQueuedMessagesWhenResponseRequired:
-                !appSettings.pauseQueuedMessagesWhenResponseRequired,
-            })
-          }
-        />
-      </SettingsToggleRow>
+      {readOnlyMode ? null : (
+        <>
+          <SettingsToggleRow
+            title="Personality"
+            subtitle={
+              <>
+                Choose Codex communication style (writes top-level <code>personality</code> in
+                config.toml).
+              </>
+            }
+          >
+            <select
+              id="features-personality-select"
+              className="settings-select"
+              value={appSettings.personality}
+              onChange={(event) =>
+                void onUpdateAppSettings({
+                  ...appSettings,
+                  personality: event.target.value as (typeof appSettings)["personality"],
+                })
+              }
+              aria-label="Personality"
+            >
+              <option value="friendly">Friendly</option>
+              <option value="pragmatic">Pragmatic</option>
+            </select>
+          </SettingsToggleRow>
+          <SettingsToggleRow
+            title="Pause queued messages when a response is required"
+            subtitle="Keep queued messages paused while Codex is waiting for plan accept/changes or your answers."
+          >
+            <SettingsToggleSwitch
+              pressed={appSettings.pauseQueuedMessagesWhenResponseRequired}
+              onClick={() =>
+                void onUpdateAppSettings({
+                  ...appSettings,
+                  pauseQueuedMessagesWhenResponseRequired:
+                    !appSettings.pauseQueuedMessagesWhenResponseRequired,
+                })
+              }
+            />
+          </SettingsToggleRow>
+        </>
+      )}
       {stableFeatures.map((feature) => (
         <SettingsToggleRow
           key={feature.name}
@@ -160,7 +177,7 @@ export function SettingsFeaturesSection({
           <SettingsToggleSwitch
             pressed={feature.enabled}
             onClick={() => onToggleCodexFeature(feature)}
-            disabled={featureUpdatingKey === feature.name}
+            disabled={readOnlyMode || featureUpdatingKey === feature.name}
           />
         </SettingsToggleRow>
       ))}
@@ -183,7 +200,7 @@ export function SettingsFeaturesSection({
           <SettingsToggleSwitch
             pressed={feature.enabled}
             onClick={() => onToggleCodexFeature(feature)}
-            disabled={featureUpdatingKey === feature.name}
+            disabled={readOnlyMode || featureUpdatingKey === feature.name}
           />
         </SettingsToggleRow>
       ))}

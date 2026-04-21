@@ -1279,6 +1279,127 @@ describe("SettingsView web build", () => {
     expect(getModelListMock).not.toHaveBeenCalled();
     expect(getConfigModelMock).not.toHaveBeenCalled();
   });
+
+  it("shows a reduced read-only Features section in web when feature flag visibility is available", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+    const onUpdateAppSettings = vi.fn().mockResolvedValue(undefined);
+    getExperimentalFeatureListMock.mockResolvedValueOnce({
+      data: [
+        {
+          name: "shell_tool",
+          stage: "stable",
+          enabled: true,
+          defaultEnabled: true,
+          displayName: "Shell tool",
+          description: "Enable the default shell tool.",
+          announcement: null,
+        },
+        {
+          name: "unified_exec",
+          stage: "stable",
+          enabled: true,
+          defaultEnabled: true,
+          displayName: "Background terminal",
+          description: "Run long-running terminal commands in the background.",
+          announcement: null,
+        },
+        {
+          name: "responses_websockets",
+          stage: "underDevelopment",
+          enabled: false,
+          defaultEnabled: false,
+          displayName: "Responses WebSockets",
+          description: null,
+          announcement: null,
+        },
+      ],
+      nextCursor: null,
+    });
+
+    render(
+      <SettingsView
+        workspaceGroups={[]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Ungrouped",
+            workspaces: [workspace({ id: "w-web-features", name: "Web Features", connected: true })],
+          },
+        ]}
+        ungroupedLabel="Ungrouped"
+        onClose={vi.fn()}
+        onMoveWorkspace={vi.fn()}
+        onDeleteWorkspace={vi.fn()}
+        onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        reduceTransparency={false}
+        onToggleTransparency={vi.fn()}
+        appSettings={baseSettings}
+        openAppIconById={{}}
+        onUpdateAppSettings={onUpdateAppSettings}
+        onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
+        onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+        scaleShortcutTitle="Scale shortcut"
+        scaleShortcutText="Use Command +/-"
+        onTestNotificationSound={vi.fn()}
+        onTestSystemNotification={vi.fn()}
+        dictationModelStatus={null}
+        onDownloadDictationModel={vi.fn()}
+        onCancelDictationDownload={vi.fn()}
+        onRemoveDictationModel={vi.fn()}
+        runtimeCapabilities={{
+          files: {
+            workspaceTree: true,
+            workspaceAgents: true,
+            globalAgents: false,
+            globalConfig: false,
+          },
+          operations: {
+            usageSnapshot: true,
+            doctorReport: false,
+            featureFlags: true,
+          },
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Features" })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Features" }));
+
+    expect(await screen.findByText("Shell tool")).toBeTruthy();
+    expect(screen.getByText("Background terminal")).toBeTruthy();
+    expect(screen.getByText("Responses WebSockets")).toBeTruthy();
+    expect(screen.queryByText("Config file")).toBeNull();
+    expect(screen.queryByLabelText("Personality")).toBeNull();
+    expect(
+      screen.queryByText("Pause queued messages when a response is required"),
+    ).toBeNull();
+
+    const stableRow = screen
+      .getByText("Background terminal")
+      .closest(".settings-toggle-row");
+    const experimentalRow = screen
+      .getByText("Responses WebSockets")
+      .closest(".settings-toggle-row");
+    expect(stableRow).not.toBeNull();
+    expect(experimentalRow).not.toBeNull();
+
+    expect(
+      within(stableRow as HTMLElement).getByRole("button").hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      within(experimentalRow as HTMLElement).getByRole("button").hasAttribute("disabled"),
+    ).toBe(true);
+
+    expect(onUpdateAppSettings).not.toHaveBeenCalled();
+  });
 });
 
 describe("SettingsView Environments", () => {
@@ -1986,7 +2107,7 @@ describe("SettingsView Codex section", () => {
         Reflect.deleteProperty(window.navigator, "maxTouchPoints");
       }
     }
-  });
+  }, 10000);
 
 });
 

@@ -11,6 +11,7 @@ type UseSettingsFeaturesSectionArgs = {
   appSettings: AppSettings;
   featureWorkspaceId: string | null;
   enabled?: boolean;
+  readOnlyMode?: boolean;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
 };
 
@@ -22,6 +23,7 @@ const HIDDEN_DYNAMIC_FEATURE_KEYS = new Set<string>([
 
 export type SettingsFeaturesSectionProps = {
   appSettings: AppSettings;
+  readOnlyMode: boolean;
   hasFeatureWorkspace: boolean;
   openConfigError: string | null;
   featureError: string | null;
@@ -142,6 +144,7 @@ export const useSettingsFeaturesSection = ({
   appSettings,
   featureWorkspaceId,
   enabled = true,
+  readOnlyMode = false,
   onUpdateAppSettings,
 }: UseSettingsFeaturesSectionArgs): SettingsFeaturesSectionProps => {
   const [openConfigError, setOpenConfigError] = useState<string | null>(null);
@@ -151,7 +154,7 @@ export const useSettingsFeaturesSection = ({
   const [features, setFeatures] = useState<CodexFeature[]>([]);
 
   const handleOpenConfig = useCallback(async () => {
-    if (!enabled) {
+    if (!enabled || readOnlyMode) {
       return;
     }
     setOpenConfigError(null);
@@ -163,7 +166,7 @@ export const useSettingsFeaturesSection = ({
         error instanceof Error ? error.message : "Unable to open config.",
       );
     }
-  }, [enabled]);
+  }, [enabled, readOnlyMode]);
 
   useEffect(() => {
     let active = true;
@@ -251,7 +254,7 @@ export const useSettingsFeaturesSection = ({
 
   const onToggleCodexFeature = useCallback(
     (feature: CodexFeature) => {
-      if (!enabled) {
+      if (!enabled || readOnlyMode) {
         return;
       }
       void (async () => {
@@ -287,11 +290,12 @@ export const useSettingsFeaturesSection = ({
         }
       })();
     },
-    [appSettings, enabled, onUpdateAppSettings],
+    [appSettings, enabled, onUpdateAppSettings, readOnlyMode],
   );
 
   return {
     appSettings,
+    readOnlyMode,
     hasFeatureWorkspace: featureWorkspaceId != null,
     openConfigError,
     featureError,

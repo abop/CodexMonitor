@@ -149,6 +149,9 @@ export function useSettingsViewOrchestration({
         runtimeCapabilities.operations.doctorReport
       ),
   );
+  const featuresReadOnlyWebMode = Boolean(
+    webRuntime && runtimeCapabilities?.operations.featureFlags,
+  );
 
   const {
     openAppDrafts,
@@ -248,6 +251,7 @@ export function useSettingsViewOrchestration({
     featureWorkspaceId,
     onUpdateAppSettings,
     enabled: isSectionEnabled("features"),
+    readOnlyMode: featuresReadOnlyWebMode,
   });
 
   const agentsSectionProps = useSettingsAgentsSection({

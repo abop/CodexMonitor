@@ -16,6 +16,7 @@ const BRIDGE_ALLOWED_RPC_METHODS: &[&str] = &[
     "read_global_agents_md",
     "read_global_codex_config_toml",
     "codex_doctor_current_config",
+    "experimental_feature_list",
     "set_workspace_runtime_codex_args",
     "list_threads",
     "start_thread",
@@ -126,7 +127,7 @@ pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
         operations: OperationsCapabilities {
             usage_snapshot: true,
             doctor_report: true,
-            feature_flags: false,
+            feature_flags: true,
         },
     }
 }

@@ -389,6 +389,94 @@ describe("tauri invoke wrappers", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it("routes getExperimentalFeatureList through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: {
+            data: [
+              {
+                name: "unified_exec",
+                stage: "stable",
+                enabled: true,
+                defaultEnabled: true,
+              },
+            ],
+            nextCursor: null,
+          },
+        }),
+      }),
+    );
+
+    await expect(
+      getExperimentalFeatureList("ws-11", "cursor-2", 50),
+    ).resolves.toMatchObject({
+      data: [expect.objectContaining({ name: "unified_exec" })],
+      nextCursor: null,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "experimental_feature_list",
+          params: {
+            workspaceId: "ws-11",
+            cursor: "cursor-2",
+            limit: 50,
+          },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("routes getExperimentalFeatureList through invoke on desktop runtime", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({
+      data: [
+        {
+          name: "shell_tool",
+          stage: "stable",
+          enabled: true,
+          defaultEnabled: true,
+        },
+      ],
+      nextCursor: null,
+    });
+
+    await expect(
+      getExperimentalFeatureList("ws-11", "cursor-2", 50),
+    ).resolves.toMatchObject({
+      data: [expect.objectContaining({ name: "shell_tool" })],
+      nextCursor: null,
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("experimental_feature_list", {
+      workspaceId: "ws-11",
+      cursor: "cursor-2",
+      limit: 50,
+    });
+  });
+
+  it("rejects setCodexFeatureFlag in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(setCodexFeatureFlag("apps", true)).rejects.toThrow(
+      "Experimental feature settings is unavailable in the web build.",
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   it("routes web RPC through the saved runtime bridge URL", async () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://env.example.com");

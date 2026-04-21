@@ -356,6 +356,15 @@ mod tests {
     }
 
     #[test]
+    fn advertises_feature_flag_operation_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.operations.feature_flags);
+        assert!(methods.contains(&"experimental_feature_list"));
+    }
+
+    #[test]
     fn rejects_methods_outside_the_allowlist() {
         tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -787,6 +796,54 @@ mod tests {
 
                 assert_eq!(response.status(), StatusCode::OK);
                 assert_eq!(server.last_method().await, "codex_doctor_current_config");
+                assert_eq!(server.last_params().await, params);
+            });
+    }
+
+    #[test]
+    fn forwards_feature_flag_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                let params = json!({
+                    "workspaceId": "ws-1",
+                    "cursor": "cursor-1",
+                    "limit": 50
+                });
+                server
+                    .enqueue_result(
+                        1,
+                        json!({
+                            "data": [],
+                            "nextCursor": null
+                        }),
+                    )
+                    .await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                json!({
+                                    "method": "experimental_feature_list",
+                                    "params": params
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "experimental_feature_list");
                 assert_eq!(server.last_params().await, params);
             });
     }

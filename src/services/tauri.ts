@@ -827,7 +827,13 @@ export async function getExperimentalFeatureList(
   cursor?: string | null,
   limit?: number | null,
 ) {
-  requireDesktopRuntime("Experimental feature settings");
+  if (isWebRuntime()) {
+    return invokeSupportedRpc<any>("experimental_feature_list", {
+      workspaceId,
+      cursor,
+      limit,
+    });
+  }
   return invoke<any>("experimental_feature_list", { workspaceId, cursor, limit });
 }
 
