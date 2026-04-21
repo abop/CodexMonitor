@@ -50,7 +50,7 @@ type UseMainAppComposerWorkspaceStateArgs = {
     >;
     userInputRequests: RequestUserInputRequest[];
   };
-  runtimeCapabilities: Pick<WebRuntimeCapabilities, "threadControls">;
+  runtimeCapabilities: Pick<WebRuntimeCapabilities, "threadControls" | "files">;
   settings: Pick<
     AppSettings,
     | "steerEnabled"
@@ -127,7 +127,7 @@ export function useMainAppComposerWorkspaceState({
     threadStatusById,
     userInputRequests,
   } = thread;
-  const { threadControls } = runtimeCapabilities;
+  const { threadControls, files: fileCapabilities } = runtimeCapabilities;
   const {
     models: modelOptions,
     selectedModelId,
@@ -173,6 +173,7 @@ export function useMainAppComposerWorkspaceState({
       tabletTab,
       rightPanelCollapsed,
       hasComposerSurface: showComposer || showWorkspaceHome,
+      runtimeFileTreeAvailable: fileCapabilities.workspaceTree,
       onDebug: addDebugEntry,
     });
 
@@ -334,6 +335,7 @@ export function useMainAppComposerWorkspaceState({
     activeTurnId,
     steerAvailable,
     commandCapabilities,
+    fileTreeAvailable: fileCapabilities.workspaceTree,
     queuePausedReason,
     canInsertComposerText,
     handleInsertComposerText,

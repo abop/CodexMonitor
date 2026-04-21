@@ -5,7 +5,7 @@ import ScrollText from "lucide-react/dist/esm/icons/scroll-text";
 
 export type PanelTabId = "git" | "files" | "prompts";
 
-type PanelTab = {
+export type PanelTab = {
   id: PanelTabId;
   label: string;
   icon: ReactNode;
@@ -17,13 +17,17 @@ type PanelTabsProps = {
   tabs?: PanelTab[];
 };
 
-const defaultTabs: PanelTab[] = [
+export const DEFAULT_PANEL_TABS: PanelTab[] = [
   { id: "git", label: "Git", icon: <GitBranch aria-hidden /> },
   { id: "files", label: "Files", icon: <Folder aria-hidden /> },
   { id: "prompts", label: "Prompts", icon: <ScrollText aria-hidden /> },
 ];
 
-export function PanelTabs({ active, onSelect, tabs = defaultTabs }: PanelTabsProps) {
+export function PanelTabs({
+  active,
+  onSelect,
+  tabs = DEFAULT_PANEL_TABS,
+}: PanelTabsProps) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const activeIndex = tabs.findIndex((tab) => tab.id === active);
   const focusableIndex = activeIndex >= 0 ? activeIndex : 0;

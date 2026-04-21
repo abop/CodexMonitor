@@ -25,6 +25,7 @@ import {
   getGitLog,
   getGitStatus,
   getOpenAppIcon,
+  getWorkspaceFiles,
   listThreads,
   listMcpServerStatus,
   readThread,
@@ -79,6 +80,7 @@ import {
   renameWorktreeUpstream,
   applyWorktreeChanges,
   setWorkspaceRuntimeCodexArgs,
+  readWorkspaceFile,
 } from "./tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -149,6 +151,66 @@ describe("tauri invoke wrappers", () => {
         body: JSON.stringify({ method: "list_workspaces", params: {} }),
       }),
     );
+  });
+
+  it("routes getWorkspaceFiles through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: ["src/main.ts", "README.md"],
+        }),
+      }),
+    );
+
+    await expect(getWorkspaceFiles("ws-1")).resolves.toEqual([
+      "src/main.ts",
+      "README.md",
+    ]);
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "list_workspace_files",
+          params: { workspaceId: "ws-1" },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("routes readWorkspaceFile through bridgeRpc in web runtime", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.stubEnv("VITE_CODEXMONITOR_BRIDGE_URL", "https://bridge.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: { content: "export {};", truncated: false },
+        }),
+      }),
+    );
+
+    await expect(readWorkspaceFile("ws-1", "src/main.ts")).resolves.toEqual({
+      content: "export {};",
+      truncated: false,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://bridge.example.com/api/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          method: "read_workspace_file",
+          params: { workspaceId: "ws-1", path: "src/main.ts" },
+        }),
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("routes web RPC through the saved runtime bridge URL", async () => {

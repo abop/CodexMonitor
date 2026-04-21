@@ -4,6 +4,14 @@ import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useMainAppComposerWorkspaceState } from "./useMainAppComposerWorkspaceState";
 
+const useWorkspaceFileListingMock = vi.hoisted(() =>
+  vi.fn(() => ({
+    files: [],
+    isLoading: false,
+    setFileAutocompleteActive: vi.fn(),
+  })),
+);
+
 vi.mock("@/features/messages/utils/messageRenderUtils", () => ({
   computePlanFollowupState: () => ({ shouldShow: false }),
 }));
@@ -20,11 +28,7 @@ vi.mock("@app/hooks/useComposerInsert", () => ({
 }));
 
 vi.mock("@app/hooks/useWorkspaceFileListing", () => ({
-  useWorkspaceFileListing: () => ({
-    files: [],
-    isLoading: false,
-    setFileAutocompleteActive: vi.fn(),
-  }),
+  useWorkspaceFileListing: useWorkspaceFileListingMock,
 }));
 
 vi.mock("@/features/workspaces/hooks/useWorkspaceAgentMd", () => ({
@@ -53,6 +57,7 @@ function buildArgs(overrides?: {
   activeTurnId?: string | null;
   steerEnabled?: boolean;
   steerCapability?: boolean;
+  fileTreeCapability?: boolean;
 }) {
   const composerInputRef = createRef<HTMLTextAreaElement>();
   const workspaceHomeTextareaRef = createRef<HTMLTextAreaElement>();
@@ -105,6 +110,12 @@ function buildArgs(overrides?: {
         compact: true,
         review: true,
         mcp: true,
+      },
+      files: {
+        workspaceTree: overrides?.fileTreeCapability ?? true,
+        workspaceAgents: false,
+        globalAgents: false,
+        globalConfig: false,
       },
     },
     settings: {
@@ -181,6 +192,12 @@ describe("useMainAppComposerWorkspaceState", () => {
             review: false,
             mcp: false,
           },
+          files: {
+            workspaceTree: true,
+            workspaceAgents: false,
+            globalAgents: false,
+            globalConfig: false,
+          },
         },
       }),
     );
@@ -189,5 +206,17 @@ describe("useMainAppComposerWorkspaceState", () => {
     expect(enabled.current.commandCapabilities.mcp).toBe(true);
     expect(disabled.current.commandCapabilities.review).toBe(false);
     expect(disabled.current.commandCapabilities.mcp).toBe(false);
+  });
+
+  it("disables workspace file listing when runtime file capability is unavailable", () => {
+    renderHook(() =>
+      useMainAppComposerWorkspaceState(buildArgs({ fileTreeCapability: false })),
+    );
+
+    expect(useWorkspaceFileListingMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runtimeFileTreeAvailable: false,
+      }),
+    );
   });
 });

@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { useMainAppLayoutSurfaces } from "./useMainAppLayoutSurfaces";
 
-function buildArgs(review: boolean): Parameters<typeof useMainAppLayoutSurfaces>[0] {
+function buildArgs(
+  review: boolean,
+  fileTreeAvailable = true,
+): Parameters<typeof useMainAppLayoutSurfaces>[0] {
   return {
     appSettings: {
       usageShowRemaining: false,
@@ -159,6 +162,7 @@ function buildArgs(review: boolean): Parameters<typeof useMainAppLayoutSurfaces>
         mcp: true,
       },
       steerAvailable: false,
+      fileTreeAvailable,
     },
     promptActions: {
       reviewActive: false,
@@ -360,5 +364,23 @@ describe("useMainAppLayoutSurfaces", () => {
 
     expect(args.startUncommittedReview).toHaveBeenCalledTimes(1);
     expect(args.startUncommittedReview).toHaveBeenCalledWith("ws-1");
+  });
+
+  it("passes a hidden files-tab flag when runtime file support is unavailable", () => {
+    const surfaces = useMainAppLayoutSurfaces(buildArgs(true, false));
+
+    expect((surfaces.git.gitDiffPanelProps as { showFilesTab?: boolean }).showFilesTab).toBe(
+      false,
+    );
+  });
+
+  it("falls back to the Git panel when files mode is selected but unsupported", () => {
+    const args = buildArgs(true, false);
+    args.gitState.filePanelMode = "files";
+
+    const surfaces = useMainAppLayoutSurfaces(args);
+
+    expect(surfaces.git.filePanelMode).toBe("git");
+    expect(surfaces.git.gitDiffPanelProps.filePanelMode).toBe("git");
   });
 });

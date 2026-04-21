@@ -28,6 +28,7 @@ type PromptPanelProps = {
   workspacePath: string | null;
   filePanelMode: PanelTabId;
   onFilePanelModeChange: (mode: PanelTabId) => void;
+  showFilesTab?: boolean;
   onSendPrompt: (text: string) => void | Promise<void>;
   onSendPromptToNewAgent: (text: string) => void | Promise<void>;
   onCreatePrompt: (data: {
@@ -139,6 +140,7 @@ export function PromptPanel({
   workspacePath,
   filePanelMode,
   onFilePanelModeChange,
+  showFilesTab = true,
   onSendPrompt,
   onSendPromptToNewAgent,
   onCreatePrompt,
@@ -443,6 +445,7 @@ export function PromptPanel({
     <PanelShell
       filePanelMode={filePanelMode}
       onFilePanelModeChange={onFilePanelModeChange}
+      showFilesTab={showFilesTab}
       className="prompt-panel"
       headerClassName="git-panel-header"
       headerRight={

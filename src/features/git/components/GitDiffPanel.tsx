@@ -72,6 +72,7 @@ type GitDiffPanelProps = {
   onModeChange: (mode: GitPanelMode) => void;
   filePanelMode: PanelTabId;
   onFilePanelModeChange: (mode: PanelTabId) => void;
+  showFilesTab?: boolean;
   worktreeApplyLabel?: string;
   worktreeApplyTitle?: string | null;
   worktreeApplyLoading?: boolean;
@@ -173,6 +174,7 @@ export function GitDiffPanel({
   onModeChange,
   filePanelMode,
   onFilePanelModeChange,
+  showFilesTab = true,
   worktreeApplyTitle = null,
   worktreeApplyLoading = false,
   worktreeApplyError = null,
@@ -661,6 +663,7 @@ export function GitDiffPanel({
     <PanelShell
       filePanelMode={filePanelMode}
       onFilePanelModeChange={onFilePanelModeChange}
+      showFilesTab={showFilesTab}
       headerClassName="git-panel-header"
       headerRight={
         <div className="git-panel-actions" role="group" aria-label="Git panel">

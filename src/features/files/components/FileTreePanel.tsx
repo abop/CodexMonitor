@@ -20,6 +20,7 @@ import {
   PanelSearchField,
 } from "../../design-system/components/panel/PanelPrimitives";
 import { readWorkspaceFile } from "../../../services/tauri";
+import { isWebRuntime } from "../../../services/runtime";
 import type { OpenAppTarget } from "../../../types";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { languageFromPath } from "../../../utils/syntax";
@@ -198,6 +199,7 @@ export function FileTreePanel({
   const dragMovedRef = useRef(false);
   const hasManualToggle = useRef(false);
   const showLoading = isLoading && files.length === 0;
+  const webRuntime = isWebRuntime();
   const listRef = useRef<HTMLDivElement | null>(null);
   const debouncedQuery = useDebouncedValue(query, 150);
   const normalizedQuery = debouncedQuery.trim().toLowerCase();
@@ -551,6 +553,10 @@ export function FileTreePanel({
 
   const showMenu = useCallback(
     async (event: MouseEvent<HTMLButtonElement>, relativePath: string) => {
+      if (webRuntime) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       const menu = await Menu.new({
@@ -577,7 +583,7 @@ export function FileTreePanel({
       const position = new LogicalPosition(event.clientX, event.clientY);
       await menu.popup(position, window);
     },
-    [canInsertText, onInsertText, resolvePath],
+    [canInsertText, onInsertText, resolvePath, webRuntime],
   );
 
   const renderRow = (entry: FileTreeRowEntry) => {

@@ -16,6 +16,7 @@ type UseWorkspaceFileListingArgs = {
   tabletTab: TabletTabKey;
   rightPanelCollapsed: boolean;
   hasComposerSurface: boolean;
+  runtimeFileTreeAvailable: boolean;
   onDebug?: (entry: DebugEntry) => void;
 };
 
@@ -35,6 +36,7 @@ export function useWorkspaceFileListing({
   tabletTab,
   rightPanelCollapsed,
   hasComposerSurface,
+  runtimeFileTreeAvailable,
   onDebug,
 }: UseWorkspaceFileListingArgs): UseWorkspaceFileListingResult {
   const [fileAutocompleteActive, setFileAutocompleteActive] = useState(false);
@@ -44,7 +46,9 @@ export function useWorkspaceFileListing({
     filePanelMode === "files" &&
     (isCompact ? compactTab === "git" : !rightPanelCollapsed);
   const shouldFetchFiles =
-    Boolean(activeWorkspace) && (filePanelMode === "files" || fileAutocompleteActive);
+    runtimeFileTreeAvailable &&
+    Boolean(activeWorkspace) &&
+    (filePanelMode === "files" || fileAutocompleteActive);
 
   useEffect(() => {
     if (!activeWorkspaceId) {
@@ -58,12 +62,22 @@ export function useWorkspaceFileListing({
     }
   }, [hasComposerSurface]);
 
+  useEffect(() => {
+    if (!runtimeFileTreeAvailable) {
+      setFileAutocompleteActive(false);
+    }
+  }, [runtimeFileTreeAvailable]);
+
   const { files, isLoading } = useWorkspaceFiles({
     activeWorkspace,
     onDebug,
     enabled: shouldFetchFiles,
-    pollingEnabled: filePanelVisible,
+    pollingEnabled: runtimeFileTreeAvailable && filePanelVisible,
   });
 
-  return { files, isLoading, setFileAutocompleteActive };
+  return {
+    files: runtimeFileTreeAvailable ? files : [],
+    isLoading: runtimeFileTreeAvailable ? isLoading : false,
+    setFileAutocompleteActive,
+  };
 }

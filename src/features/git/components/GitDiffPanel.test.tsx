@@ -162,6 +162,21 @@ describe("GitDiffPanel", () => {
     ).toBeNull();
   });
 
+  it("hides the Files tab when runtime file support is unavailable", () => {
+    const { container } = render(
+      <GitDiffPanel
+        {...baseProps}
+        showFilesTab={false}
+      />,
+    );
+
+    expect(within(container).queryAllByRole("tab", { name: "Git" }).length).toBeGreaterThan(0);
+    expect(within(container).queryAllByRole("tab", { name: "Files" })).toHaveLength(0);
+    expect(within(container).queryAllByRole("tab", { name: "Prompts" }).length).toBeGreaterThan(
+      0,
+    );
+  });
+
   it("adds a show in file manager option for file context menus", async () => {
     clipboardWriteText.mockClear();
     const { container } = render(

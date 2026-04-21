@@ -686,8 +686,14 @@ function buildGitSurface({
   prompts,
   isPhone,
 }: MainAppLayoutSurfacesContext): LayoutNodesOptions["git"] {
+  const fileTreeAvailable = composerWorkspaceState.fileTreeAvailable;
+  const effectiveFilePanelMode =
+    fileTreeAvailable || gitState.filePanelMode !== "files"
+      ? gitState.filePanelMode
+      : "git";
+
   return {
-    filePanelMode: gitState.filePanelMode,
+    filePanelMode: effectiveFilePanelMode,
     fileTreeProps: activeWorkspace
       ? {
           workspaceId: activeWorkspace.id,
@@ -700,7 +706,7 @@ function buildGitSurface({
             ]),
           ],
           isLoading: composerWorkspaceState.isFilesLoading,
-          filePanelMode: gitState.filePanelMode,
+          filePanelMode: effectiveFilePanelMode,
           onFilePanelModeChange: gitState.setFilePanelMode,
           onInsertText: composerWorkspaceState.handleInsertComposerText,
           canInsertText: composerWorkspaceState.canInsertComposerText,
@@ -713,8 +719,9 @@ function buildGitSurface({
     promptPanelProps: {
       prompts,
       workspacePath: activeWorkspace?.path ?? null,
-      filePanelMode: gitState.filePanelMode,
+      filePanelMode: effectiveFilePanelMode,
       onFilePanelModeChange: gitState.setFilePanelMode,
+      showFilesTab: fileTreeAvailable,
       onSendPrompt: composerWorkspaceState.handleSendPrompt,
       onSendPromptToNewAgent: promptActions.handleSendPromptToNewAgent,
       onCreatePrompt: promptActions.handleCreatePrompt,
@@ -730,8 +737,9 @@ function buildGitSurface({
       workspacePath: activeWorkspace?.path ?? null,
       mode: gitState.gitPanelMode,
       onModeChange: gitState.handleGitPanelModeChange,
-      filePanelMode: gitState.filePanelMode,
+      filePanelMode: effectiveFilePanelMode,
       onFilePanelModeChange: gitState.setFilePanelMode,
+      showFilesTab: fileTreeAvailable,
       worktreeApplyLabel: "apply",
       worktreeApplyTitle: worktreeState.activeParentWorkspace?.name
         ? `Apply changes to ${worktreeState.activeParentWorkspace.name}`

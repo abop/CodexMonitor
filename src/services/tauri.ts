@@ -1036,19 +1036,20 @@ export async function runCodexUpdate(
 }
 
 export async function getWorkspaceFiles(workspaceId: string) {
-  requireDesktopRuntime("Workspace file access");
-  return invoke<string[]>("list_workspace_files", { workspaceId });
+  return invokeSupportedRpc<string[]>("list_workspace_files", { workspaceId });
 }
 
 export async function readWorkspaceFile(
   workspaceId: string,
   path: string,
 ): Promise<{ content: string; truncated: boolean }> {
-  requireDesktopRuntime("Workspace file access");
-  return invoke<{ content: string; truncated: boolean }>("read_workspace_file", {
-    workspaceId,
-    path,
-  });
+  return invokeSupportedRpc<{ content: string; truncated: boolean }>(
+    "read_workspace_file",
+    {
+      workspaceId,
+      path,
+    },
+  );
 }
 
 export async function readAgentMd(workspaceId: string): Promise<AgentMdResponse> {

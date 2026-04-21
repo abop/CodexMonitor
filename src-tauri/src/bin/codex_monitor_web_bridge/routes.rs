@@ -301,6 +301,16 @@ mod tests {
     }
 
     #[test]
+    fn advertises_workspace_tree_file_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.files.workspace_tree);
+        assert!(methods.contains(&"list_workspace_files"));
+        assert!(methods.contains(&"read_workspace_file"));
+    }
+
+    #[test]
     fn rejects_methods_outside_the_allowlist() {
         tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -413,6 +423,55 @@ mod tests {
                             "workspaceId": "ws-1",
                             "cursor": null,
                             "limit": null
+                        }),
+                    ),
+                ];
+
+                for (method, params) in requests {
+                    let (client, mut server) = test_client_pair().await;
+                    server.enqueue_result(1, json!({})).await;
+                    let app = build_router(test_state_with_client(client));
+                    let response = app
+                        .oneshot(
+                            Request::builder()
+                                .method("POST")
+                                .uri("/api/rpc")
+                                .header("content-type", "application/json")
+                                .header("cf-access-jwt-assertion", "present")
+                                .body(Body::from(
+                                    json!({ "method": method, "params": params }).to_string(),
+                                ))
+                                .unwrap(),
+                        )
+                        .await
+                        .unwrap();
+
+                    assert_eq!(response.status(), StatusCode::OK, "{method} should be allowed");
+                    assert_eq!(server.last_method().await, method);
+                    assert_eq!(server.last_params().await, params);
+                }
+            });
+    }
+
+    #[test]
+    fn forwards_workspace_file_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let requests = [
+                    (
+                        "list_workspace_files",
+                        json!({
+                            "workspaceId": "ws-1"
+                        }),
+                    ),
+                    (
+                        "read_workspace_file",
+                        json!({
+                            "workspaceId": "ws-1",
+                            "path": "src/main.ts"
                         }),
                     ),
                 ];
