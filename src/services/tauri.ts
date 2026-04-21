@@ -64,6 +64,8 @@ async function invokeSupportedRpc<T>(
   command: string,
   params?: RpcParams,
 ): Promise<T> {
+  // The name stays for existing callers, but web runtime now trusts the bridge
+  // to enforce method allowlisting instead of duplicating it here.
   if (isWebRuntime()) {
     return bridgeRpc<T>(bridgeConfigOrThrow(), command, params);
   }

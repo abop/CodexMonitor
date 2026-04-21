@@ -32,6 +32,52 @@ type JsonRpcPayload = {
   result?: unknown;
 };
 
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === "boolean";
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((entry) => typeof entry === "string")
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isWebRuntimeCapabilities(
+  payload: unknown,
+): payload is WebRuntimeCapabilities {
+  if (!isRecord(payload)) {
+    return false;
+  }
+
+  const { version, methods, threadControls, files, operations } = payload;
+  if (version !== 1 || !isStringArray(methods)) {
+    return false;
+  }
+
+  if (!isRecord(threadControls) || !isRecord(files) || !isRecord(operations)) {
+    return false;
+  }
+
+  return (
+    isBoolean(threadControls.steer) &&
+    isBoolean(threadControls.fork) &&
+    isBoolean(threadControls.compact) &&
+    isBoolean(threadControls.review) &&
+    isBoolean(threadControls.mcp) &&
+    isBoolean(files.workspaceTree) &&
+    isBoolean(files.workspaceAgents) &&
+    isBoolean(files.globalAgents) &&
+    isBoolean(files.globalConfig) &&
+    isBoolean(operations.usageSnapshot) &&
+    isBoolean(operations.doctorReport) &&
+    isBoolean(operations.featureFlags)
+  );
+}
+
 export async function bridgeRpc<T>(
   config: BridgeConfig,
   method: string,
@@ -71,7 +117,14 @@ export async function fetchBridgeCapabilities(
     credentials: "include",
   });
 
-  return (await response.json()) as WebRuntimeCapabilities;
+  const payload = (await response.json().catch(() => ({}))) as JsonRpcPayload;
+  if (!response.ok) {
+    throw new Error(`Bridge request failed (${response.status})`);
+  }
+  if (!isWebRuntimeCapabilities(payload)) {
+    throw new Error("Bridge returned an invalid response.");
+  }
+  return payload;
 }
 
 export async function testBridgeConnection(config: BridgeConfig) {

@@ -148,4 +148,76 @@ describe("bridgeRpc", () => {
       }),
     );
   });
+
+  it("rejects non-OK bridge capability responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: async () => ({
+          version: 1,
+          methods: [],
+          threadControls: {
+            steer: false,
+            fork: false,
+            compact: false,
+            review: false,
+            mcp: false,
+          },
+          files: {
+            workspaceTree: false,
+            workspaceAgents: false,
+            globalAgents: false,
+            globalConfig: false,
+          },
+          operations: {
+            usageSnapshot: false,
+            doctorReport: false,
+            featureFlags: false,
+          },
+        }),
+      }),
+    );
+
+    await expect(
+      fetchBridgeCapabilities({ baseUrl: "https://bridge.example.com" }),
+    ).rejects.toThrow("Bridge request failed (503)");
+  });
+
+  it("rejects malformed bridge capability responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          version: 1,
+          methods: "list_workspaces",
+          threadControls: {
+            steer: true,
+            fork: true,
+            compact: true,
+            review: false,
+            mcp: false,
+          },
+          files: {
+            workspaceTree: false,
+            workspaceAgents: false,
+            globalAgents: false,
+            globalConfig: false,
+          },
+          operations: {
+            usageSnapshot: false,
+            doctorReport: false,
+            featureFlags: false,
+          },
+        }),
+      }),
+    );
+
+    await expect(
+      fetchBridgeCapabilities({ baseUrl: "https://bridge.example.com" }),
+    ).rejects.toThrow("Bridge returned an invalid response.");
+  });
 });

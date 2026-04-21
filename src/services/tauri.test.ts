@@ -784,7 +784,7 @@ describe("tauri invoke wrappers", () => {
         }),
       }),
     );
-    expect(invoke).not.toHaveBeenCalledWith("fork_thread", expect.anything());
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("maps workspaceId and threadId for compact_thread", async () => {
@@ -821,7 +821,7 @@ describe("tauri invoke wrappers", () => {
         }),
       }),
     );
-    expect(invoke).not.toHaveBeenCalledWith("compact_thread", expect.anything());
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("maps workspaceId/threadId/name for set_thread_name", async () => {
@@ -1523,7 +1523,7 @@ describe("tauri invoke wrappers", () => {
         }),
       }),
     );
-    expect(invoke).not.toHaveBeenCalledWith("turn_steer", expect.anything());
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("converts image paths before turn_steer in remote mode", async () => {
