@@ -349,14 +349,14 @@ export function SettingsCodexSection({
         {globalConfigVisible ? (
           <FileEditorCard
             title="Global config.toml"
-            meta={appendMetaTag(globalConfigMeta, "Read-only")}
+            meta={appendMetaTag(globalConfigMeta, globalConfigReadOnly ? "Read-only" : null)}
             error={globalConfigError}
             value={globalConfigContent}
             placeholder="Edit the global Codex config.toml…"
             disabled={globalConfigLoading}
             readOnly={globalConfigReadOnly}
             refreshDisabled={globalConfigRefreshDisabled}
-            saveDisabled={true}
+            saveDisabled={globalConfigSaveDisabled}
             saveLabel={globalConfigSaveLabel}
             onChange={onSetGlobalConfigContent}
             onRefresh={onRefreshGlobalConfig}

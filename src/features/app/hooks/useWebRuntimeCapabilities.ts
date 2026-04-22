@@ -25,6 +25,7 @@ const DESKTOP_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
     globalAgents: true,
     globalAgentsWrite: true,
     globalConfig: true,
+    globalConfigWrite: true,
   },
   operations: {
     usageSnapshot: true,
@@ -53,6 +54,7 @@ const WEB_SAFE_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
     globalAgents: false,
     globalAgentsWrite: false,
     globalConfig: false,
+    globalConfigWrite: false,
   },
   operations: {
     usageSnapshot: false,

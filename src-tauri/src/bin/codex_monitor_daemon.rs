@@ -720,6 +720,17 @@ impl DaemonState {
         .await
     }
 
+    async fn write_global_codex_config_toml(&self, content: String) -> Result<(), String> {
+        files_core::file_write_core(
+            &self.workspaces,
+            file_policy::FileScope::Global,
+            file_policy::FileKind::Config,
+            None,
+            content,
+        )
+        .await
+    }
+
     async fn file_read(
         &self,
         scope: file_policy::FileScope,

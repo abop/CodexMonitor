@@ -76,6 +76,11 @@ pub(crate) struct WriteGlobalAgentsMdRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct WriteGlobalCodexConfigTomlRequest {
+    pub(crate) content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct IdRequest {
     pub(crate) id: String,
 }

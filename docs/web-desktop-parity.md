@@ -19,7 +19,7 @@ This document describes the current capability split between the desktop app and
 - Workspace file listing, text preview, and file snippet insertion into the composer when the connected bridge advertises file-tree support.
 - Workspace `AGENTS.md` preview and refresh in Workspace Home when the connected bridge advertises `files.workspaceAgents`, plus editing when it also advertises `files.workspaceAgentsWrite`.
 - Global `AGENTS.md` preview and refresh in the web Codex settings section when the connected bridge advertises `files.globalAgents`, plus editing when it also advertises `files.globalAgentsWrite`.
-- Global `config.toml` preview and refresh in the web Codex settings section when the connected bridge advertises `files.globalConfig`.
+- Global `config.toml` preview and refresh in the web Codex settings section when the connected bridge advertises `files.globalConfig`, plus editing when it also advertises `files.globalConfigWrite`.
 - Read-only remote `codexBin` / `codexArgs` runtime summary in the reduced web Codex settings section from shared app settings.
 - Read-only `Agents` settings visibility for remote multi-agent core settings and configured custom agent summaries when the connected bridge advertises `operations.agentsSettings`.
 - Prompt list, create, update, delete, and move.
@@ -51,7 +51,6 @@ This document describes the current capability split between the desktop app and
 - Local workspace path validation.
 - Clone-from-workspace flow.
 - Worktree creation.
-- Global Codex config editing. Web currently supports read-only preview and refresh only when `files.globalConfig` is available.
 - Agent role management and agent config editing/generation. Web currently supports read-only settings summary only when `operations.agentsSettings` is available.
 - Prompt folder reveal.
 - Open workspace paths in local editors or commands.

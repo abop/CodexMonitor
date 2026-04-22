@@ -124,6 +124,7 @@ function buildArgs(overrides?: {
         globalAgents: false,
         globalAgentsWrite: false,
         globalConfig: false,
+        globalConfigWrite: false,
       },
     },
     settings: {
@@ -207,6 +208,7 @@ describe("useMainAppComposerWorkspaceState", () => {
             globalAgents: false,
             globalAgentsWrite: false,
             globalConfig: false,
+            globalConfigWrite: false,
           },
         },
       }),

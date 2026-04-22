@@ -21,6 +21,7 @@ type UseSettingsCodexSectionArgs = {
   globalAgentsEnabled?: boolean;
   globalAgentsWriteEnabled?: boolean;
   globalConfigEnabled?: boolean;
+  globalConfigWriteEnabled?: boolean;
   doctorReportEnabled?: boolean;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
   onRunDoctor: (
@@ -95,6 +96,7 @@ export const useSettingsCodexSection = ({
   globalAgentsEnabled = enabled,
   globalAgentsWriteEnabled = !readOnlyFilesMode,
   globalConfigEnabled = enabled,
+  globalConfigWriteEnabled = !readOnlyFilesMode,
   doctorReportEnabled = enabled,
   onUpdateAppSettings,
   onRunDoctor,
@@ -300,14 +302,15 @@ export const useSettingsCodexSection = ({
       (readOnlyFilesMode && !globalAgentsWriteEnabled) || globalAgentsEditorMeta.saveDisabled,
     globalAgentsSaveLabel: globalAgentsEditorMeta.saveLabel,
     globalConfigVisible: globalConfigEnabled,
-    globalConfigReadOnly: readOnlyFilesMode,
+    globalConfigReadOnly: readOnlyFilesMode && !globalConfigWriteEnabled,
     globalConfigMeta: globalConfigEditorMeta.meta,
     globalConfigError,
     globalConfigContent,
     globalConfigLoading,
     globalConfigRefreshDisabled: globalConfigEditorMeta.refreshDisabled,
-    globalConfigSaveDisabled: readOnlyFilesMode || globalConfigEditorMeta.saveDisabled,
-    globalConfigSaveLabel: readOnlyFilesMode ? "Save" : globalConfigEditorMeta.saveLabel,
+    globalConfigSaveDisabled:
+      (readOnlyFilesMode && !globalConfigWriteEnabled) || globalConfigEditorMeta.saveDisabled,
+    globalConfigSaveLabel: globalConfigEditorMeta.saveLabel,
     onSetCodexPathDraft: setCodexPathDraft,
     onSetCodexArgsDraft: setCodexArgsDraft,
     onSetGlobalAgentsContent: setGlobalAgentsContent,

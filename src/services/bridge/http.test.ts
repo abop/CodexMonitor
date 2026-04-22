@@ -119,6 +119,7 @@ describe("bridgeRpc", () => {
           globalAgents: false,
           globalAgentsWrite: false,
           globalConfig: false,
+          globalConfigWrite: false,
         },
         operations: {
           usageSnapshot: false,
@@ -145,6 +146,7 @@ describe("bridgeRpc", () => {
         files: expect.objectContaining({
           workspaceAgentsWrite: false,
           globalAgentsWrite: false,
+          globalConfigWrite: false,
         }),
         operations: expect.objectContaining({
           accountLogin: true,
@@ -186,6 +188,7 @@ describe("bridgeRpc", () => {
             globalAgents: false,
             globalAgentsWrite: false,
             globalConfig: false,
+            globalConfigWrite: false,
           },
           operations: {
             usageSnapshot: false,
@@ -227,6 +230,7 @@ describe("bridgeRpc", () => {
             globalAgents: false,
             globalAgentsWrite: false,
             globalConfig: false,
+            globalConfigWrite: false,
           },
           operations: {
             usageSnapshot: false,
@@ -267,6 +271,7 @@ describe("bridgeRpc", () => {
             globalAgents: false,
             globalAgentsWrite: false,
             globalConfig: false,
+            globalConfigWrite: false,
           },
           operations: {
             usageSnapshot: false,
@@ -307,6 +312,48 @@ describe("bridgeRpc", () => {
             workspaceAgentsWrite: false,
             globalAgents: true,
             globalConfig: false,
+            globalConfigWrite: false,
+          },
+          operations: {
+            usageSnapshot: false,
+            doctorReport: false,
+            featureFlags: false,
+            accountLogin: false,
+            worktreeSetupStatus: false,
+            agentsSettings: false,
+          },
+        }),
+      }),
+    );
+
+    await expect(
+      fetchBridgeCapabilities({ baseUrl: "https://bridge.example.com" }),
+    ).rejects.toThrow("Bridge returned an invalid response.");
+  });
+
+  it("rejects capability responses missing global config write support", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          version: 1,
+          methods: ["list_workspaces", "read_global_codex_config_toml"],
+          threadControls: {
+            steer: false,
+            fork: false,
+            compact: false,
+            review: false,
+            mcp: false,
+          },
+          files: {
+            workspaceTree: false,
+            workspaceAgents: false,
+            workspaceAgentsWrite: false,
+            globalAgents: false,
+            globalAgentsWrite: false,
+            globalConfig: true,
           },
           operations: {
             usageSnapshot: false,

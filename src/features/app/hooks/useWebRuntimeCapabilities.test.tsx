@@ -75,6 +75,7 @@ describe("useWebRuntimeCapabilities", () => {
     });
     expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(true);
     expect((result.current.files as Record<string, unknown>).globalAgentsWrite).toBe(true);
+    expect((result.current.files as Record<string, unknown>).globalConfigWrite).toBe(true);
     expect(fetchBridgeCapabilitiesMock).not.toHaveBeenCalled();
   });
 
@@ -100,6 +101,7 @@ describe("useWebRuntimeCapabilities", () => {
         globalAgents: false,
         globalAgentsWrite: true,
         globalConfig: false,
+        globalConfigWrite: true,
       },
       operations: {
         usageSnapshot: true,
@@ -131,6 +133,7 @@ describe("useWebRuntimeCapabilities", () => {
 
     expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(true);
     expect((result.current.files as Record<string, unknown>).globalAgentsWrite).toBe(true);
+    expect((result.current.files as Record<string, unknown>).globalConfigWrite).toBe(true);
     expect(result.current.operations).toEqual({
       usageSnapshot: true,
       doctorReport: false,
@@ -170,6 +173,7 @@ describe("useWebRuntimeCapabilities", () => {
         globalAgents: false,
         globalAgentsWrite: false,
         globalConfig: false,
+        globalConfigWrite: false,
       },
       operations: {
         usageSnapshot: false,
@@ -201,6 +205,7 @@ describe("useWebRuntimeCapabilities", () => {
 
     expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(false);
     expect((result.current.files as Record<string, unknown>).globalAgentsWrite).toBe(false);
+    expect((result.current.files as Record<string, unknown>).globalConfigWrite).toBe(false);
   });
 
   it("resets to safe fallback when the bridge URL changes and ignores stale in-flight results", async () => {
@@ -274,6 +279,7 @@ describe("useWebRuntimeCapabilities", () => {
           globalAgents: false,
           globalAgentsWrite: false,
           globalConfig: false,
+          globalConfigWrite: false,
         },
         operations: {
           usageSnapshot: false,
@@ -295,6 +301,7 @@ describe("useWebRuntimeCapabilities", () => {
     });
     expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(false);
     expect((result.current.files as Record<string, unknown>).globalAgentsWrite).toBe(false);
+    expect((result.current.files as Record<string, unknown>).globalConfigWrite).toBe(false);
 
     await act(async () => {
       resolveSecond?.({
@@ -314,6 +321,7 @@ describe("useWebRuntimeCapabilities", () => {
           globalAgents: false,
           globalAgentsWrite: true,
           globalConfig: false,
+          globalConfigWrite: true,
         },
         operations: {
           usageSnapshot: false,
@@ -337,6 +345,7 @@ describe("useWebRuntimeCapabilities", () => {
     );
     expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(true);
     expect((result.current.files as Record<string, unknown>).globalAgentsWrite).toBe(true);
+    expect((result.current.files as Record<string, unknown>).globalConfigWrite).toBe(true);
   });
 
   it("keeps steer, fork, and compact false on fetch failure", async () => {
@@ -365,5 +374,6 @@ describe("useWebRuntimeCapabilities", () => {
     );
     expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(false);
     expect((result.current.files as Record<string, unknown>).globalAgentsWrite).toBe(false);
+    expect((result.current.files as Record<string, unknown>).globalConfigWrite).toBe(false);
   });
 });

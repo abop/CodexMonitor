@@ -1594,10 +1594,7 @@ describe("tauri invoke wrappers", () => {
 
     await writeGlobalCodexConfigToml("model = \"gpt-5\"");
 
-    expect(invokeMock).toHaveBeenCalledWith("file_write", {
-      scope: "global",
-      kind: "config",
-      workspaceId: undefined,
+    expect(invokeMock).toHaveBeenCalledWith("write_global_codex_config_toml", {
       content: "model = \"gpt-5\"",
     });
   });

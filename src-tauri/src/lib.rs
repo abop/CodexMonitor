@@ -188,6 +188,7 @@ pub fn run() {
             files::read_global_agents_md,
             files::write_global_agents_md,
             files::read_global_codex_config_toml,
+            files::write_global_codex_config_toml,
             files::read_workspace_agent_md,
             files::write_workspace_agent_md,
             files::read_image_as_data_url,

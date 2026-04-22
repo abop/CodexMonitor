@@ -356,6 +356,15 @@ mod tests {
     }
 
     #[test]
+    fn advertises_global_codex_config_write_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.files.global_config_write);
+        assert!(methods.contains(&"write_global_codex_config_toml"));
+    }
+
+    #[test]
     fn advertises_usage_snapshot_operation_support() {
         let capabilities = bridge_capabilities_v1();
         let methods = capabilities.methods;
@@ -856,6 +865,44 @@ mod tests {
 
                 assert_eq!(response.status(), StatusCode::OK);
                 assert_eq!(server.last_method().await, "read_global_codex_config_toml");
+                assert_eq!(server.last_params().await, params);
+            });
+    }
+
+    #[test]
+    fn forwards_global_codex_config_write_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                let params = json!({
+                    "content": "model = \"gpt-5\""
+                });
+                server.enqueue_result(1, json!({})).await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                json!({
+                                    "method": "write_global_codex_config_toml",
+                                    "params": params
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "write_global_codex_config_toml");
                 assert_eq!(server.last_params().await, params);
             });
     }

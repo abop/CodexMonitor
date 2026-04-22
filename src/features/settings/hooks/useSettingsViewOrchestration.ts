@@ -244,6 +244,11 @@ export function useSettingsViewOrchestration({
         ? Boolean(runtimeCapabilities?.files.globalConfig)
         : true
       : false,
+    globalConfigWriteEnabled: isSectionEnabled("codex")
+      ? webRuntime
+        ? Boolean(runtimeCapabilities?.files.globalConfigWrite)
+        : true
+      : false,
     doctorReportEnabled: isSectionEnabled("codex")
       ? webRuntime
         ? Boolean(runtimeCapabilities?.operations.doctorReport)

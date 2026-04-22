@@ -183,6 +183,24 @@ async fn write_global_agents_md_impl(
     .await
 }
 
+async fn write_global_codex_config_toml_impl(
+    content: String,
+    state: &AppState,
+    app: &AppHandle,
+) -> Result<(), String> {
+    write_fixed_file_impl(
+        FileScope::Global,
+        FileKind::Config,
+        None,
+        content.clone(),
+        "write_global_codex_config_toml",
+        json!({ "content": content }),
+        state,
+        app,
+    )
+    .await
+}
+
 #[tauri::command]
 pub(crate) async fn file_read(
     scope: FileScope,
@@ -248,6 +266,15 @@ pub(crate) async fn read_global_codex_config_toml(
     app: AppHandle,
 ) -> Result<TextFileResponse, String> {
     read_global_codex_config_toml_impl(&*state, &app).await
+}
+
+#[tauri::command]
+pub(crate) async fn write_global_codex_config_toml(
+    content: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    write_global_codex_config_toml_impl(content, &*state, &app).await
 }
 
 #[tauri::command]

@@ -17,6 +17,7 @@ const BRIDGE_ALLOWED_RPC_METHODS: &[&str] = &[
     "read_global_agents_md",
     "write_global_agents_md",
     "read_global_codex_config_toml",
+    "write_global_codex_config_toml",
     "codex_doctor_current_config",
     "experimental_feature_list",
     "worktree_setup_status",
@@ -105,6 +106,7 @@ pub(crate) struct FileCapabilities {
     pub(crate) global_agents: bool,
     pub(crate) global_agents_write: bool,
     pub(crate) global_config: bool,
+    pub(crate) global_config_write: bool,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -136,6 +138,7 @@ pub(crate) fn bridge_capabilities_v1() -> WebRuntimeCapabilities {
             global_agents: true,
             global_agents_write: true,
             global_config: true,
+            global_config_write: true,
         },
         operations: OperationsCapabilities {
             usage_snapshot: true,
