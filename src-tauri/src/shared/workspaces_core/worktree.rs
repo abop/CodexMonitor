@@ -15,7 +15,7 @@ use crate::types::{
     WorktreeSetupStatus,
 };
 
-use super::connect::{kill_session_by_id, take_live_shared_session, workspace_session_spawn_lock};
+use super::connect::{kill_session_by_id, workspace_session_spawn_lock};
 use super::helpers::{
     copy_agents_md_from_parent_to_worktree, normalize_setup_script, workspace_path_to_string,
     worktree_setup_marker_path, AGENTS_MD_FILE_NAME,
@@ -221,20 +221,15 @@ where
     };
 
     let _spawn_guard = workspace_session_spawn_lock().lock().await;
-    let existing_session = take_live_shared_session(sessions).await;
-    let session = if let Some(existing_session) = existing_session {
-        existing_session
-    } else {
-        let (default_bin, codex_args) = {
-            let settings = app_settings.lock().await;
-            (
-                settings.codex_bin.clone(),
-                resolve_workspace_codex_args(&entry, Some(&parent_entry), Some(&settings)),
-            )
-        };
-        let codex_home = resolve_workspace_codex_home(&entry, Some(&parent_entry));
-        spawn_session(entry.clone(), default_bin, codex_args, codex_home).await?
+    let (default_bin, codex_args) = {
+        let settings = app_settings.lock().await;
+        (
+            settings.codex_bin.clone(),
+            resolve_workspace_codex_args(&entry, Some(&parent_entry), Some(&settings)),
+        )
     };
+    let codex_home = resolve_workspace_codex_home(&entry, Some(&parent_entry));
+    let session = spawn_session(entry.clone(), default_bin, codex_args, codex_home).await?;
 
     {
         let mut workspaces = workspaces.lock().await;

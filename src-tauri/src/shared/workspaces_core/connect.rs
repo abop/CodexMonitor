@@ -33,24 +33,6 @@ async fn remove_session_references(
     sessions.retain(|_, candidate| !Arc::ptr_eq(candidate, session));
 }
 
-pub(super) async fn take_live_shared_session(
-    sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
-) -> Option<Arc<WorkspaceSession>> {
-    loop {
-        let existing_session = {
-            let sessions = sessions.lock().await;
-            sessions.values().next().cloned()
-        };
-        let Some(existing_session) = existing_session else {
-            return None;
-        };
-        if session_process_is_alive(&existing_session).await {
-            return Some(existing_session);
-        }
-        remove_session_references(sessions, &existing_session).await;
-    }
-}
-
 pub(crate) async fn connect_workspace_core<F, Fut>(
     workspace_id: String,
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
@@ -72,16 +54,6 @@ where
             return Ok(());
         }
         remove_session_references(sessions, &existing_for_entry).await;
-    }
-    if let Some(existing_session) = take_live_shared_session(sessions).await {
-        existing_session
-            .register_workspace_with_path(&entry.id, Some(&entry.path))
-            .await;
-        sessions
-            .lock()
-            .await
-            .insert(entry.id.clone(), existing_session);
-        return Ok(());
     }
     let (default_bin, codex_args) = {
         let settings = app_settings.lock().await;
@@ -248,6 +220,50 @@ mod tests {
             assert_eq!(spawn_calls.load(Ordering::SeqCst), 1);
             assert!(sessions.lock().await.contains_key(&entry.id));
             kill_session_by_id(&sessions, &entry.id).await;
+        });
+    }
+
+    #[test]
+    fn connect_workspace_spawns_distinct_session_for_distinct_workspace() {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let first = make_workspace_entry("ws-1");
+            let second = make_workspace_entry("ws-2");
+            let workspaces = Mutex::new(HashMap::from([
+                (first.id.clone(), first.clone()),
+                (second.id.clone(), second.clone()),
+            ]));
+            let sessions = Mutex::new(HashMap::from([(
+                first.id.clone(),
+                make_session(first.clone()),
+            )]));
+            let app_settings = Mutex::new(AppSettings::default());
+            let spawn_calls = Arc::new(AtomicUsize::new(0));
+            let spawn_calls_ref = spawn_calls.clone();
+            let second_for_spawn = second.clone();
+
+            connect_workspace_core(
+                second.id.clone(),
+                &workspaces,
+                &sessions,
+                &app_settings,
+                move |_entry, _default_bin, _codex_args, _codex_home| {
+                    let spawn_calls_ref = spawn_calls_ref.clone();
+                    let second_for_spawn = second_for_spawn.clone();
+                    async move {
+                        spawn_calls_ref.fetch_add(1, Ordering::SeqCst);
+                        Ok(make_session(second_for_spawn))
+                    }
+                },
+            )
+            .await
+            .expect("connect should spawn a new session");
+
+            assert_eq!(spawn_calls.load(Ordering::SeqCst), 1);
+
+            let sessions = sessions.lock().await;
+            let first_session = sessions.get(&first.id).expect("first session");
+            let second_session = sessions.get(&second.id).expect("second session");
+            assert!(!Arc::ptr_eq(first_session, second_session));
         });
     }
 }
