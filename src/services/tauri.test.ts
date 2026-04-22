@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import * as notification from "@tauri-apps/plugin-notification";
+import { backendRpc } from "./backend/http";
+import { pickBrowserImageFiles } from "./browserFiles";
+import { isWebRuntime, readRuntimeConfig } from "./runtime";
 import {
   exportMarkdownFile,
   addWorkspace,
@@ -53,6 +56,8 @@ import {
   generateAgentDescription,
   writeAgentConfigToml,
   writeAgentMd,
+  setMenuAccelerators,
+  isMobileRuntime,
 } from "./tauri";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -70,9 +75,32 @@ vi.mock("@tauri-apps/plugin-notification", () => ({
   sendNotification: vi.fn(),
 }));
 
+vi.mock("./backend/http", () => ({
+  backendRpc: vi.fn(),
+}));
+
+vi.mock("./browserFiles", () => ({
+  pickBrowserImageFiles: vi.fn(),
+}));
+
+vi.mock("./runtime", () => ({
+  isWebRuntime: vi.fn(() => false),
+  readRuntimeConfig: vi.fn(() => ({
+    runtime: "desktop",
+    backendBaseUrl: null,
+  })),
+}));
+
 describe("tauri invoke wrappers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isWebRuntime).mockReturnValue(false);
+    vi.mocked(readRuntimeConfig).mockReturnValue({
+      runtime: "desktop",
+      backendBaseUrl: null,
+    });
+    vi.mocked(backendRpc).mockReset();
+    vi.mocked(pickBrowserImageFiles).mockReset();
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockImplementation(async (command: string) => {
       if (command === "is_macos_debug_build") {
@@ -149,6 +177,80 @@ describe("tauri invoke wrappers", () => {
         },
       ],
     });
+  });
+
+  it("routes workspace listing through backend rpc in web runtime", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.mocked(readRuntimeConfig).mockReturnValue({
+      runtime: "web",
+      backendBaseUrl: "https://daemon.example.com",
+    });
+    vi.mocked(backendRpc).mockResolvedValueOnce([{ id: "ws-web" }]);
+
+    await expect(listWorkspaces()).resolves.toEqual([{ id: "ws-web" }]);
+
+    expect(backendRpc).toHaveBeenCalledWith(
+      { baseUrl: "https://daemon.example.com" },
+      "list_workspaces",
+      {},
+    );
+    expect(vi.mocked(invoke)).not.toHaveBeenCalledWith("list_workspaces");
+  });
+
+  it("uses the browser image picker in web runtime", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.mocked(pickBrowserImageFiles).mockResolvedValueOnce([
+      "data:image/png;base64,abc123",
+    ]);
+
+    await expect(pickImageFiles()).resolves.toEqual([
+      "data:image/png;base64,abc123",
+    ]);
+
+    expect(pickBrowserImageFiles).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(open)).not.toHaveBeenCalled();
+  });
+
+  it("sends browser-safe thread messages through backend rpc in web runtime", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.mocked(readRuntimeConfig).mockReturnValue({
+      runtime: "web",
+      backendBaseUrl: "https://daemon.example.com",
+    });
+    vi.mocked(backendRpc).mockResolvedValueOnce({ ok: true });
+
+    await sendUserMessage("ws-1", "thread-1", "hello", {
+      images: ["data:image/png;base64,abc123"],
+    });
+
+    expect(backendRpc).toHaveBeenCalledWith(
+      { baseUrl: "https://daemon.example.com" },
+      "send_user_message",
+      expect.objectContaining({
+        workspaceId: "ws-1",
+        threadId: "thread-1",
+        text: "hello",
+        images: ["data:image/png;base64,abc123"],
+      }),
+    );
+  });
+
+  it("skips desktop-only menu accelerators in web runtime", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+
+    await expect(
+      setMenuAccelerators([{ id: "menu-new-agent", accelerator: "CmdOrCtrl+N" }]),
+    ).resolves.toBeUndefined();
+
+    expect(vi.mocked(invoke)).not.toHaveBeenCalledWith("menu_set_accelerators", {
+      updates: [{ id: "menu-new-agent", accelerator: "CmdOrCtrl+N" }],
+    });
+  });
+
+  it("treats browser runtime as non-mobile", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+
+    await expect(isMobileRuntime()).resolves.toBe(false);
   });
 
   it("returns null when markdown export is cancelled", async () => {
@@ -231,7 +333,7 @@ describe("tauri invoke wrappers", () => {
     );
 
     await expect(listWorkspaces()).resolves.toEqual([]);
-    expect(invokeMock).toHaveBeenCalledWith("list_workspaces");
+    expect(invokeMock).toHaveBeenCalledWith("list_workspaces", undefined);
   });
 
   it("applies default limit for git log", async () => {
@@ -485,11 +587,14 @@ describe("tauri invoke wrappers", () => {
     await tailscaleDaemonStop();
     await tailscaleDaemonStatus();
 
-    expect(invokeMock).toHaveBeenCalledWith("tailscale_status");
-    expect(invokeMock).toHaveBeenCalledWith("tailscale_daemon_command_preview");
-    expect(invokeMock).toHaveBeenCalledWith("tailscale_daemon_start");
-    expect(invokeMock).toHaveBeenCalledWith("tailscale_daemon_stop");
-    expect(invokeMock).toHaveBeenCalledWith("tailscale_daemon_status");
+    expect(invokeMock).toHaveBeenCalledWith("tailscale_status", undefined);
+    expect(invokeMock).toHaveBeenCalledWith(
+      "tailscale_daemon_command_preview",
+      undefined,
+    );
+    expect(invokeMock).toHaveBeenCalledWith("tailscale_daemon_start", undefined);
+    expect(invokeMock).toHaveBeenCalledWith("tailscale_daemon_stop", undefined);
+    expect(invokeMock).toHaveBeenCalledWith("tailscale_daemon_status", undefined);
   });
 
   it("reads agent.md for a workspace", async () => {
@@ -585,7 +690,7 @@ describe("tauri invoke wrappers", () => {
 
     await getAgentsSettings();
 
-    expect(invokeMock).toHaveBeenCalledWith("get_agents_settings");
+    expect(invokeMock).toHaveBeenCalledWith("get_agents_settings", undefined);
   });
 
   it("updates core agents settings", async () => {
@@ -1102,7 +1207,7 @@ describe("tauri invoke wrappers", () => {
 
     await sendNotification("Dev", "Fallback");
 
-    expect(invokeMock).toHaveBeenCalledWith("is_macos_debug_build");
+    expect(invokeMock).toHaveBeenCalledWith("is_macos_debug_build", undefined);
     expect(invokeMock).toHaveBeenCalledWith("send_notification_fallback", {
       title: "Dev",
       body: "Fallback",

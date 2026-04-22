@@ -35,7 +35,7 @@ pub(super) fn build_result_response(id: Option<u64>, result: Value) -> Option<St
     )
 }
 
-fn build_event_notification(event: DaemonEvent) -> Option<String> {
+pub(super) fn serialize_event_notification(event: DaemonEvent) -> Option<String> {
     let payload = match event {
         DaemonEvent::AppServer(payload) => json!({
             "method": "app-server-event",
@@ -166,7 +166,7 @@ pub(super) async fn forward_events(
             Err(broadcast::error::RecvError::Closed) => break,
         };
 
-        let Some(payload) = build_event_notification(event) else {
+        let Some(payload) = serialize_event_notification(event) else {
             continue;
         };
 
