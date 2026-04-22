@@ -17,6 +17,8 @@ mod file_policy;
 mod git_utils;
 #[path = "codex_monitor_daemon/rpc.rs"]
 mod rpc;
+#[path = "codex_monitor_daemon/http.rs"]
+mod http;
 #[path = "../rules.rs"]
 mod rules;
 #[path = "../shared/mod.rs"]
@@ -146,6 +148,9 @@ struct DaemonConfig {
     listen: SocketAddr,
     token: Option<String>,
     data_dir: PathBuf,
+    http_listen: Option<SocketAddr>,
+    allowed_origins: Vec<String>,
+    require_cf_access_header: bool,
 }
 
 struct DaemonState {
@@ -1499,8 +1504,8 @@ fn default_data_dir() -> PathBuf {
 fn usage() -> String {
     format!(
         "\
-USAGE:\n  codex-monitor-daemon [--listen <addr>] [--data-dir <path>] [--token <token> | --insecure-no-auth]\n\n\
-OPTIONS:\n  --listen <addr>          Bind address (default: {DEFAULT_LISTEN_ADDR})\n  --data-dir <path>        Data dir holding workspaces.json/settings.json\n  --token <token>          Shared token required by TCP clients\n  --insecure-no-auth       Disable TCP auth (dev only)\n  -h, --help               Show this help\n"
+USAGE:\n  codex-monitor-daemon [--listen <addr>] [--http-listen <addr>] [--allow-origin <origin>] [--require-cf-access-header] [--data-dir <path>] [--token <token> | --insecure-no-auth]\n\n\
+OPTIONS:\n  --listen <addr>              TCP bind address (default: {DEFAULT_LISTEN_ADDR})\n  --http-listen <addr>         Optional HTTP/WebSocket bind address\n  --allow-origin <origin>      Additional allowed browser origin (repeatable)\n  --require-cf-access-header   Require `cf-access-jwt-assertion` on HTTP requests\n  --data-dir <path>            Data dir holding workspaces.json/settings.json\n  --token <token>              Shared token required by TCP clients and optional HTTP bearer auth\n  --insecure-no-auth           Disable TCP/HTTP auth (dev only)\n  -h, --help                   Show this help\n"
     )
 }
 
@@ -1512,6 +1517,27 @@ fn parse_args() -> Result<DaemonConfig, String> {
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
+    let mut http_listen = env::var("CODEX_MONITOR_DAEMON_HTTP_LISTEN")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .map(|value| value.parse::<SocketAddr>().map_err(|err| err.to_string()))
+        .transpose()?;
+    let mut allowed_origins = env::var("CODEX_MONITOR_DAEMON_ALLOWED_ORIGINS")
+        .ok()
+        .map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|entry| !entry.is_empty())
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let mut require_cf_access_header = env::var("CODEX_MONITOR_DAEMON_REQUIRE_CF_ACCESS_HEADER")
+        .ok()
+        .map(|value| matches!(value.trim(), "1" | "true" | "TRUE" | "yes" | "YES"))
+        .unwrap_or(false);
     let mut insecure_no_auth = false;
     let mut data_dir: Option<PathBuf> = None;
 
@@ -1533,6 +1559,21 @@ fn parse_args() -> Result<DaemonConfig, String> {
                     return Err("--token requires a non-empty value".to_string());
                 }
                 token = Some(trimmed.to_string());
+            }
+            "--http-listen" => {
+                let value = args.next().ok_or("--http-listen requires a value")?;
+                http_listen = Some(value.parse::<SocketAddr>().map_err(|err| err.to_string())?);
+            }
+            "--allow-origin" => {
+                let value = args.next().ok_or("--allow-origin requires a value")?;
+                let trimmed = value.trim();
+                if trimmed.is_empty() {
+                    return Err("--allow-origin requires a non-empty value".to_string());
+                }
+                allowed_origins.push(trimmed.to_string());
+            }
+            "--require-cf-access-header" => {
+                require_cf_access_header = true;
             }
             "--data-dir" => {
                 let value = args.next().ok_or("--data-dir requires a value")?;
@@ -1561,7 +1602,60 @@ fn parse_args() -> Result<DaemonConfig, String> {
         listen,
         token,
         data_dir: data_dir.unwrap_or_else(default_data_dir),
+        http_listen,
+        allowed_origins,
+        require_cf_access_header,
     })
+}
+
+async fn run_tcp_listener(
+    config: Arc<DaemonConfig>,
+    state: Arc<DaemonState>,
+    events_tx: broadcast::Sender<DaemonEvent>,
+) -> Result<(), String> {
+    let listener = TcpListener::bind(config.listen)
+        .await
+        .map_err(|err| format!("failed to bind {}: {err}", config.listen))?;
+    eprintln!(
+        "codex-monitor-daemon tcp listening on {} (data dir: {})",
+        config.listen,
+        state
+            .storage_path
+            .parent()
+            .unwrap_or(&state.storage_path)
+            .display()
+    );
+
+    loop {
+        match listener.accept().await {
+            Ok((socket, _addr)) => {
+                let config = Arc::clone(&config);
+                let state = Arc::clone(&state);
+                let events = events_tx.clone();
+                tokio::spawn(async move {
+                    transport::handle_client(socket, config, state, events).await;
+                });
+            }
+            Err(_) => continue,
+        }
+    }
+}
+
+async fn run_http_listener(
+    config: Arc<DaemonConfig>,
+    state: Arc<DaemonState>,
+    events_tx: broadcast::Sender<DaemonEvent>,
+) -> Result<(), String> {
+    let Some(http_listen) = config.http_listen else {
+        return Ok(());
+    };
+    let listener = tokio::net::TcpListener::bind(http_listen)
+        .await
+        .map_err(|err| format!("failed to bind {http_listen}: {err}"))?;
+    eprintln!("codex-monitor-daemon http listening on {http_listen}");
+    http::serve(listener, config, state, events_tx)
+        .await
+        .map_err(|err| format!("http server failed: {err}"))
 }
 
 #[cfg(test)]
@@ -1931,36 +2025,39 @@ fn main() {
         };
         let state = Arc::new(DaemonState::load(&config, event_sink));
         let config = Arc::new(config);
+        let tcp_task = tokio::spawn(run_tcp_listener(
+            Arc::clone(&config),
+            Arc::clone(&state),
+            events_tx.clone(),
+        ));
+        let http_task = tokio::spawn(run_http_listener(
+            Arc::clone(&config),
+            Arc::clone(&state),
+            events_tx.clone(),
+        ));
 
-        let listener = match TcpListener::bind(config.listen).await {
-            Ok(listener) => listener,
-            Err(err) => {
-                eprintln!("failed to bind {}: {err}", config.listen);
+        let (tcp_result, http_result) = tokio::join!(tcp_task, http_task);
+        match tcp_result {
+            Ok(Err(err)) => {
+                eprintln!("{err}");
                 std::process::exit(2);
             }
-        };
-        eprintln!(
-            "codex-monitor-daemon listening on {} (data dir: {})",
-            config.listen,
-            state
-                .storage_path
-                .parent()
-                .unwrap_or(&state.storage_path)
-                .display()
-        );
-
-        loop {
-            match listener.accept().await {
-                Ok((socket, _addr)) => {
-                    let config = Arc::clone(&config);
-                    let state = Arc::clone(&state);
-                    let events = events_tx.clone();
-                    tokio::spawn(async move {
-                        transport::handle_client(socket, config, state, events).await;
-                    });
-                }
-                Err(_) => continue,
+            Err(err) => {
+                eprintln!("tcp listener task failed: {err}");
+                std::process::exit(2);
             }
+            Ok(Ok(())) => {}
+        }
+        match http_result {
+            Ok(Err(err)) => {
+                eprintln!("{err}");
+                std::process::exit(2);
+            }
+            Err(err) => {
+                eprintln!("http listener task failed: {err}");
+                std::process::exit(2);
+            }
+            Ok(Ok(())) => {}
         }
     });
 }

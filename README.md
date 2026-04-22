@@ -76,6 +76,23 @@ Run in dev mode:
 npm run tauri:dev
 ```
 
+Run the browser runtime against a daemon HTTP/WS backend:
+
+```bash
+VITE_CODEXMONITOR_BACKEND_URL=http://127.0.0.1:4732 npm run dev:web
+```
+
+Build the browser runtime:
+
+```bash
+VITE_CODEXMONITOR_BACKEND_URL=https://daemon.example.com npm run build:web
+```
+
+Notes:
+
+- The web runtime expects the daemon HTTP listener to expose `/api/rpc`, `/api/capabilities`, and `/ws`.
+- If `VITE_CODEXMONITOR_BACKEND_URL` is omitted, the app shows a connect screen and lets you enter the backend URL manually.
+
 ## iOS Support (WIP)
 
 iOS support is currently in progress.

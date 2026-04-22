@@ -1,4 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
+import { subscribeBackendEvent } from "./backend/realtime";
+import { isWebRuntime, readRuntimeConfig } from "./runtime";
 import type {
   AppServerEvent,
   DictationEvent,
@@ -24,24 +26,61 @@ type SubscriptionOptions = {
 };
 
 type Listener<T> = (payload: T) => void;
+const NOOP_UNSUBSCRIBE = () => {};
 
 function createEventHub<T>(eventName: string) {
   const listeners = new Set<Listener<T>>();
   let unlisten: Unsubscribe | null = null;
   let listenPromise: Promise<Unsubscribe> | null = null;
 
+  const emit = (payload: T) => {
+    for (const listener of listeners) {
+      try {
+        listener(payload);
+      } catch (error) {
+        console.error(`[events] ${eventName} listener failed`, error);
+      }
+    }
+  };
+
   const start = (options?: SubscriptionOptions) => {
     if (unlisten || listenPromise) {
       return;
     }
-    listenPromise = listen<T>(eventName, (event) => {
-      for (const listener of listeners) {
-        try {
-          listener(event.payload);
-        } catch (error) {
-          console.error(`[events] ${eventName} listener failed`, error);
-        }
+
+    if (isWebRuntime()) {
+      if (eventName !== "app-server-event") {
+        unlisten = NOOP_UNSUBSCRIBE;
+        return;
       }
+
+      const { backendBaseUrl } = readRuntimeConfig();
+      if (!backendBaseUrl) {
+        options?.onError?.(
+          new Error(
+            "Web runtime backend is not configured. Set VITE_CODEXMONITOR_BACKEND_URL.",
+          ),
+        );
+        return;
+      }
+
+      try {
+        unlisten = subscribeBackendEvent(
+          { baseUrl: backendBaseUrl },
+          eventName,
+          (payload) => {
+            emit(payload as T);
+          },
+          options,
+        );
+      } catch (error) {
+        options?.onError?.(error);
+      }
+      return;
+    }
+
+    listenPromise = listen<T>(eventName, (event) => {
+      emit(event.payload);
     });
     listenPromise
       .then((handler) => {
