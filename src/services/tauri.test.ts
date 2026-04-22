@@ -1553,9 +1553,7 @@ describe("tauri invoke wrappers", () => {
 
     await writeAgentMd("ws-agent", "# Agent");
 
-    expect(invokeMock).toHaveBeenCalledWith("file_write", {
-      scope: "workspace",
-      kind: "agents",
+    expect(invokeMock).toHaveBeenCalledWith("write_workspace_agent_md", {
       workspaceId: "ws-agent",
       content: "# Agent",
     });

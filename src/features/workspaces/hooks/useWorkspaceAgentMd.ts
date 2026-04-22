@@ -2,22 +2,23 @@ import { useCallback } from "react";
 import type { DebugEntry, WorkspaceInfo } from "../../../types";
 import { readAgentMd, writeAgentMd } from "../../../services/tauri";
 import { useFileEditor, type FileEditorResponse } from "../../shared/hooks/useFileEditor";
-import { isWebRuntime } from "@services/runtime";
 
 type UseWorkspaceAgentMdOptions = {
   activeWorkspace: WorkspaceInfo | null;
   enabled?: boolean;
+  writeEnabled?: boolean;
   onDebug?: (entry: DebugEntry) => void;
 };
 
 export function useWorkspaceAgentMd({
   activeWorkspace,
   enabled = true,
+  writeEnabled = enabled,
   onDebug,
 }: UseWorkspaceAgentMdOptions) {
   const workspaceId = activeWorkspace?.id ?? null;
-  const webRuntime = isWebRuntime();
   const readEnabled = Boolean(workspaceId) && enabled;
+  const saveEnabled = Boolean(workspaceId) && writeEnabled;
 
   const readWithDebug = useCallback(async (): Promise<FileEditorResponse> => {
     if (!workspaceId || !enabled) {
@@ -55,7 +56,7 @@ export function useWorkspaceAgentMd({
   }, [enabled, onDebug, workspaceId]);
 
   const writeWithDebug = useCallback(async (content: string) => {
-    if (!workspaceId || !enabled || webRuntime) {
+    if (!workspaceId || !saveEnabled) {
       return;
     }
     const requestWorkspaceId = workspaceId;
@@ -86,7 +87,7 @@ export function useWorkspaceAgentMd({
       });
       throw error;
     }
-  }, [enabled, onDebug, webRuntime, workspaceId]);
+  }, [onDebug, saveEnabled, workspaceId]);
 
   return useFileEditor({
     key: readEnabled ? workspaceId : null,

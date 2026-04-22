@@ -82,7 +82,7 @@ const workspace: WorkspaceInfo = {
 };
 
 function renderWorkspaceHome(
-  overrides?: Partial<Parameters<typeof WorkspaceHome>[0]>,
+  overrides?: Record<string, unknown>,
 ) {
   useComposerAutocompleteStateMock.mockReturnValue({
     isAutocompleteOpen: false,
@@ -156,6 +156,7 @@ function renderWorkspaceHome(
       agentMdExists={false}
       agentMdTruncated={false}
       agentMdAvailable={false}
+      agentMdWritable={false}
       agentMdLoading={false}
       agentMdSaving={false}
       agentMdError={null}
@@ -163,7 +164,7 @@ function renderWorkspaceHome(
       onAgentMdChange={vi.fn()}
       onAgentMdRefresh={vi.fn()}
       onAgentMdSave={vi.fn()}
-      {...overrides}
+      {...(overrides as Partial<Parameters<typeof WorkspaceHome>[0]>)}
     />,
   );
 }
@@ -211,6 +212,27 @@ describe("WorkspaceHome", () => {
         refreshDisabled: false,
         saveDisabled: true,
         readOnly: true,
+      }),
+    );
+  });
+
+  it("renders supported web AGENTS.md as editable when write support is available", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    renderWorkspaceHome({
+      agentMdContent: "# Agent",
+      agentMdExists: true,
+      agentMdAvailable: true,
+      agentMdWritable: true,
+      agentMdDirty: true,
+    });
+
+    expect(fileEditorCardMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: null,
+        refreshDisabled: false,
+        saveDisabled: false,
+        readOnly: false,
       }),
     );
   });

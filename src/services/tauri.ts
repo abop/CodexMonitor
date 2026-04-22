@@ -1057,7 +1057,10 @@ export async function readAgentMd(workspaceId: string): Promise<AgentMdResponse>
 }
 
 export async function writeAgentMd(workspaceId: string, content: string): Promise<void> {
-  return fileWrite("workspace", "agents", content, workspaceId);
+  return invokeSupportedRpc("write_workspace_agent_md", {
+    workspaceId,
+    content,
+  });
 }
 
 export async function listGitBranches(workspaceId: string) {

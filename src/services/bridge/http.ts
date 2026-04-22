@@ -15,6 +15,7 @@ export type WebRuntimeCapabilities = {
   files: {
     workspaceTree: boolean;
     workspaceAgents: boolean;
+    workspaceAgentsWrite: boolean;
     globalAgents: boolean;
     globalConfig: boolean;
   };
@@ -73,6 +74,7 @@ function isWebRuntimeCapabilities(
     isBoolean(threadControls.mcp) &&
     isBoolean(files.workspaceTree) &&
     isBoolean(files.workspaceAgents) &&
+    isBoolean(files.workspaceAgentsWrite) &&
     isBoolean(files.globalAgents) &&
     isBoolean(files.globalConfig) &&
     isBoolean(operations.usageSnapshot) &&

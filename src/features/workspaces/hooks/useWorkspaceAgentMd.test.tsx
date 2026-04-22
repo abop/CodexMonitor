@@ -2,7 +2,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceInfo } from "../../../types";
-import { readAgentMd } from "../../../services/tauri";
+import { readAgentMd, writeAgentMd } from "../../../services/tauri";
 import { pushErrorToast } from "../../../services/toasts";
 import { useWorkspaceAgentMd } from "./useWorkspaceAgentMd";
 
@@ -68,5 +68,37 @@ describe("useWorkspaceAgentMd", () => {
     expect(result.current.content).toBe("# Agent");
     expect(result.current.exists).toBe(true);
     expect(result.current.error).toBeNull();
+  });
+
+  it("saves AGENTS.md in web runtime when workspace AGENTS write capability is available", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    vi.mocked(readAgentMd).mockResolvedValue({
+      exists: false,
+      content: "",
+      truncated: false,
+    });
+    vi.mocked(writeAgentMd).mockResolvedValue(undefined);
+
+    const { result } = renderHook(() =>
+      useWorkspaceAgentMd({
+        activeWorkspace: workspace,
+        enabled: true,
+        writeEnabled: true,
+      } as never),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      result.current.setContent("# Agent");
+    });
+
+    await act(async () => {
+      await result.current.save();
+    });
+
+    expect(vi.mocked(writeAgentMd)).toHaveBeenCalledWith("workspace-1", "# Agent");
   });
 });

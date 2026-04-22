@@ -321,6 +321,7 @@ export function useMainAppComposerWorkspaceState({
   const agentMdState = useWorkspaceAgentMd({
     activeWorkspace,
     enabled: fileCapabilities.workspaceAgents,
+    writeEnabled: fileCapabilities.workspaceAgentsWrite,
     onDebug: addDebugEntry,
   });
 
@@ -344,6 +345,7 @@ export function useMainAppComposerWorkspaceState({
     recentThreadsUpdatedAt,
     workspaceHomeState,
     agentMdAvailable: fileCapabilities.workspaceAgents,
+    agentMdWritable: fileCapabilities.workspaceAgentsWrite,
     agentMdState,
     ...composerState,
   };

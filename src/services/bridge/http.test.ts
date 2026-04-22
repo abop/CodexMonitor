@@ -115,6 +115,7 @@ describe("bridgeRpc", () => {
         files: {
           workspaceTree: false,
           workspaceAgents: false,
+          workspaceAgentsWrite: false,
           globalAgents: false,
           globalConfig: false,
         },
@@ -139,6 +140,9 @@ describe("bridgeRpc", () => {
           steer: true,
           fork: true,
           compact: true,
+        }),
+        files: expect.objectContaining({
+          workspaceAgentsWrite: false,
         }),
         operations: expect.objectContaining({
           accountLogin: true,
@@ -176,6 +180,7 @@ describe("bridgeRpc", () => {
           files: {
             workspaceTree: false,
             workspaceAgents: false,
+            workspaceAgentsWrite: false,
             globalAgents: false,
             globalConfig: false,
           },
@@ -215,6 +220,46 @@ describe("bridgeRpc", () => {
           files: {
             workspaceTree: false,
             workspaceAgents: false,
+            workspaceAgentsWrite: false,
+            globalAgents: false,
+            globalConfig: false,
+          },
+          operations: {
+            usageSnapshot: false,
+            doctorReport: false,
+            featureFlags: false,
+            accountLogin: false,
+            worktreeSetupStatus: false,
+            agentsSettings: false,
+          },
+        }),
+      }),
+    );
+
+    await expect(
+      fetchBridgeCapabilities({ baseUrl: "https://bridge.example.com" }),
+    ).rejects.toThrow("Bridge returned an invalid response.");
+  });
+
+  it("rejects capability responses missing workspace AGENTS write support", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          version: 1,
+          methods: ["list_workspaces", "read_workspace_agent_md"],
+          threadControls: {
+            steer: false,
+            fork: false,
+            compact: false,
+            review: false,
+            mcp: false,
+          },
+          files: {
+            workspaceTree: false,
+            workspaceAgents: true,
             globalAgents: false,
             globalConfig: false,
           },

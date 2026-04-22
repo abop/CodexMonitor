@@ -320,6 +320,15 @@ mod tests {
     }
 
     #[test]
+    fn advertises_workspace_agent_write_support() {
+        let capabilities = bridge_capabilities_v1();
+        let methods = capabilities.methods;
+
+        assert!(capabilities.files.workspace_agents_write);
+        assert!(methods.contains(&"write_workspace_agent_md"));
+    }
+
+    #[test]
     fn advertises_global_agent_file_support() {
         let capabilities = bridge_capabilities_v1();
         let methods = capabilities.methods;
@@ -671,6 +680,45 @@ mod tests {
 
                 assert_eq!(response.status(), StatusCode::OK);
                 assert_eq!(server.last_method().await, "read_workspace_agent_md");
+                assert_eq!(server.last_params().await, params);
+            });
+    }
+
+    #[test]
+    fn forwards_workspace_agent_write_requests() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime")
+            .block_on(async {
+                let (client, mut server) = test_client_pair().await;
+                let params = json!({
+                    "workspaceId": "ws-1",
+                    "content": "# Agent"
+                });
+                server.enqueue_result(1, json!({})).await;
+                let app = build_router(test_state_with_client(client));
+                let response = app
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/api/rpc")
+                            .header("content-type", "application/json")
+                            .header("cf-access-jwt-assertion", "present")
+                            .body(Body::from(
+                                json!({
+                                    "method": "write_workspace_agent_md",
+                                    "params": params
+                                })
+                                .to_string(),
+                            ))
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(server.last_method().await, "write_workspace_agent_md");
                 assert_eq!(server.last_params().await, params);
             });
     }

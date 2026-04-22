@@ -1048,6 +1048,7 @@ describe("SettingsView web build", () => {
           files: {
             workspaceTree: true,
             workspaceAgents: true,
+            workspaceAgentsWrite: false,
             globalAgents: false,
             globalConfig: false,
           },
@@ -1134,6 +1135,7 @@ describe("SettingsView web build", () => {
           files: {
             workspaceTree: true,
             workspaceAgents: true,
+            workspaceAgentsWrite: false,
             globalAgents: true,
             globalConfig: true,
           },
@@ -1217,6 +1219,7 @@ describe("SettingsView web build", () => {
       files: {
         workspaceTree: true,
         workspaceAgents: true,
+        workspaceAgentsWrite: false,
         globalAgents: false,
         globalConfig: false,
       },
@@ -1334,6 +1337,7 @@ describe("SettingsView web build", () => {
           files: {
             workspaceTree: true,
             workspaceAgents: true,
+            workspaceAgentsWrite: false,
             globalAgents: false,
             globalConfig: false,
           },
@@ -1459,6 +1463,7 @@ describe("SettingsView web build", () => {
           files: {
             workspaceTree: true,
             workspaceAgents: true,
+            workspaceAgentsWrite: false,
             globalAgents: false,
             globalConfig: false,
           },

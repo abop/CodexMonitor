@@ -21,6 +21,7 @@ const DESKTOP_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
   files: {
     workspaceTree: true,
     workspaceAgents: true,
+    workspaceAgentsWrite: true,
     globalAgents: true,
     globalConfig: true,
   },
@@ -47,6 +48,7 @@ const WEB_SAFE_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
   files: {
     workspaceTree: false,
     workspaceAgents: false,
+    workspaceAgentsWrite: false,
     globalAgents: false,
     globalConfig: false,
   },

@@ -73,6 +73,7 @@ describe("useWebRuntimeCapabilities", () => {
       review: true,
       mcp: true,
     });
+    expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(true);
     expect(fetchBridgeCapabilitiesMock).not.toHaveBeenCalled();
   });
 
@@ -94,6 +95,7 @@ describe("useWebRuntimeCapabilities", () => {
       files: {
         workspaceTree: false,
         workspaceAgents: false,
+        workspaceAgentsWrite: true,
         globalAgents: false,
         globalConfig: false,
       },
@@ -125,6 +127,7 @@ describe("useWebRuntimeCapabilities", () => {
       }),
     );
 
+    expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(true);
     expect(result.current.operations).toEqual({
       usageSnapshot: true,
       doctorReport: false,
@@ -160,6 +163,7 @@ describe("useWebRuntimeCapabilities", () => {
       files: {
         workspaceTree: false,
         workspaceAgents: false,
+        workspaceAgentsWrite: false,
         globalAgents: false,
         globalConfig: false,
       },
@@ -190,6 +194,8 @@ describe("useWebRuntimeCapabilities", () => {
         mcp: false,
       }),
     );
+
+    expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(false);
   });
 
   it("resets to safe fallback when the bridge URL changes and ignores stale in-flight results", async () => {
@@ -259,6 +265,7 @@ describe("useWebRuntimeCapabilities", () => {
         files: {
           workspaceTree: false,
           workspaceAgents: false,
+          workspaceAgentsWrite: false,
           globalAgents: false,
           globalConfig: false,
         },
@@ -280,6 +287,7 @@ describe("useWebRuntimeCapabilities", () => {
       review: false,
       mcp: false,
     });
+    expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(false);
 
     await act(async () => {
       resolveSecond?.({
@@ -295,6 +303,7 @@ describe("useWebRuntimeCapabilities", () => {
         files: {
           workspaceTree: false,
           workspaceAgents: false,
+          workspaceAgentsWrite: true,
           globalAgents: false,
           globalConfig: false,
         },
@@ -318,6 +327,7 @@ describe("useWebRuntimeCapabilities", () => {
         mcp: false,
       }),
     );
+    expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(true);
   });
 
   it("keeps steer, fork, and compact false on fetch failure", async () => {
@@ -344,5 +354,6 @@ describe("useWebRuntimeCapabilities", () => {
         mcp: false,
       }),
     );
+    expect((result.current.files as Record<string, unknown>).workspaceAgentsWrite).toBe(false);
   });
 });

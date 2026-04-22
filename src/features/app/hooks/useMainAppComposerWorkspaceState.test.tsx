@@ -63,6 +63,7 @@ function buildArgs(overrides?: {
   steerCapability?: boolean;
   fileTreeCapability?: boolean;
   workspaceAgentsCapability?: boolean;
+  workspaceAgentsWriteCapability?: boolean;
 }) {
   const composerInputRef = createRef<HTMLTextAreaElement>();
   const workspaceHomeTextareaRef = createRef<HTMLTextAreaElement>();
@@ -119,6 +120,7 @@ function buildArgs(overrides?: {
       files: {
         workspaceTree: overrides?.fileTreeCapability ?? true,
         workspaceAgents: overrides?.workspaceAgentsCapability ?? false,
+        workspaceAgentsWrite: overrides?.workspaceAgentsWriteCapability ?? false,
         globalAgents: false,
         globalConfig: false,
       },
@@ -200,6 +202,7 @@ describe("useMainAppComposerWorkspaceState", () => {
           files: {
             workspaceTree: true,
             workspaceAgents: false,
+            workspaceAgentsWrite: false,
             globalAgents: false,
             globalConfig: false,
           },
@@ -227,12 +230,18 @@ describe("useMainAppComposerWorkspaceState", () => {
 
   it("passes workspace AGENTS capability through to useWorkspaceAgentMd", () => {
     renderHook(() =>
-      useMainAppComposerWorkspaceState(buildArgs({ workspaceAgentsCapability: true })),
+      useMainAppComposerWorkspaceState(
+        buildArgs({
+          workspaceAgentsCapability: true,
+          workspaceAgentsWriteCapability: true,
+        }),
+      ),
     );
 
     expect(useWorkspaceAgentMdMock).toHaveBeenCalledWith(
       expect.objectContaining({
         enabled: true,
+        writeEnabled: true,
       }),
     );
   });

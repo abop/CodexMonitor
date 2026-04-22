@@ -17,7 +17,7 @@ This document describes the current capability split between the desktop app and
 - Standard message sending with browser-picked or pasted image attachments.
 - Core Git workflows: status, diffs, log, stage, unstage, revert, commit, fetch, pull, push, sync, branch list, branch create, and branch checkout.
 - Workspace file listing, text preview, and file snippet insertion into the composer when the connected bridge advertises file-tree support.
-- Workspace `AGENTS.md` preview and refresh in Workspace Home when the connected bridge advertises `files.workspaceAgents`.
+- Workspace `AGENTS.md` preview and refresh in Workspace Home when the connected bridge advertises `files.workspaceAgents`, plus editing when it also advertises `files.workspaceAgentsWrite`.
 - Global `AGENTS.md` and global `config.toml` preview and refresh in the web Codex settings section when the connected bridge advertises `files.globalAgents` / `files.globalConfig`.
 - Read-only remote `codexBin` / `codexArgs` runtime summary in the reduced web Codex settings section from shared app settings.
 - Read-only `Agents` settings visibility for remote multi-agent core settings and configured custom agent summaries when the connected bridge advertises `operations.agentsSettings`.
@@ -50,7 +50,6 @@ This document describes the current capability split between the desktop app and
 - Local workspace path validation.
 - Clone-from-workspace flow.
 - Worktree creation.
-- Workspace `AGENTS.md` editing. Web currently supports read-only preview and refresh only when `files.workspaceAgents` is available.
 - Global `AGENTS.md` editing. Web currently supports read-only preview and refresh only when `files.globalAgents` is available.
 - Global Codex config editing. Web currently supports read-only preview and refresh only when `files.globalConfig` is available.
 - Agent role management and agent config editing/generation. Web currently supports read-only settings summary only when `operations.agentsSettings` is available.
@@ -111,6 +110,6 @@ This document describes the current capability split between the desktop app and
 - Web settings section filter and read-only environment/agents/Codex visibility: `src/features/settings/components/settingsViewConstants.ts`, `src/features/settings/components/sections/SettingsEnvironmentsSection.tsx`, `src/features/settings/components/sections/SettingsAgentsSection.tsx`
 - Worktree setup status capability and shared sidebar rendering: `src/features/app/hooks/useWorktreeSetupStatusMap.ts`, `src/features/app/components/WorktreeCard.tsx`, `src/features/app/components/Sidebar.tsx`
 - Desktop shell chrome gates: `src/features/app/components/MainAppShell.tsx`
-- Workspace `AGENTS.md` runtime gating and web read-only behavior: `src/features/workspaces/components/WorkspaceHome.tsx`
+- Workspace `AGENTS.md` capability-aware read/write gating in Workspace Home: `src/features/workspaces/components/WorkspaceHome.tsx`, `src/features/workspaces/hooks/useWorkspaceAgentMd.ts`
 - Global Codex file web read-only behavior: `src/features/settings/components/sections/SettingsCodexSection.tsx`
 - Web doctor-report routing: `src/services/tauri.ts`
