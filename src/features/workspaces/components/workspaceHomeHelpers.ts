@@ -1,3 +1,4 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import type { ModelOption } from "../../../types";
 import type { WorkspaceHomeRunInstance } from "../hooks/useWorkspaceHome";
 
@@ -8,6 +9,14 @@ export const CARET_ANCHOR_GAP = 8;
 export const buildIconPath = (workspacePath: string) => {
   const separator = workspacePath.includes("\\") ? "\\" : "/";
   return `${workspacePath.replace(/[\\/]+$/, "")}${separator}icon.png`;
+};
+
+export const resolveIconSrc = (workspacePath: string) => {
+  try {
+    return convertFileSrc(buildIconPath(workspacePath));
+  } catch {
+    return "";
+  }
 };
 
 export const resolveModelLabel = (model: ModelOption | null) =>
