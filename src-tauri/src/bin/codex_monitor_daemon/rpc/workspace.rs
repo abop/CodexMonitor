@@ -201,6 +201,10 @@ pub(super) async fn try_handle(
             )
         }
         "read_global_agents_md" => Some(serialize_result(state.read_global_agents_md()).await),
+        "write_global_agents_md" => {
+            let request = parse_request_or_err!(params, workspace_rpc::WriteGlobalAgentsMdRequest);
+            Some(serialize_ok(state.write_global_agents_md(request.content)).await)
+        }
         "read_global_codex_config_toml" => {
             Some(serialize_result(state.read_global_codex_config_toml()).await)
         }

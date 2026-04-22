@@ -19,6 +19,7 @@ type UseSettingsCodexSectionArgs = {
   enabled?: boolean;
   readOnlyFilesMode?: boolean;
   globalAgentsEnabled?: boolean;
+  globalAgentsWriteEnabled?: boolean;
   globalConfigEnabled?: boolean;
   doctorReportEnabled?: boolean;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
@@ -92,6 +93,7 @@ export const useSettingsCodexSection = ({
   enabled = true,
   readOnlyFilesMode = false,
   globalAgentsEnabled = enabled,
+  globalAgentsWriteEnabled = !readOnlyFilesMode,
   globalConfigEnabled = enabled,
   doctorReportEnabled = enabled,
   onUpdateAppSettings,
@@ -288,14 +290,15 @@ export const useSettingsCodexSection = ({
     readOnlyFilesMode,
     doctorReportVisible: doctorReportEnabled,
     globalAgentsVisible: globalAgentsEnabled,
-    globalAgentsReadOnly: readOnlyFilesMode,
+    globalAgentsReadOnly: readOnlyFilesMode && !globalAgentsWriteEnabled,
     globalAgentsMeta: globalAgentsEditorMeta.meta,
     globalAgentsError,
     globalAgentsContent,
     globalAgentsLoading,
     globalAgentsRefreshDisabled: globalAgentsEditorMeta.refreshDisabled,
-    globalAgentsSaveDisabled: readOnlyFilesMode || globalAgentsEditorMeta.saveDisabled,
-    globalAgentsSaveLabel: readOnlyFilesMode ? "Save" : globalAgentsEditorMeta.saveLabel,
+    globalAgentsSaveDisabled:
+      (readOnlyFilesMode && !globalAgentsWriteEnabled) || globalAgentsEditorMeta.saveDisabled,
+    globalAgentsSaveLabel: globalAgentsEditorMeta.saveLabel,
     globalConfigVisible: globalConfigEnabled,
     globalConfigReadOnly: readOnlyFilesMode,
     globalConfigMeta: globalConfigEditorMeta.meta,

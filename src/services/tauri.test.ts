@@ -1574,10 +1574,7 @@ describe("tauri invoke wrappers", () => {
 
     await writeGlobalAgentsMd("# Global");
 
-    expect(invokeMock).toHaveBeenCalledWith("file_write", {
-      scope: "global",
-      kind: "agents",
-      workspaceId: undefined,
+    expect(invokeMock).toHaveBeenCalledWith("write_global_agents_md", {
       content: "# Global",
     });
   });

@@ -699,6 +699,17 @@ impl DaemonState {
         .await
     }
 
+    async fn write_global_agents_md(&self, content: String) -> Result<(), String> {
+        files_core::file_write_core(
+            &self.workspaces,
+            file_policy::FileScope::Global,
+            file_policy::FileKind::Agents,
+            None,
+            content,
+        )
+        .await
+    }
+
     async fn read_global_codex_config_toml(&self) -> Result<file_io::TextFileResponse, String> {
         files_core::file_read_core(
             &self.workspaces,

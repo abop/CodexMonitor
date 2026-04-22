@@ -177,6 +177,7 @@ fn can_retry_after_disconnect(method: &str) -> bool {
             | "read_thread"
             | "read_agent_config_toml"
             | "read_global_agents_md"
+            | "write_global_agents_md"
             | "read_global_codex_config_toml"
             | "read_workspace_agent_md"
             | "write_workspace_agent_md"

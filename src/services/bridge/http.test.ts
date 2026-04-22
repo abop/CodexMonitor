@@ -117,6 +117,7 @@ describe("bridgeRpc", () => {
           workspaceAgents: false,
           workspaceAgentsWrite: false,
           globalAgents: false,
+          globalAgentsWrite: false,
           globalConfig: false,
         },
         operations: {
@@ -143,6 +144,7 @@ describe("bridgeRpc", () => {
         }),
         files: expect.objectContaining({
           workspaceAgentsWrite: false,
+          globalAgentsWrite: false,
         }),
         operations: expect.objectContaining({
           accountLogin: true,
@@ -182,6 +184,7 @@ describe("bridgeRpc", () => {
             workspaceAgents: false,
             workspaceAgentsWrite: false,
             globalAgents: false,
+            globalAgentsWrite: false,
             globalConfig: false,
           },
           operations: {
@@ -222,6 +225,7 @@ describe("bridgeRpc", () => {
             workspaceAgents: false,
             workspaceAgentsWrite: false,
             globalAgents: false,
+            globalAgentsWrite: false,
             globalConfig: false,
           },
           operations: {
@@ -261,6 +265,47 @@ describe("bridgeRpc", () => {
             workspaceTree: false,
             workspaceAgents: true,
             globalAgents: false,
+            globalAgentsWrite: false,
+            globalConfig: false,
+          },
+          operations: {
+            usageSnapshot: false,
+            doctorReport: false,
+            featureFlags: false,
+            accountLogin: false,
+            worktreeSetupStatus: false,
+            agentsSettings: false,
+          },
+        }),
+      }),
+    );
+
+    await expect(
+      fetchBridgeCapabilities({ baseUrl: "https://bridge.example.com" }),
+    ).rejects.toThrow("Bridge returned an invalid response.");
+  });
+
+  it("rejects capability responses missing global AGENTS write support", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          version: 1,
+          methods: ["list_workspaces", "read_global_agents_md"],
+          threadControls: {
+            steer: false,
+            fork: false,
+            compact: false,
+            review: false,
+            mcp: false,
+          },
+          files: {
+            workspaceTree: false,
+            workspaceAgents: false,
+            workspaceAgentsWrite: false,
+            globalAgents: true,
             globalConfig: false,
           },
           operations: {

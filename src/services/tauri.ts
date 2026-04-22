@@ -251,7 +251,9 @@ export async function readGlobalAgentsMd(): Promise<GlobalAgentsResponse> {
 }
 
 export async function writeGlobalAgentsMd(content: string): Promise<void> {
-  return fileWrite("global", "agents", content);
+  return invokeSupportedRpc("write_global_agents_md", {
+    content,
+  });
 }
 
 export async function readGlobalCodexConfigToml(): Promise<GlobalCodexConfigResponse> {

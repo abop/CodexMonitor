@@ -71,6 +71,11 @@ pub(crate) struct WriteWorkspaceAgentMdRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct WriteGlobalAgentsMdRequest {
+    pub(crate) content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct IdRequest {
     pub(crate) id: String,
 }

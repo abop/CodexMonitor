@@ -234,6 +234,11 @@ export function useSettingsViewOrchestration({
         ? Boolean(runtimeCapabilities?.files.globalAgents)
         : true
       : false,
+    globalAgentsWriteEnabled: isSectionEnabled("codex")
+      ? webRuntime
+        ? Boolean(runtimeCapabilities?.files.globalAgentsWrite)
+        : true
+      : false,
     globalConfigEnabled: isSectionEnabled("codex")
       ? webRuntime
         ? Boolean(runtimeCapabilities?.files.globalConfig)

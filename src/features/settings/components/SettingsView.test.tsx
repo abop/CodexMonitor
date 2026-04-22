@@ -1050,6 +1050,7 @@ describe("SettingsView web build", () => {
             workspaceAgents: true,
             workspaceAgentsWrite: false,
             globalAgents: false,
+            globalAgentsWrite: false,
             globalConfig: false,
           },
           operations: {
@@ -1137,6 +1138,7 @@ describe("SettingsView web build", () => {
             workspaceAgents: true,
             workspaceAgentsWrite: false,
             globalAgents: true,
+            globalAgentsWrite: false,
             globalConfig: true,
           },
           operations: {
@@ -1195,6 +1197,105 @@ describe("SettingsView web build", () => {
     expect(getConfigModelMock).not.toHaveBeenCalled();
   });
 
+  it("enables global AGENTS editing in reduced web Codex when global AGENTS write capability is available", async () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    cleanup();
+    readGlobalAgentsMdMock.mockResolvedValue({
+      exists: true,
+      content: "# Global",
+      truncated: false,
+    });
+    readGlobalCodexConfigTomlMock.mockResolvedValue({
+      exists: true,
+      content: "model = \"gpt-5\"",
+      truncated: false,
+    });
+
+    render(
+      <SettingsView
+        workspaceGroups={[]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Ungrouped",
+            workspaces: [workspace({ id: "w-web", name: "Web Workspace", connected: true })],
+          },
+        ]}
+        ungroupedLabel="Ungrouped"
+        onClose={vi.fn()}
+        onMoveWorkspace={vi.fn()}
+        onDeleteWorkspace={vi.fn()}
+        onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+        reduceTransparency={false}
+        onToggleTransparency={vi.fn()}
+        appSettings={baseSettings}
+        openAppIconById={{}}
+        onUpdateAppSettings={vi.fn().mockResolvedValue(undefined)}
+        onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
+        onRunCodexUpdate={vi.fn().mockResolvedValue(createUpdateResult())}
+        onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+        scaleShortcutTitle="Scale shortcut"
+        scaleShortcutText="Use Command +/-"
+        onTestNotificationSound={vi.fn()}
+        onTestSystemNotification={vi.fn()}
+        dictationModelStatus={null}
+        onDownloadDictationModel={vi.fn()}
+        onCancelDictationDownload={vi.fn()}
+        onRemoveDictationModel={vi.fn()}
+        runtimeCapabilities={{
+          files: {
+            workspaceTree: true,
+            workspaceAgents: true,
+            workspaceAgentsWrite: false,
+            globalAgents: true,
+            globalAgentsWrite: true,
+            globalConfig: true,
+          },
+          operations: {
+            usageSnapshot: true,
+            doctorReport: false,
+            featureFlags: false,
+            accountLogin: false,
+            worktreeSetupStatus: false,
+            agentsSettings: false,
+          },
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Codex" })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Codex" }));
+
+    await waitFor(() => {
+      expect(readGlobalAgentsMdMock).toHaveBeenCalled();
+      expect(readGlobalCodexConfigTomlMock).toHaveBeenCalled();
+    });
+
+    const globalAgentsTextarea = screen.getByPlaceholderText(
+      "Add global instructions for Codex agents…",
+    ) as HTMLTextAreaElement;
+    const globalConfigTextarea = screen.getByPlaceholderText(
+      "Edit the global Codex config.toml…",
+    ) as HTMLTextAreaElement;
+    const saveButtons = screen.getAllByTitle("Save");
+
+    expect(globalAgentsTextarea.readOnly).toBe(false);
+    expect(globalConfigTextarea.readOnly).toBe(true);
+    fireEvent.change(globalAgentsTextarea, {
+      target: { value: "# Global\n\nExtra guidance" },
+    });
+    expect(saveButtons[0]?.hasAttribute("disabled")).toBe(false);
+    expect(saveButtons[1]?.hasAttribute("disabled")).toBe(true);
+    expect(screen.getAllByText("Read-only")).toHaveLength(1);
+  });
+
   it("shows a reduced read-only Agents section in web when agent settings capability is available", async () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     cleanup();
@@ -1221,6 +1322,7 @@ describe("SettingsView web build", () => {
         workspaceAgents: true,
         workspaceAgentsWrite: false,
         globalAgents: false,
+        globalAgentsWrite: false,
         globalConfig: false,
       },
       operations: {
@@ -1339,6 +1441,7 @@ describe("SettingsView web build", () => {
             workspaceAgents: true,
             workspaceAgentsWrite: false,
             globalAgents: false,
+            globalAgentsWrite: false,
             globalConfig: false,
           },
           operations: {
@@ -1465,6 +1568,7 @@ describe("SettingsView web build", () => {
             workspaceAgents: true,
             workspaceAgentsWrite: false,
             globalAgents: false,
+            globalAgentsWrite: false,
             globalConfig: false,
           },
           operations: {

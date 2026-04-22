@@ -165,6 +165,24 @@ async fn write_workspace_agent_md_impl(
     .await
 }
 
+async fn write_global_agents_md_impl(
+    content: String,
+    state: &AppState,
+    app: &AppHandle,
+) -> Result<(), String> {
+    write_fixed_file_impl(
+        FileScope::Global,
+        FileKind::Agents,
+        None,
+        content.clone(),
+        "write_global_agents_md",
+        json!({ "content": content }),
+        state,
+        app,
+    )
+    .await
+}
+
 #[tauri::command]
 pub(crate) async fn file_read(
     scope: FileScope,
@@ -213,6 +231,15 @@ pub(crate) async fn read_global_agents_md(
     app: AppHandle,
 ) -> Result<TextFileResponse, String> {
     read_global_agents_md_impl(&*state, &app).await
+}
+
+#[tauri::command]
+pub(crate) async fn write_global_agents_md(
+    content: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    write_global_agents_md_impl(content, &*state, &app).await
 }
 
 #[tauri::command]

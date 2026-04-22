@@ -69,8 +69,12 @@ type SettingsCodexSectionProps = {
 
 const DEFAULT_REASONING_EFFORT = "medium";
 
-const appendMetaTag = (meta: string | undefined, tag: string) =>
-  meta && meta.trim().length > 0 ? `${meta} · ${tag}` : tag;
+const appendMetaTag = (meta: string | undefined, tag: string | null) => {
+  if (!tag) {
+    return meta ?? "";
+  }
+  return meta && meta.trim().length > 0 ? `${meta} · ${tag}` : tag;
+};
 
 const normalizeEffortValue = (value: unknown): string | null => {
   if (typeof value !== "string") {
@@ -248,7 +252,7 @@ export function SettingsCodexSection({
     return (
       <SettingsSection
         title="Codex"
-        subtitle="Inspect remote Codex runtime settings, files, and diagnostics. Editing and other Codex controls remain desktop-only in the web build."
+        subtitle="Inspect remote Codex runtime settings, files, and diagnostics. Some Codex controls remain desktop-only in the web build."
       >
         <div className="settings-field">
           <div className="settings-field-label">Default Codex path</div>
@@ -311,14 +315,14 @@ export function SettingsCodexSection({
         {globalAgentsVisible ? (
           <FileEditorCard
             title="Global AGENTS.md"
-            meta={appendMetaTag(globalAgentsMeta, "Read-only")}
+            meta={appendMetaTag(globalAgentsMeta, globalAgentsReadOnly ? "Read-only" : null)}
             error={globalAgentsError}
             value={globalAgentsContent}
             placeholder="Add global instructions for Codex agents…"
             disabled={globalAgentsLoading}
             readOnly={globalAgentsReadOnly}
             refreshDisabled={globalAgentsRefreshDisabled}
-            saveDisabled={true}
+            saveDisabled={globalAgentsSaveDisabled}
             saveLabel={globalAgentsSaveLabel}
             onChange={onSetGlobalAgentsContent}
             onRefresh={onRefreshGlobalAgents}

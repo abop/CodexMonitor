@@ -23,6 +23,7 @@ const DESKTOP_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
     workspaceAgents: true,
     workspaceAgentsWrite: true,
     globalAgents: true,
+    globalAgentsWrite: true,
     globalConfig: true,
   },
   operations: {
@@ -50,6 +51,7 @@ const WEB_SAFE_RUNTIME_CAPABILITIES: WebRuntimeCapabilities = {
     workspaceAgents: false,
     workspaceAgentsWrite: false,
     globalAgents: false,
+    globalAgentsWrite: false,
     globalConfig: false,
   },
   operations: {

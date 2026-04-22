@@ -17,6 +17,7 @@ export type WebRuntimeCapabilities = {
     workspaceAgents: boolean;
     workspaceAgentsWrite: boolean;
     globalAgents: boolean;
+    globalAgentsWrite: boolean;
     globalConfig: boolean;
   };
   operations: {
@@ -76,6 +77,7 @@ function isWebRuntimeCapabilities(
     isBoolean(files.workspaceAgents) &&
     isBoolean(files.workspaceAgentsWrite) &&
     isBoolean(files.globalAgents) &&
+    isBoolean(files.globalAgentsWrite) &&
     isBoolean(files.globalConfig) &&
     isBoolean(operations.usageSnapshot) &&
     isBoolean(operations.doctorReport) &&
