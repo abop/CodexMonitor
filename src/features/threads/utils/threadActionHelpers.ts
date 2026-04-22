@@ -10,8 +10,8 @@ import {
   getThreadTimestamp,
   isReviewingFromThread,
   mergeThreadItems,
-  previewThreadName,
 } from "@utils/threadItems";
+import { getPreferredThreadName } from "./threadNaming";
 import { asString, normalizeRootPath } from "./threadNormalize";
 import { getResumedTurnState } from "./threadRpc";
 
@@ -176,8 +176,7 @@ export function buildResumeHydrationPlan({
       : localItems;
   const preview = asString(thread.preview ?? "");
   const customName = getCustomName(workspaceId, threadId);
-  const threadName =
-    !customName && preview ? previewThreadName(preview, "New Agent") : null;
+  const threadName = !customName ? getPreferredThreadName(thread) : null;
   const lastAgentMessage = [...mergedItems]
     .reverse()
     .find(

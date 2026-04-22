@@ -4,14 +4,13 @@ import {
   getThreadTimestamp,
 } from "@utils/threadItems";
 import { extractThreadCodexMetadata } from "@threads/utils/threadCodexMetadata";
-import { asString } from "@threads/utils/threadNormalize";
 import {
   getParentThreadIdFromThread,
   getSubagentMetadataFromThread,
   isSubagentThreadSource,
   shouldHideSubagentThreadFromSidebar,
 } from "@threads/utils/threadRpc";
-import { clampThreadName } from "@threads/utils/threadNaming";
+import { getPreferredThreadName } from "@threads/utils/threadNaming";
 
 type BuildThreadSummaryFromThreadOptions = {
   workspaceId: string;
@@ -46,12 +45,9 @@ export function buildThreadSummaryFromThread({
   if (!id) {
     return null;
   }
-  const preview = asString(thread.preview ?? "").trim();
   const customName = getCustomName?.(workspaceId, id);
   const fallbackName = `Agent ${fallbackIndex + 1}`;
-  const name = customName
-    ? customName
-    : clampThreadName(preview) ?? fallbackName;
+  const name = customName ?? getPreferredThreadName(thread) ?? fallbackName;
   const metadata = extractThreadCodexMetadata(thread);
   if (shouldHideSubagentThreadFromSidebar(thread.source)) {
     return null;

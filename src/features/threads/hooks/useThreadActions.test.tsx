@@ -16,7 +16,6 @@ import {
   getThreadTimestamp,
   isReviewingFromThread,
   mergeThreadItems,
-  previewThreadName,
 } from "@utils/threadItems";
 import { saveThreadActivity } from "@threads/utils/threadStorage";
 import { useThreadActions } from "./useThreadActions";
@@ -261,7 +260,7 @@ describe("useThreadActions", () => {
     expect(resumeThread).toHaveBeenCalledWith("ws-1", "thread-1");
   });
 
-  it("resumes thread, sets items, status, name, and last message", async () => {
+  it("resumes thread, prefers explicit names, and updates status and last message", async () => {
     const assistantItem: ConversationItem = {
       id: "assistant-1",
       kind: "message",
@@ -271,12 +270,16 @@ describe("useThreadActions", () => {
 
     vi.mocked(resumeThread).mockResolvedValue({
       result: {
-        thread: { id: "thread-2", preview: "preview", updated_at: 555 },
+        thread: {
+          id: "thread-2",
+          name: "Saved Thread Name",
+          preview: "preview",
+          updated_at: 555,
+        },
       },
     });
     vi.mocked(buildItemsFromThread).mockReturnValue([assistantItem]);
     vi.mocked(isReviewingFromThread).mockReturnValue(true);
-    vi.mocked(previewThreadName).mockReturnValue("Preview Name");
     vi.mocked(getThreadTimestamp).mockReturnValue(999);
     vi.mocked(mergeThreadItems).mockReturnValue([assistantItem]);
 
@@ -311,7 +314,7 @@ describe("useThreadActions", () => {
       type: "setThreadName",
       workspaceId: "ws-1",
       threadId: "thread-2",
-      name: "Preview Name",
+      name: "Saved Thread Name",
     });
     expect(dispatch).toHaveBeenCalledWith({
       type: "setLastAgentMessage",
@@ -1272,6 +1275,45 @@ describe("useThreadActions", () => {
         {
           id: "thread-win-1",
           name: "Windows thread",
+          updatedAt: 5000,
+          createdAt: 0,
+        },
+      ],
+    });
+  });
+
+  it("prefers explicit thread names over preview text in thread/list", async () => {
+    vi.mocked(listThreads).mockResolvedValue({
+      result: {
+        data: [
+          {
+            id: "thread-named-1",
+            cwd: "/tmp/codex",
+            name: "Saved Thread Name",
+            preview: "Preview text",
+            updated_at: 5000,
+          },
+        ],
+        nextCursor: null,
+      },
+    });
+    vi.mocked(getThreadTimestamp).mockReturnValue(5000);
+
+    const { result, dispatch } = renderActions();
+
+    await act(async () => {
+      await result.current.listThreadsForWorkspace(workspace);
+    });
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setThreads",
+      workspaceId: "ws-1",
+      sortKey: "updated_at",
+      preserveAnchors: true,
+      threads: [
+        {
+          id: "thread-named-1",
+          name: "Saved Thread Name",
           updatedAt: 5000,
           createdAt: 0,
         },
