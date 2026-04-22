@@ -21,10 +21,14 @@ export function useLocalUsage(enabled: boolean, workspacePath: string | null) {
   const requestIdRef = useRef(0);
   const enabledRef = useRef(enabled);
   const workspaceRef = useRef(workspacePath);
+  const inFlightKeyRef = useRef<string | null>(null);
+  const inFlightRequestRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     enabledRef.current = enabled;
     if (!enabled) {
+      inFlightKeyRef.current = null;
+      inFlightRequestRef.current = null;
       setState((prev) => ({ ...prev, isLoading: false }));
     }
   }, [enabled]);
@@ -37,10 +41,17 @@ export function useLocalUsage(enabled: boolean, workspacePath: string | null) {
     if (!enabledRef.current) {
       return Promise.resolve();
     }
+    const requestKey = workspaceRef.current ?? "__all__";
+    if (
+      inFlightKeyRef.current === requestKey &&
+      inFlightRequestRef.current
+    ) {
+      return inFlightRequestRef.current;
+    }
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
-    return localUsageSnapshot(30, workspaceRef.current ?? undefined)
+    const request = localUsageSnapshot(30, workspaceRef.current ?? undefined)
       .then((snapshot) => {
         if (requestIdRef.current !== requestId || !enabledRef.current) {
           return;
@@ -53,7 +64,19 @@ export function useLocalUsage(enabled: boolean, workspacePath: string | null) {
         }
         const message = err instanceof Error ? err.message : String(err);
         setState((prev) => ({ ...prev, isLoading: false, error: message }));
+      })
+      .finally(() => {
+        if (
+          inFlightKeyRef.current === requestKey &&
+          inFlightRequestRef.current === request
+        ) {
+          inFlightKeyRef.current = null;
+          inFlightRequestRef.current = null;
+        }
       });
+    inFlightKeyRef.current = requestKey;
+    inFlightRequestRef.current = request;
+    return request;
   }, []);
 
   useEffect(() => {

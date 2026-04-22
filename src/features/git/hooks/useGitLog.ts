@@ -35,55 +35,78 @@ export function useGitLog(
   const [state, setState] = useState<GitLogState>(emptyState);
   const requestIdRef = useRef(0);
   const workspaceIdRef = useRef<string | null>(activeWorkspace?.id ?? null);
+  const inFlightWorkspaceIdRef = useRef<string | null>(null);
+  const inFlightRequestRef = useRef<Promise<void> | null>(null);
 
   const refresh = useCallback(async () => {
     if (!activeWorkspace) {
       setState(emptyState);
+      inFlightWorkspaceIdRef.current = null;
+      inFlightRequestRef.current = null;
       return;
     }
     const workspaceId = activeWorkspace.id;
+    if (
+      inFlightWorkspaceIdRef.current === workspaceId &&
+      inFlightRequestRef.current
+    ) {
+      return inFlightRequestRef.current;
+    }
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
-    try {
-      const response = await getGitLog(workspaceId);
-      if (
-        requestIdRef.current !== requestId ||
-        workspaceIdRef.current !== workspaceId
-      ) {
-        return;
-      }
-      setState({
-        entries: response.entries,
-        total: response.total,
-        ahead: response.ahead,
-        behind: response.behind,
-        aheadEntries: response.aheadEntries,
-        behindEntries: response.behindEntries,
-        upstream: response.upstream,
-        isLoading: false,
-        error: null,
+    const request = getGitLog(workspaceId)
+      .then((response) => {
+        if (
+          requestIdRef.current !== requestId ||
+          workspaceIdRef.current !== workspaceId
+        ) {
+          return;
+        }
+        setState({
+          entries: response.entries,
+          total: response.total,
+          ahead: response.ahead,
+          behind: response.behind,
+          aheadEntries: response.aheadEntries,
+          behindEntries: response.behindEntries,
+          upstream: response.upstream,
+          isLoading: false,
+          error: null,
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to load git log", error);
+        if (
+          requestIdRef.current !== requestId ||
+          workspaceIdRef.current !== workspaceId
+        ) {
+          return;
+        }
+        setState({
+          entries: [],
+          total: 0,
+          ahead: 0,
+          behind: 0,
+          aheadEntries: [],
+          behindEntries: [],
+          upstream: null,
+          isLoading: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      })
+      .finally(() => {
+        if (
+          inFlightWorkspaceIdRef.current === workspaceId &&
+          inFlightRequestRef.current === request
+        ) {
+          inFlightWorkspaceIdRef.current = null;
+          inFlightRequestRef.current = null;
+        }
       });
-    } catch (error) {
-      console.error("Failed to load git log", error);
-      if (
-        requestIdRef.current !== requestId ||
-        workspaceIdRef.current !== workspaceId
-      ) {
-        return;
-      }
-      setState({
-        entries: [],
-        total: 0,
-        ahead: 0,
-        behind: 0,
-        aheadEntries: [],
-        behindEntries: [],
-        upstream: null,
-        isLoading: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    inFlightWorkspaceIdRef.current = workspaceId;
+    inFlightRequestRef.current = request;
+    return request;
   }, [activeWorkspace]);
 
   useEffect(() => {
@@ -91,6 +114,8 @@ export function useGitLog(
     if (workspaceIdRef.current !== workspaceId) {
       workspaceIdRef.current = workspaceId;
       requestIdRef.current += 1;
+      inFlightWorkspaceIdRef.current = null;
+      inFlightRequestRef.current = null;
       setState(emptyState);
     }
   }, [activeWorkspace?.id]);
