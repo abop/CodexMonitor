@@ -1,5 +1,5 @@
 use serde_json::{json, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::env;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -643,6 +643,60 @@ pub(crate) fn build_codex_path_env(codex_bin: Option<&str>) -> Option<String> {
         .map(|joined| joined.to_string_lossy().to_string())
 }
 
+const APP_SERVER_STDERR_TAIL_LIMIT: usize = 8;
+const APP_SERVER_REASONING_EFFORT_KEY: &str = "model_reasoning_effort";
+
+fn normalize_app_server_reasoning_override(value: Option<&str>) -> Option<&'static str> {
+    let normalized = value?.trim();
+    if normalized.eq_ignore_ascii_case("xhigh") {
+        Some("high")
+    } else {
+        None
+    }
+}
+
+fn build_app_server_command_args(codex_home: Option<&Path>) -> Result<Vec<String>, String> {
+    let mut args = vec!["app-server".to_string()];
+    let Some(codex_home) = codex_home else {
+        return Ok(args);
+    };
+
+    let (_, document) = crate::shared::config_toml_core::load_global_config_document(codex_home)?;
+    let configured_effort =
+        crate::shared::config_toml_core::read_top_level_string(&document, APP_SERVER_REASONING_EFFORT_KEY);
+    if let Some(override_effort) =
+        normalize_app_server_reasoning_override(configured_effort.as_deref())
+    {
+        args.push("-c".to_string());
+        args.push(format!("{APP_SERVER_REASONING_EFFORT_KEY}={override_effort:?}"));
+    }
+    Ok(args)
+}
+
+fn collect_recent_stderr_detail(lines: &VecDeque<String>) -> Option<String> {
+    let detail = lines
+        .iter()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if detail.is_empty() {
+        None
+    } else {
+        Some(detail)
+    }
+}
+
+fn build_initialize_timeout_error(detail: Option<String>) -> String {
+    if let Some(detail) = detail {
+        return format!(
+            "Codex app-server did not respond to initialize: {detail}. Check that `codex app-server` works in Terminal."
+        );
+    }
+    "Codex app-server did not respond to initialize. Check that `codex app-server` works in Terminal."
+        .to_string()
+}
+
 pub(crate) fn build_codex_command_with_bin(
     codex_bin: Option<String>,
     codex_args: Option<&str>,
@@ -756,11 +810,12 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
 ) -> Result<Arc<WorkspaceSession>, String> {
     let codex_bin = default_codex_bin;
     let _ = check_codex_installation(codex_bin.clone()).await?;
+    let app_server_args = build_app_server_command_args(codex_home.as_deref())?;
 
     let mut command = build_codex_command_with_bin(
         codex_bin,
         codex_args.as_deref(),
-        vec!["app-server".to_string()],
+        app_server_args,
     )?;
     command.current_dir(&entry.path);
     if let Some(path) = codex_home.as_ref() {
@@ -792,6 +847,9 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
             normalize_root_path(&entry.path),
         )])),
     });
+    let stderr_tail = Arc::new(Mutex::new(VecDeque::with_capacity(
+        APP_SERVER_STDERR_TAIL_LIMIT,
+    )));
 
     let session_clone = Arc::clone(&session);
     let fallback_workspace_id = entry.id.clone();
@@ -1053,11 +1111,19 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
 
     let workspace_id = entry.id.clone();
     let event_sink_clone = event_sink.clone();
+    let stderr_tail_clone = Arc::clone(&stderr_tail);
     tokio::spawn(async move {
         let mut lines = BufReader::new(stderr).lines();
         while let Ok(Some(line)) = lines.next_line().await {
             if line.trim().is_empty() {
                 continue;
+            }
+            {
+                let mut tail = stderr_tail_clone.lock().await;
+                if tail.len() == APP_SERVER_STDERR_TAIL_LIMIT {
+                    tail.pop_front();
+                }
+                tail.push_back(line.clone());
             }
             let payload = AppServerEvent {
                 workspace_id: workspace_id.clone(),
@@ -1079,12 +1145,13 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
     let init_response = match init_result {
         Ok(response) => response,
         Err(_) => {
+            let stderr_detail = {
+                let tail = stderr_tail.lock().await;
+                collect_recent_stderr_detail(&tail)
+            };
             let mut child = session.child.lock().await;
             kill_child_process_tree(&mut child).await;
-            return Err(
-                "Codex app-server did not respond to initialize. Check that `codex app-server` works in Terminal."
-                    .to_string(),
-            );
+            return Err(build_initialize_timeout_error(stderr_detail));
         }
     };
     init_response?;
@@ -1105,13 +1172,29 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
 #[cfg(test)]
 mod tests {
     use super::{
-        build_initialize_params, extract_related_thread_ids, extract_thread_entries_from_thread_list_result,
-        extract_thread_id, normalize_root_path, resolve_workspace_for_cwd,
+        build_app_server_command_args, build_initialize_params, build_initialize_timeout_error,
+        extract_related_thread_ids, extract_thread_entries_from_thread_list_result, extract_thread_id,
+        normalize_app_server_reasoning_override, normalize_root_path, resolve_workspace_for_cwd,
         should_suppress_hidden_thread_event, source_subagent_kind,
         thread_started_is_memory_consolidation,
     };
     use std::collections::HashMap;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
     use serde_json::json;
+
+    fn temp_dir(prefix: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("codex-monitor-{prefix}-{nonce}"));
+        if dir.exists() {
+            let _ = std::fs::remove_dir_all(&dir);
+        }
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
 
     #[test]
     fn extract_thread_id_reads_camel_case() {
@@ -1153,6 +1236,56 @@ mod tests {
                 .and_then(|value| value.as_bool()),
             Some(true)
         );
+    }
+
+    #[test]
+    fn normalize_app_server_reasoning_override_maps_xhigh_to_high() {
+        assert_eq!(
+            normalize_app_server_reasoning_override(Some("xhigh")),
+            Some("high")
+        );
+        assert_eq!(
+            normalize_app_server_reasoning_override(Some("XHIGH")),
+            Some("high")
+        );
+    }
+
+    #[test]
+    fn normalize_app_server_reasoning_override_ignores_supported_values() {
+        assert_eq!(normalize_app_server_reasoning_override(Some("high")), None);
+        assert_eq!(normalize_app_server_reasoning_override(Some("medium")), None);
+        assert_eq!(normalize_app_server_reasoning_override(None), None);
+    }
+
+    #[test]
+    fn build_app_server_command_args_adds_reasoning_override_for_xhigh_config() {
+        let codex_home = temp_dir("app-server-xhigh");
+        std::fs::write(
+            codex_home.join("config.toml"),
+            "model_reasoning_effort = \"xhigh\"\n",
+        )
+        .expect("write config");
+
+        let args = build_app_server_command_args(Some(&codex_home)).expect("build args");
+        assert_eq!(
+            args,
+            vec![
+                "app-server".to_string(),
+                "-c".to_string(),
+                "model_reasoning_effort=\"high\"".to_string()
+            ]
+        );
+
+        let _ = std::fs::remove_dir_all(codex_home);
+    }
+
+    #[test]
+    fn build_initialize_timeout_error_includes_recent_stderr() {
+        let error = build_initialize_timeout_error(Some(
+            "Failed to deserialize overridden config: unknown variant `xhigh`".to_string(),
+        ));
+        assert!(error.contains("xhigh"));
+        assert!(error.contains("did not respond to initialize"));
     }
 
     #[test]

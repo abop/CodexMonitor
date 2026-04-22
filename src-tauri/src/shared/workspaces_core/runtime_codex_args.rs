@@ -54,20 +54,10 @@ where
 
     // If we are not connected, we can't respawn. Treat this as a no-op success; callers
     // should call again after connecting.
-    let (workspace_connected, current_session) = {
+    let current_session = {
         let sessions = sessions.lock().await;
-        (
-            sessions.contains_key(&entry.id),
-            sessions.values().next().cloned(),
-        )
+        sessions.get(&entry.id).cloned()
     };
-    if !workspace_connected {
-        return Ok(WorkspaceRuntimeCodexArgsResult {
-            applied_codex_args: target_args,
-            respawned: false,
-        });
-    }
-
     let Some(current_session) = current_session else {
         return Ok(WorkspaceRuntimeCodexArgsResult {
             applied_codex_args: target_args,
@@ -85,37 +75,13 @@ where
     let codex_home = resolve_workspace_codex_home(&entry, parent_entry.as_ref());
     let new_session =
         spawn_session(entry.clone(), default_bin, target_args.clone(), codex_home).await?;
-    let workspace_ids = {
-        let mut sessions = sessions.lock().await;
-        let keys: Vec<String> = sessions.keys().cloned().collect();
-        for key in &keys {
-            sessions.insert(key.clone(), Arc::clone(&new_session));
-        }
-        keys
-    };
-    let workspace_paths = {
-        let workspaces = workspaces.lock().await;
-        workspace_ids
-            .iter()
-            .map(|workspace_id| {
-                let path = workspaces
-                    .get(workspace_id)
-                    .map(|entry| entry.path.clone())
-                    .unwrap_or_default();
-                (workspace_id.clone(), path)
-            })
-            .collect::<Vec<_>>()
-    };
-    for (workspace_id, workspace_path) in &workspace_paths {
-        let path = if workspace_path.is_empty() {
-            None
-        } else {
-            Some(workspace_path.as_str())
-        };
-        new_session
-            .register_workspace_with_path(workspace_id, path)
-            .await;
-    }
+    new_session
+        .register_workspace_with_path(&entry.id, Some(&entry.path))
+        .await;
+    sessions
+        .lock()
+        .await
+        .insert(entry.id.clone(), Arc::clone(&new_session));
     let mut child = current_session.child.lock().await;
     kill_child_process_tree(&mut child).await;
 
@@ -308,6 +274,65 @@ mod tests {
                 .codex_args
                 .clone();
             assert_eq!(next, Some("--new".to_string()));
+        });
+    }
+
+    #[test]
+    fn set_workspace_runtime_codex_args_only_respawns_target_workspace() {
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let first = make_workspace_entry("ws-1");
+            let second = make_workspace_entry("ws-2");
+            let workspaces = Mutex::new(HashMap::from([
+                (first.id.clone(), first.clone()),
+                (second.id.clone(), second.clone()),
+            ]));
+            let first_session = Arc::new(make_session(first.clone(), Some("--first".to_string())));
+            let second_session = Arc::new(make_session(second.clone(), Some("--second".to_string())));
+            let sessions = Mutex::new(HashMap::from([
+                (first.id.clone(), Arc::clone(&first_session)),
+                (second.id.clone(), Arc::clone(&second_session)),
+            ]));
+            let app_settings = Mutex::new(AppSettings::default());
+
+            let spawn_calls = Arc::new(AtomicUsize::new(0));
+            let spawn_calls_ref = spawn_calls.clone();
+
+            let result = set_workspace_runtime_codex_args_core(
+                second.id.clone(),
+                Some("--updated".to_string()),
+                &workspaces,
+                &sessions,
+                &app_settings,
+                move |entry, _bin, args, _home| {
+                    let spawn_calls_ref = spawn_calls_ref.clone();
+                    async move {
+                        spawn_calls_ref.fetch_add(1, Ordering::SeqCst);
+                        Ok(Arc::new(make_session(entry, args)))
+                    }
+                },
+            )
+            .await
+            .expect("core call succeeds");
+
+            assert_eq!(
+                result,
+                WorkspaceRuntimeCodexArgsResult {
+                    applied_codex_args: Some("--updated".to_string()),
+                    respawned: true
+                }
+            );
+            assert_eq!(spawn_calls.load(Ordering::SeqCst), 1);
+
+            let sessions = sessions.lock().await;
+            let updated_first = sessions.get(&first.id).expect("first session");
+            let updated_second = sessions.get(&second.id).expect("second session");
+            assert!(Arc::ptr_eq(updated_first, &first_session));
+            assert!(!Arc::ptr_eq(updated_second, &second_session));
+            assert_eq!(updated_first.codex_args.clone(), Some("--first".to_string()));
+            assert_eq!(
+                updated_second.codex_args.clone(),
+                Some("--updated".to_string())
+            );
         });
     }
 }
