@@ -25,6 +25,8 @@ vi.mock("./runtime", () => ({
   readRuntimeConfig: vi.fn(() => ({
     runtime: "desktop",
     backendBaseUrl: null,
+    backendToken: null,
+    activeBackend: null,
   })),
 }));
 
@@ -67,6 +69,13 @@ describe("events subscriptions", () => {
     vi.mocked(readRuntimeConfig).mockReturnValue({
       runtime: "web",
       backendBaseUrl: "https://daemon.example.com",
+      backendToken: "secret-token",
+      activeBackend: {
+        id: "backend-1",
+        name: "Remote Office",
+        baseUrl: "https://daemon.example.com",
+        token: "secret-token",
+      },
     });
     const unlisten = vi.fn();
     let listener: ((payload: AppServerEvent) => void) | null = null;
@@ -88,7 +97,7 @@ describe("events subscriptions", () => {
     expect(listener).not.toBeNull();
     listener!(payload);
     expect(subscribeBackendEvent).toHaveBeenCalledWith(
-      { baseUrl: "https://daemon.example.com" },
+      { baseUrl: "https://daemon.example.com", token: "secret-token" },
       "app-server-event",
       expect.any(Function),
       undefined,

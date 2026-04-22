@@ -88,6 +88,8 @@ vi.mock("./runtime", () => ({
   readRuntimeConfig: vi.fn(() => ({
     runtime: "desktop",
     backendBaseUrl: null,
+    backendToken: null,
+    activeBackend: null,
   })),
 }));
 
@@ -98,6 +100,8 @@ describe("tauri invoke wrappers", () => {
     vi.mocked(readRuntimeConfig).mockReturnValue({
       runtime: "desktop",
       backendBaseUrl: null,
+      backendToken: null,
+      activeBackend: null,
     });
     vi.mocked(backendRpc).mockReset();
     vi.mocked(pickBrowserImageFiles).mockReset();
@@ -184,13 +188,20 @@ describe("tauri invoke wrappers", () => {
     vi.mocked(readRuntimeConfig).mockReturnValue({
       runtime: "web",
       backendBaseUrl: "https://daemon.example.com",
+      backendToken: "secret-token",
+      activeBackend: {
+        id: "backend-1",
+        name: "Remote Office",
+        baseUrl: "https://daemon.example.com",
+        token: "secret-token",
+      },
     });
     vi.mocked(backendRpc).mockResolvedValueOnce([{ id: "ws-web" }]);
 
     await expect(listWorkspaces()).resolves.toEqual([{ id: "ws-web" }]);
 
     expect(backendRpc).toHaveBeenCalledWith(
-      { baseUrl: "https://daemon.example.com" },
+      { baseUrl: "https://daemon.example.com", token: "secret-token" },
       "list_workspaces",
       {},
     );
@@ -216,6 +227,13 @@ describe("tauri invoke wrappers", () => {
     vi.mocked(readRuntimeConfig).mockReturnValue({
       runtime: "web",
       backendBaseUrl: "https://daemon.example.com",
+      backendToken: "secret-token",
+      activeBackend: {
+        id: "backend-1",
+        name: "Remote Office",
+        baseUrl: "https://daemon.example.com",
+        token: "secret-token",
+      },
     });
     vi.mocked(backendRpc).mockResolvedValueOnce({ ok: true });
 
@@ -224,7 +242,7 @@ describe("tauri invoke wrappers", () => {
     });
 
     expect(backendRpc).toHaveBeenCalledWith(
-      { baseUrl: "https://daemon.example.com" },
+      { baseUrl: "https://daemon.example.com", token: "secret-token" },
       "send_user_message",
       expect.objectContaining({
         workspaceId: "ws-1",

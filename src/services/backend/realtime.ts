@@ -95,26 +95,33 @@ export class BackendRealtimeClient {
 
 type BackendConfig = {
   baseUrl: string;
+  token?: string | null;
 };
 
 const realtimeClients = new Map<string, BackendRealtimeClient>();
 
-function toWebSocketUrl(baseUrl: string) {
+function toWebSocketUrl(baseUrl: string, token?: string | null) {
   const url = new URL(baseUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.pathname = `${url.pathname.replace(/\/+$/, "")}/ws`;
   url.search = "";
+  if (token) {
+    url.searchParams.set("token", token);
+  }
   url.hash = "";
   return url.toString();
 }
 
 function getBackendRealtimeClient(config: BackendConfig) {
-  const existing = realtimeClients.get(config.baseUrl);
+  const cacheKey = `${config.baseUrl}::${config.token ?? ""}`;
+  const existing = realtimeClients.get(cacheKey);
   if (existing) {
     return existing;
   }
-  const client = new BackendRealtimeClient(toWebSocketUrl(config.baseUrl));
-  realtimeClients.set(config.baseUrl, client);
+  const client = new BackendRealtimeClient(
+    toWebSocketUrl(config.baseUrl, config.token),
+  );
+  realtimeClients.set(cacheKey, client);
   return client;
 }
 

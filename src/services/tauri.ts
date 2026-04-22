@@ -84,13 +84,13 @@ function unsupportedInWeb(command: string): Error {
 }
 
 function getRequiredBackendConfig() {
-  const { backendBaseUrl } = readRuntimeConfig();
+  const { backendBaseUrl, backendToken } = readRuntimeConfig();
   if (!backendBaseUrl) {
     throw new Error(
       "Web runtime backend is not configured. Set VITE_CODEXMONITOR_BACKEND_URL.",
     );
   }
-  return { baseUrl: backendBaseUrl };
+  return { baseUrl: backendBaseUrl, token: backendToken };
 }
 
 async function invokeCommand<T>(command: string, params?: InvokeParams): Promise<T> {

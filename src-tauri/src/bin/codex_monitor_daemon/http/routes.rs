@@ -5,7 +5,7 @@ use crate::shared::web_runtime_capabilities::{
     web_allowed_rpc_methods, web_capabilities_v1,
 };
 use axum::extract::ws::{Message, WebSocketUpgrade};
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
 use axum::routing::{get, post};
@@ -18,6 +18,11 @@ struct RpcRequest {
     method: String,
     #[serde(default)]
     params: Value,
+}
+
+#[derive(Default, Deserialize)]
+struct WsQuery {
+    token: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -67,7 +72,7 @@ async fn rpc_handler(
 ) -> Result<Response, Response> {
     let allowed_origin = resolve_allowed_origin(&headers, &state.config)
         .map_err(|error| error_response(&headers, None, error))?;
-    require_http_auth(&headers, &state.config)
+    require_http_auth(&headers, None, &state.config)
         .map_err(|error| error_response(&headers, allowed_origin.clone(), error))?;
 
     if !web_allowed_rpc_methods().contains(&request.method.as_str()) {
@@ -103,11 +108,12 @@ async fn rpc_handler(
 async fn ws_handler(
     State(state): State<HttpState>,
     headers: HeaderMap,
+    Query(query): Query<WsQuery>,
     websocket: WebSocketUpgrade,
 ) -> Result<Response, Response> {
     let allowed_origin = resolve_allowed_origin(&headers, &state.config)
         .map_err(|error| error_response(&headers, None, error))?;
-    require_http_auth(&headers, &state.config)
+    require_http_auth(&headers, query.token.as_deref(), &state.config)
         .map_err(|error| error_response(&headers, allowed_origin.clone(), error))?;
     let mut events = state.events_tx.subscribe();
 
