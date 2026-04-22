@@ -54,7 +54,7 @@ function createEventHub<T>(eventName: string) {
         return;
       }
 
-      const { backendBaseUrl } = readRuntimeConfig();
+      const { backendBaseUrl, backendToken } = readRuntimeConfig();
       if (!backendBaseUrl) {
         options?.onError?.(
           new Error(
@@ -66,7 +66,7 @@ function createEventHub<T>(eventName: string) {
 
       try {
         unlisten = subscribeBackendEvent(
-          { baseUrl: backendBaseUrl },
+          { baseUrl: backendBaseUrl, token: backendToken },
           eventName,
           (payload) => {
             emit(payload as T);

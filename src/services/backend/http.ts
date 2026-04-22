@@ -1,5 +1,6 @@
 export type BackendConfig = {
   baseUrl: string;
+  token?: string | null;
 };
 
 export type WebRuntimeCapabilities = {
@@ -75,11 +76,16 @@ export async function backendRpc<T>(
   method: string,
   params?: Record<string, unknown>,
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (config.token) {
+    headers.Authorization = `Bearer ${config.token}`;
+  }
+
   const response = await fetch(`${config.baseUrl}/api/rpc`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     credentials: "include",
     body: JSON.stringify({
       method,
@@ -104,8 +110,14 @@ export async function backendRpc<T>(
 export async function fetchBackendCapabilities(
   config: BackendConfig,
 ): Promise<WebRuntimeCapabilities> {
+  const headers: Record<string, string> = {};
+  if (config.token) {
+    headers.Authorization = `Bearer ${config.token}`;
+  }
+
   const response = await fetch(`${config.baseUrl}/api/capabilities`, {
     method: "GET",
+    headers,
     credentials: "include",
   });
 
