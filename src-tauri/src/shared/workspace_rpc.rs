@@ -88,6 +88,7 @@ pub(crate) struct UpdateWorkspaceSettingsRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub(crate) struct AddCloneRequest {
     pub(crate) source_workspace_id: String,
     pub(crate) copy_name: String,
@@ -95,6 +96,7 @@ pub(crate) struct AddCloneRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub(crate) struct OpenWorkspaceInRequest {
     pub(crate) path: String,
     pub(crate) app: Option<String>,
@@ -106,6 +108,7 @@ pub(crate) struct OpenWorkspaceInRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub(crate) struct GetOpenAppIconRequest {
     pub(crate) app_name: String,
 }
