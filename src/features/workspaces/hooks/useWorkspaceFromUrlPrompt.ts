@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { pickWorkspacePath } from "@services/tauri";
+import { isWebRuntime } from "@services/runtime";
 
 type WorkspaceFromUrlPromptState = {
   url: string;
@@ -41,7 +42,12 @@ export function useWorkspaceFromUrlPrompt({ onSubmit }: UseWorkspaceFromUrlPromp
     return prompt.url.trim().length > 0 && prompt.destinationPath.trim().length > 0;
   }, [prompt]);
 
+  const canChooseDestinationPath = !isWebRuntime();
+
   const chooseDestinationPath = useCallback(async () => {
+    if (isWebRuntime()) {
+      return;
+    }
     const selected = await pickWorkspacePath();
     if (!selected) {
       return;
@@ -84,10 +90,15 @@ export function useWorkspaceFromUrlPrompt({ onSubmit }: UseWorkspaceFromUrlPromp
     submitWorkspaceFromUrlPrompt: submitPrompt,
     updateWorkspaceFromUrlUrl: (url: string) =>
       setPrompt((prev) => (prev ? { ...prev, url, error: null } : prev)),
+    updateWorkspaceFromUrlDestinationPath: (destinationPath: string) =>
+      setPrompt((prev) =>
+        prev ? { ...prev, destinationPath, error: null } : prev,
+      ),
     updateWorkspaceFromUrlTargetFolderName: (targetFolderName: string) =>
       setPrompt((prev) => (prev ? { ...prev, targetFolderName, error: null } : prev)),
     clearWorkspaceFromUrlDestinationPath: () =>
       setPrompt((prev) => (prev ? { ...prev, destinationPath: "", error: null } : prev)),
+    canChooseWorkspaceFromUrlDestinationPath: canChooseDestinationPath,
     canSubmitWorkspaceFromUrlPrompt: canSubmit,
   };
 }
