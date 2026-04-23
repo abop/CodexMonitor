@@ -83,7 +83,9 @@ type UseMainAppModalsArgs = {
       AppModalsProps,
       | "workspaceFromUrlPrompt"
       | "workspaceFromUrlCanSubmit"
+      | "workspaceFromUrlCanChooseDestinationPath"
       | "onWorkspaceFromUrlPromptUrlChange"
+      | "onWorkspaceFromUrlPromptDestinationPathChange"
       | "onWorkspaceFromUrlPromptTargetFolderNameChange"
       | "onWorkspaceFromUrlPromptChooseDestinationPath"
       | "onWorkspaceFromUrlPromptClearDestinationPath"
@@ -234,7 +236,9 @@ type BuildAppModalsPropsArgs = {
         AppModalsProps,
         | "workspaceFromUrlPrompt"
         | "workspaceFromUrlCanSubmit"
+        | "workspaceFromUrlCanChooseDestinationPath"
         | "onWorkspaceFromUrlPromptUrlChange"
+        | "onWorkspaceFromUrlPromptDestinationPathChange"
         | "onWorkspaceFromUrlPromptTargetFolderNameChange"
         | "onWorkspaceFromUrlPromptChooseDestinationPath"
         | "onWorkspaceFromUrlPromptClearDestinationPath"

@@ -95,7 +95,9 @@ export type AppModalsProps = {
   onClonePromptConfirm: () => void;
   workspaceFromUrlPrompt: WorkspaceFromUrlPromptState;
   workspaceFromUrlCanSubmit: boolean;
+  workspaceFromUrlCanChooseDestinationPath: boolean;
   onWorkspaceFromUrlPromptUrlChange: (value: string) => void;
+  onWorkspaceFromUrlPromptDestinationPathChange: (value: string) => void;
   onWorkspaceFromUrlPromptTargetFolderNameChange: (value: string) => void;
   onWorkspaceFromUrlPromptChooseDestinationPath: () => void;
   onWorkspaceFromUrlPromptClearDestinationPath: () => void;
@@ -149,7 +151,9 @@ export const AppModals = memo(function AppModals({
   onClonePromptConfirm,
   workspaceFromUrlPrompt,
   workspaceFromUrlCanSubmit,
+  workspaceFromUrlCanChooseDestinationPath,
   onWorkspaceFromUrlPromptUrlChange,
+  onWorkspaceFromUrlPromptDestinationPathChange,
   onWorkspaceFromUrlPromptTargetFolderNameChange,
   onWorkspaceFromUrlPromptChooseDestinationPath,
   onWorkspaceFromUrlPromptClearDestinationPath,
@@ -259,7 +263,9 @@ export const AppModals = memo(function AppModals({
             error={workspaceFromUrlPrompt.error}
             isBusy={workspaceFromUrlPrompt.isSubmitting}
             canSubmit={workspaceFromUrlCanSubmit}
+            canChooseDestinationPath={workspaceFromUrlCanChooseDestinationPath}
             onUrlChange={onWorkspaceFromUrlPromptUrlChange}
+            onDestinationPathChange={onWorkspaceFromUrlPromptDestinationPathChange}
             onTargetFolderNameChange={onWorkspaceFromUrlPromptTargetFolderNameChange}
             onChooseDestinationPath={onWorkspaceFromUrlPromptChooseDestinationPath}
             onClearDestinationPath={onWorkspaceFromUrlPromptClearDestinationPath}
