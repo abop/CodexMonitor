@@ -44,6 +44,7 @@ pub(crate) fn resolve_allowed_origin(
 
 pub(crate) fn require_http_auth(
     headers: &HeaderMap,
+    query_token: Option<&str>,
     config: &DaemonConfig,
 ) -> Result<(), (StatusCode, String)> {
     if config.require_cf_access_header {
@@ -64,13 +65,16 @@ pub(crate) fn require_http_auth(
     let Some(expected) = config.token.as_deref() else {
         return Ok(());
     };
-    let Some(value) = headers.get(header::AUTHORIZATION) else {
+    let provided = if let Some(value) = headers.get(header::AUTHORIZATION) {
+        let value = value
+            .to_str()
+            .map_err(|_| (StatusCode::BAD_REQUEST, "invalid authorization header".to_string()))?;
+        value.strip_prefix("Bearer ").unwrap_or_default().trim()
+    } else if let Some(value) = query_token.map(str::trim).filter(|value| !value.is_empty()) {
+        value
+    } else {
         return Err((StatusCode::UNAUTHORIZED, "missing authorization header".to_string()));
     };
-    let value = value
-        .to_str()
-        .map_err(|_| (StatusCode::BAD_REQUEST, "invalid authorization header".to_string()))?;
-    let provided = value.strip_prefix("Bearer ").unwrap_or_default();
     if provided != expected {
         return Err((StatusCode::UNAUTHORIZED, "invalid authorization token".to_string()));
     }
@@ -125,4 +129,58 @@ pub(crate) fn error_response(
             }),
         ),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::require_http_auth;
+    use crate::DaemonConfig;
+    use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    use std::path::PathBuf;
+
+    fn test_config() -> DaemonConfig {
+        DaemonConfig {
+            listen: SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 4732),
+            token: Some("test-token".to_string()),
+            data_dir: PathBuf::from("/tmp"),
+            http_listen: Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 4787)),
+            allowed_origins: vec![],
+            require_cf_access_header: false,
+        }
+    }
+
+    #[test]
+    fn accepts_bearer_token_in_authorization_header() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_static("Bearer test-token"),
+        );
+
+        let result = require_http_auth(&headers, None, &test_config());
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn accepts_query_token_when_authorization_header_is_missing() {
+        let headers = HeaderMap::new();
+
+        let result = require_http_auth(&headers, Some("test-token"), &test_config());
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn rejects_invalid_query_token() {
+        let headers = HeaderMap::new();
+
+        let result = require_http_auth(&headers, Some("wrong-token"), &test_config());
+        assert_eq!(
+            result,
+            Err((
+                StatusCode::UNAUTHORIZED,
+                "invalid authorization token".to_string()
+            ))
+        );
+    }
 }

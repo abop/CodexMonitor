@@ -133,6 +133,26 @@ describe("useThreadTurnEvents", () => {
     expect(safeMessageActivity).toHaveBeenCalled();
   });
 
+  it("prefers explicit thread names when a thread starts", () => {
+    const { result, dispatch } = makeOptions();
+
+    act(() => {
+      result.current.onThreadStarted("ws-1", {
+        id: "thread-1",
+        name: "Saved Thread Name",
+        preview: "A brand new thread",
+        updatedAt: 1_700_000_000_000,
+      });
+    });
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setThreadName",
+      workspaceId: "ws-1",
+      threadId: "thread-1",
+      name: "Saved Thread Name",
+    });
+  });
+
   it("does not override custom thread names on thread started", () => {
     const { result, dispatch, getCustomName } = makeOptions();
     getCustomName.mockReturnValue("Custom name");

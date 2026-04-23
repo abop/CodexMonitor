@@ -15,7 +15,7 @@ use crate::storage::write_workspaces;
 use crate::types::{AppSettings, WorkspaceEntry, WorkspaceInfo, WorkspaceKind, WorkspaceSettings};
 use crate::utils::normalize_windows_namespace_path;
 
-use super::connect::{kill_session_by_id, take_live_shared_session, workspace_session_spawn_lock};
+use super::connect::{kill_session_by_id, workspace_session_spawn_lock};
 use super::helpers::{
     normalize_setup_script, normalize_workspace_path_input, workspace_path_to_string,
 };
@@ -54,23 +54,15 @@ where
     };
 
     let _spawn_guard = workspace_session_spawn_lock().lock().await;
-    let existing_session = take_live_shared_session(sessions).await;
-    let (session, spawned_new_session) = if let Some(existing_session) = existing_session {
-        (existing_session, false)
-    } else {
-        let (default_bin, codex_args) = {
-            let settings = app_settings.lock().await;
-            (
-                settings.codex_bin.clone(),
-                resolve_workspace_codex_args(&entry, None, Some(&settings)),
-            )
-        };
-        let codex_home = resolve_workspace_codex_home(&entry, None);
+    let (default_bin, codex_args) = {
+        let settings = app_settings.lock().await;
         (
-            spawn_session(entry.clone(), default_bin, codex_args, codex_home).await?,
-            true,
+            settings.codex_bin.clone(),
+            resolve_workspace_codex_args(&entry, None, Some(&settings)),
         )
     };
+    let codex_home = resolve_workspace_codex_home(&entry, None);
+    let session = spawn_session(entry.clone(), default_bin, codex_args, codex_home).await?;
 
     if let Err(error) = {
         let mut workspaces = workspaces.lock().await;
@@ -82,10 +74,8 @@ where
             let mut workspaces = workspaces.lock().await;
             workspaces.remove(&entry.id);
         }
-        if spawned_new_session {
-            let mut child = session.child.lock().await;
-            kill_child_process_tree(&mut child).await;
-        }
+        let mut child = session.child.lock().await;
+        kill_child_process_tree(&mut child).await;
         return Err(error);
     }
 
@@ -205,24 +195,19 @@ where
     };
 
     let _spawn_guard = workspace_session_spawn_lock().lock().await;
-    let existing_session = take_live_shared_session(sessions).await;
-    let (session, spawned_new_session) = if let Some(existing_session) = existing_session {
-        (existing_session, false)
-    } else {
-        let (default_bin, codex_args) = {
-            let settings = app_settings.lock().await;
-            (
-                settings.codex_bin.clone(),
-                resolve_workspace_codex_args(&entry, None, Some(&settings)),
-            )
-        };
-        let codex_home = resolve_workspace_codex_home(&entry, None);
-        match spawn_session(entry.clone(), default_bin, codex_args, codex_home).await {
-            Ok(session) => (session, true),
-            Err(error) => {
-                let _ = tokio::fs::remove_dir_all(&destination_path).await;
-                return Err(error);
-            }
+    let (default_bin, codex_args) = {
+        let settings = app_settings.lock().await;
+        (
+            settings.codex_bin.clone(),
+            resolve_workspace_codex_args(&entry, None, Some(&settings)),
+        )
+    };
+    let codex_home = resolve_workspace_codex_home(&entry, None);
+    let session = match spawn_session(entry.clone(), default_bin, codex_args, codex_home).await {
+        Ok(session) => session,
+        Err(error) => {
+            let _ = tokio::fs::remove_dir_all(&destination_path).await;
+            return Err(error);
         }
     };
 
@@ -236,10 +221,8 @@ where
             let mut workspaces = workspaces.lock().await;
             workspaces.remove(&entry.id);
         }
-        if spawned_new_session {
-            let mut child = session.child.lock().await;
-            kill_child_process_tree(&mut child).await;
-        }
+        let mut child = session.child.lock().await;
+        kill_child_process_tree(&mut child).await;
         let _ = tokio::fs::remove_dir_all(&destination_path).await;
         return Err(error);
     }
@@ -370,24 +353,19 @@ where
     };
 
     let _spawn_guard = workspace_session_spawn_lock().lock().await;
-    let existing_session = take_live_shared_session(sessions).await;
-    let (session, spawned_new_session) = if let Some(existing_session) = existing_session {
-        (existing_session, false)
-    } else {
-        let (default_bin, codex_args) = {
-            let settings = app_settings.lock().await;
-            (
-                settings.codex_bin.clone(),
-                resolve_workspace_codex_args(&entry, None, Some(&settings)),
-            )
-        };
-        let codex_home = resolve_workspace_codex_home(&entry, None);
-        match spawn_session(entry.clone(), default_bin, codex_args, codex_home).await {
-            Ok(session) => (session, true),
-            Err(error) => {
-                let _ = tokio::fs::remove_dir_all(&clone_path).await;
-                return Err(error);
-            }
+    let (default_bin, codex_args) = {
+        let settings = app_settings.lock().await;
+        (
+            settings.codex_bin.clone(),
+            resolve_workspace_codex_args(&entry, None, Some(&settings)),
+        )
+    };
+    let codex_home = resolve_workspace_codex_home(&entry, None);
+    let session = match spawn_session(entry.clone(), default_bin, codex_args, codex_home).await {
+        Ok(session) => session,
+        Err(error) => {
+            let _ = tokio::fs::remove_dir_all(&clone_path).await;
+            return Err(error);
         }
     };
 
@@ -401,10 +379,8 @@ where
             let mut workspaces = workspaces.lock().await;
             workspaces.remove(&entry.id);
         }
-        if spawned_new_session {
-            let mut child = session.child.lock().await;
-            kill_child_process_tree(&mut child).await;
-        }
+        let mut child = session.child.lock().await;
+        kill_child_process_tree(&mut child).await;
         let _ = tokio::fs::remove_dir_all(&clone_path).await;
         return Err(error);
     }

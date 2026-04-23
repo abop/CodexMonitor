@@ -28,6 +28,8 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
   const requestIdRef = useRef(0);
   const workspaceIdRef = useRef<string | null>(activeWorkspace?.id ?? null);
   const cachedStatusRef = useRef<Map<string, GitStatusState>>(new Map());
+  const inFlightWorkspaceIdRef = useRef<string | null>(null);
+  const inFlightRequestRef = useRef<Promise<void> | null>(null);
   const workspaceId = activeWorkspace?.id ?? null;
 
   const resolveBranchName = useCallback(
@@ -47,11 +49,19 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
   const refresh = useCallback(() => {
     if (!workspaceId) {
       setStatus(emptyStatus);
-      return;
+      inFlightWorkspaceIdRef.current = null;
+      inFlightRequestRef.current = null;
+      return Promise.resolve();
+    }
+    if (
+      inFlightWorkspaceIdRef.current === workspaceId &&
+      inFlightRequestRef.current
+    ) {
+      return inFlightRequestRef.current;
     }
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
-    return getGitStatus(workspaceId)
+    const request = getGitStatus(workspaceId)
       .then((data) => {
         if (
           requestIdRef.current !== requestId ||
@@ -83,13 +93,27 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
           ? { ...cached, error: message }
           : { ...emptyStatus, branchName: "unknown", error: message };
         setStatus(nextStatus);
+      })
+      .finally(() => {
+        if (
+          inFlightWorkspaceIdRef.current === workspaceId &&
+          inFlightRequestRef.current === request
+        ) {
+          inFlightWorkspaceIdRef.current = null;
+          inFlightRequestRef.current = null;
+        }
       });
+    inFlightWorkspaceIdRef.current = workspaceId;
+    inFlightRequestRef.current = request;
+    return request;
   }, [resolveBranchName, workspaceId]);
 
   useEffect(() => {
     if (workspaceIdRef.current !== workspaceId) {
       workspaceIdRef.current = workspaceId;
       requestIdRef.current += 1;
+      inFlightWorkspaceIdRef.current = null;
+      inFlightRequestRef.current = null;
       if (!workspaceId) {
         setStatus(emptyStatus);
         return;

@@ -33,6 +33,29 @@ describe("backend http client", () => {
     );
   });
 
+  it("sends a bearer token when the backend requires one", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ result: { ok: true } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await backendRpc<{ ok: boolean }>(
+      { baseUrl: "https://daemon.example.com", token: "secret-token" } as never,
+      "list_workspaces",
+      {},
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://daemon.example.com/api/rpc",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer secret-token",
+        }),
+      }),
+    );
+  });
+
   it("loads capability payloads", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

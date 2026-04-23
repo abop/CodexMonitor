@@ -43,8 +43,8 @@ import { useWindowLabel } from "@/features/layout/hooks/useWindowLabel";
 import MainApp from "@app/components/MainApp";
 import {
   readRuntimeConfig,
-  setRuntimeBackendBaseUrl,
   subscribeRuntimeBackendBaseUrl,
+  upsertRuntimeWebBackend,
 } from "@services/runtime";
 
 const AboutView = lazy(() =>
@@ -54,7 +54,10 @@ const AboutView = lazy(() =>
 );
 
 function WebRuntimeSetupView() {
+  const [backendName, setBackendName] = useState("");
   const [backendUrl, setBackendUrl] = useState("");
+  const [backendToken, setBackendToken] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   return (
     <div
@@ -71,7 +74,21 @@ function WebRuntimeSetupView() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          setRuntimeBackendBaseUrl(backendUrl);
+          try {
+            upsertRuntimeWebBackend(
+              {
+                name: backendName.trim(),
+                baseUrl: backendUrl.trim(),
+                token: backendToken.trim(),
+              },
+              { activate: true },
+            );
+            setErrorMessage(null);
+          } catch (error) {
+            setErrorMessage(
+              error instanceof Error ? error.message : "Unable to save backend.",
+            );
+          }
         }}
         style={{
           width: "min(560px, 100%)",
@@ -100,9 +117,32 @@ function WebRuntimeSetupView() {
           </h1>
           <p style={{ margin: 0, color: "#cbd5e1", lineHeight: 1.6 }}>
             This browser runtime talks directly to the unified daemon backend.
-            Enter the daemon base URL to continue.
+            Save a named backend to continue. Add a token when the daemon requires
+            one.
           </p>
         </div>
+
+        <label style={{ display: "grid", gap: "8px" }}>
+          <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Backend name</span>
+          <input
+            aria-label="Backend name"
+            type="text"
+            value={backendName}
+            onChange={(event) => {
+              setBackendName(event.target.value);
+            }}
+            placeholder="Local daemon"
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "14px",
+              border: "1px solid rgba(148, 163, 184, 0.28)",
+              background: "rgba(15, 23, 42, 0.88)",
+              color: "#e2e8f0",
+              fontSize: "1rem",
+            }}
+          />
+        </label>
 
         <label style={{ display: "grid", gap: "8px" }}>
           <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Backend URL</span>
@@ -126,6 +166,30 @@ function WebRuntimeSetupView() {
           />
         </label>
 
+        <label style={{ display: "grid", gap: "8px" }}>
+          <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>
+            Access token (optional)
+          </span>
+          <input
+            aria-label="Access token (optional)"
+            type="password"
+            value={backendToken}
+            onChange={(event) => {
+              setBackendToken(event.target.value);
+            }}
+            placeholder="Bearer token"
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "14px",
+              border: "1px solid rgba(148, 163, 184, 0.28)",
+              background: "rgba(15, 23, 42, 0.88)",
+              color: "#e2e8f0",
+              fontSize: "1rem",
+            }}
+          />
+        </label>
+
         <div
           style={{
             fontSize: "0.92rem",
@@ -136,6 +200,19 @@ function WebRuntimeSetupView() {
           Expected format: <code>https://host.example.com</code> or{" "}
           <code>http://127.0.0.1:4732</code>
         </div>
+
+        {errorMessage && (
+          <div
+            role="alert"
+            style={{
+              color: "#fecaca",
+              fontSize: "0.92rem",
+              lineHeight: 1.5,
+            }}
+          >
+            {errorMessage}
+          </div>
+        )}
 
         <button
           type="submit"
@@ -179,5 +256,10 @@ export default function App() {
     return <WebRuntimeSetupView />;
   }
 
-  return <MainApp />;
+  const mainAppKey =
+    runtimeConfig.runtime === "web"
+      ? `${runtimeConfig.backendBaseUrl ?? "none"}::${runtimeConfig.backendToken ?? ""}`
+      : "desktop";
+
+  return <MainApp key={mainAppKey} />;
 }

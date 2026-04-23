@@ -182,4 +182,50 @@ describe("useGitStatus", () => {
 
     unmount();
   });
+
+  it("does not start another poll while the current git status request is still in flight", async () => {
+    const getGitStatusMock = vi.mocked(getGitStatus);
+    let resolveFirst: ((value: ReturnType<typeof makeStatus>) => void) | undefined;
+    const firstPromise = new Promise<ReturnType<typeof makeStatus>>((resolve) => {
+      resolveFirst = resolve;
+    });
+    getGitStatusMock
+      .mockReturnValueOnce(firstPromise)
+      .mockResolvedValueOnce(makeStatus("next", 2, 3));
+
+    const { result, unmount } = renderHook(
+      ({ active }: { active: WorkspaceInfo | null }) => useGitStatus(active),
+      { initialProps: { active: workspace } },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getGitStatusMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    expect(getGitStatusMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirst?.(makeStatus("main", 1, 0));
+      await Promise.resolve();
+    });
+
+    expect(result.current.status.branchName).toBe("main");
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    expect(getGitStatusMock).toHaveBeenCalledTimes(2);
+    expect(result.current.status.branchName).toBe("next");
+
+    unmount();
+  });
 });

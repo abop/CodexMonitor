@@ -6,7 +6,6 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import type {
   AppOption,
   CustomPromptOption,
@@ -31,7 +30,7 @@ import { FileEditorCard } from "../../shared/components/FileEditorCard";
 import { WorkspaceHomeRunControls } from "./WorkspaceHomeRunControls";
 import { WorkspaceHomeHistory } from "./WorkspaceHomeHistory";
 import { WorkspaceHomeGitInitBanner } from "./WorkspaceHomeGitInitBanner";
-import { buildIconPath } from "./workspaceHomeHelpers";
+import { resolveIconSrc } from "./workspaceHomeHelpers";
 import { useWorkspaceHomeSuggestionsStyle } from "../hooks/useWorkspaceHomeSuggestionsStyle";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
 
@@ -162,8 +161,7 @@ export function WorkspaceHome({
 }: WorkspaceHomeProps) {
   const [showIcon, setShowIcon] = useState(true);
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
-  const iconPath = useMemo(() => buildIconPath(workspace.path), [workspace.path]);
-  const iconSrc = useMemo(() => convertFileSrc(iconPath), [iconPath]);
+  const iconSrc = useMemo(() => resolveIconSrc(workspace.path), [workspace.path]);
   const fallbackTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const textareaRef = textareaRefProp ?? fallbackTextareaRef;
   const {
@@ -350,7 +348,7 @@ export function WorkspaceHome({
   return (
     <div className="workspace-home">
       <div className="workspace-home-hero">
-        {showIcon && (
+        {showIcon && iconSrc && (
           <img
             className="workspace-home-icon"
             src={iconSrc}
