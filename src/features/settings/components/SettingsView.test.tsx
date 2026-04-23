@@ -1071,7 +1071,6 @@ describe("SettingsView Environments", () => {
       if (originalDescriptor) {
         Object.defineProperty(navigator, "clipboard", originalDescriptor);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (navigator as any).clipboard;
       }
     }

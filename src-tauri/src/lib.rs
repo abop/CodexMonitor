@@ -107,6 +107,8 @@ pub fn run() {
             if window.label() != "main" {
                 return;
             }
+            #[cfg(not(target_os = "macos"))]
+            let _ = event;
             #[cfg(target_os = "macos")]
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();

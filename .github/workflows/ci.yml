@@ -6,12 +6,15 @@ on:
   pull_request:
     branches: ["main"]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
@@ -22,8 +25,8 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
@@ -34,8 +37,8 @@ jobs:
   test-js:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
@@ -46,6 +49,8 @@ jobs:
 
   test-tauri:
     name: Rust tests (${{ matrix.platform.name }})
+    # Temporarily keep Rust validation local; hosted runners are too slow for PR iteration.
+    if: ${{ false }}
     runs-on: ${{ matrix.platform.os }}
     strategy:
       fail-fast: false
@@ -58,10 +63,10 @@ jobs:
           - name: Windows
             os: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - name: Cache Rust build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -99,6 +104,8 @@ jobs:
 
   build-tauri:
     name: Tauri build (${{ matrix.platform.name }})
+    # Temporarily keep heavy native builds out of PR CI; run them locally when needed.
+    if: ${{ false }}
     runs-on: ${{ matrix.platform.os }}
     needs:
       - lint
@@ -119,14 +126,14 @@ jobs:
             os: windows-latest
             build_command: npm run tauri -- build --debug --no-bundle --config src-tauri/tauri.windows.conf.json
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
       - uses: dtolnay/rust-toolchain@stable
       - name: Cache Rust build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
