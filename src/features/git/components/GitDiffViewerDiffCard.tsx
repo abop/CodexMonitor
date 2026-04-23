@@ -144,8 +144,9 @@ export const DiffCard = memo(function DiffCard({
       ...parsed,
       name: normalizedName,
       prevName: normalizedPrevName,
-      oldLines: entry.oldLines,
-      newLines: entry.newLines,
+      deletionLines: entry.oldLines ?? parsed.deletionLines,
+      additionLines: entry.newLines ?? parsed.additionLines,
+      isPartial: entry.oldLines || entry.newLines ? false : parsed.isPartial,
     } satisfies FileDiffMetadata;
   }, [displayPath, entry.diff, entry.newLines, entry.oldLines]);
 

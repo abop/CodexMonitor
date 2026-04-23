@@ -10,6 +10,9 @@ permissions:
   contents: read
   deployments: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
@@ -19,12 +22,12 @@ jobs:
       cancel-in-progress: true
     steps:
       - name: Checkout tested commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
@@ -36,7 +39,7 @@ jobs:
         run: npm run build:web
 
       - name: Deploy production
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v5
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
