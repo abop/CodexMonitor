@@ -9,21 +9,26 @@ type BackendEvent = {
   params?: unknown;
 };
 
+const RECONNECT_DELAY_MS = 500;
+
 export class BackendRealtimeClient {
   private socket: WebSocket | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Map<string, Set<Listener>>();
   private errorListeners = new Set<ErrorListener>();
+  private closedByClient = false;
 
   constructor(private readonly wsUrl: string) {}
 
   subscribe(eventName: string, listener: Listener, options?: SubscriptionOptions) {
-    this.ensureSocket();
     const listeners = this.listeners.get(eventName) ?? new Set<Listener>();
     listeners.add(listener);
     this.listeners.set(eventName, listeners);
     if (options?.onError) {
       this.errorListeners.add(options.onError);
     }
+    this.closedByClient = false;
+    this.ensureSocket();
     return () => {
       const current = this.listeners.get(eventName);
       if (!current) {
@@ -46,14 +51,18 @@ export class BackendRealtimeClient {
   }
 
   close() {
-    this.socket?.close();
+    this.closedByClient = true;
+    this.clearReconnectTimer();
+    const socket = this.socket;
     this.socket = null;
+    socket?.close();
   }
 
   private ensureSocket() {
-    if (this.socket) {
+    if (this.socket || !this.hasListeners()) {
       return;
     }
+    this.closedByClient = false;
     const socket = new WebSocket(this.wsUrl);
     socket.onmessage = (event) => {
       const parsed = this.parseMessage(event.data);
@@ -69,15 +78,52 @@ export class BackendRealtimeClient {
       });
     };
     socket.onclose = () => {
-      this.socket = null;
+      if (this.socket === socket) {
+        this.socket = null;
+      }
+      try {
+        socket.close();
+      } catch {
+        // Browsers may already be closing this socket after an error event.
+      }
+      if (!this.closedByClient) {
+        this.scheduleReconnect();
+      }
     };
     socket.onerror = (error) => {
       this.errorListeners.forEach((listener) => {
         listener(error);
       });
-      this.socket = null;
+      if (this.socket === socket) {
+        this.socket = null;
+      }
+      if (!this.closedByClient) {
+        this.scheduleReconnect();
+      }
     };
     this.socket = socket;
+  }
+
+  private hasListeners() {
+    return this.listeners.size > 0;
+  }
+
+  private scheduleReconnect() {
+    if (this.socket || this.reconnectTimer || !this.hasListeners()) {
+      return;
+    }
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.ensureSocket();
+    }, RECONNECT_DELAY_MS);
+  }
+
+  private clearReconnectTimer() {
+    if (!this.reconnectTimer) {
+      return;
+    }
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
   }
 
   private parseMessage(message: unknown): BackendEvent | null {
