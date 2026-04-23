@@ -38,7 +38,7 @@ export function useGitDiffs(
   );
 
   const refresh = useCallback(async () => {
-    if (!activeWorkspace) {
+    if (!activeWorkspace || files.length === 0) {
       setState(emptyState);
       return;
     }
@@ -71,7 +71,7 @@ export function useGitDiffs(
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [activeWorkspace, ignoreWhitespaceChanges]);
+  }, [activeWorkspace, files.length, ignoreWhitespaceChanges]);
 
   useEffect(() => {
     const workspaceId = activeWorkspace?.id ?? null;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GitFileStatus, WorkspaceInfo } from "../../../types";
 import { getGitStatus } from "../../../services/tauri";
+import { isMissingRepo } from "../utils/repoErrors";
 
 type GitStatusState = {
   branchName: string;
@@ -30,6 +31,7 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
   const cachedStatusRef = useRef<Map<string, GitStatusState>>(new Map());
   const inFlightWorkspaceIdRef = useRef<string | null>(null);
   const inFlightRequestRef = useRef<Promise<void> | null>(null);
+  const missingRepoWorkspaceIdsRef = useRef<Set<string>>(new Set());
   const workspaceId = activeWorkspace?.id ?? null;
 
   const resolveBranchName = useCallback(
@@ -76,6 +78,7 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
           branchName: resolvedBranchName,
           error: null,
         };
+        missingRepoWorkspaceIdsRef.current.delete(workspaceId);
         setStatus(nextStatus);
         cachedStatusRef.current.set(workspaceId, nextStatus);
       })
@@ -88,6 +91,9 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
           return;
         }
         const message = err instanceof Error ? err.message : String(err);
+        if (isMissingRepo(message)) {
+          missingRepoWorkspaceIdsRef.current.add(workspaceId);
+        }
         const cached = cachedStatusRef.current.get(workspaceId);
         const nextStatus = cached
           ? { ...cached, error: message }
@@ -130,6 +136,9 @@ export function useGitStatus(activeWorkspace: WorkspaceInfo | null) {
     }
 
     const fetchStatus = () => {
+      if (missingRepoWorkspaceIdsRef.current.has(workspaceId)) {
+        return;
+      }
       refresh()?.catch(() => {});
     };
 
