@@ -4,6 +4,7 @@ import type { AppSettings, WorkspaceInfo } from "../../../types";
 import type { DebugEntry } from "../../../types";
 import { useWorkspaceDialogs } from "./useWorkspaceDialogs";
 import { isMobilePlatform } from "../../../utils/platformPaths";
+import { isWebRuntime } from "../../../services/runtime";
 
 type WorkspaceControllerOptions = {
   appSettings: AppSettings;
@@ -77,7 +78,9 @@ export function useWorkspaceController({
       return null;
     }
     const result = await runAddWorkspacesFromPaths(paths, {
-      rememberMobileRemoteRecents: isMobilePlatform() && appSettings.backendMode === "remote",
+      rememberMobileRemoteRecents:
+        isWebRuntime() ||
+        (isMobilePlatform() && appSettings.backendMode === "remote"),
     });
     return result.firstAdded;
   }, [appSettings.backendMode, requestWorkspacePaths, runAddWorkspacesFromPaths]);

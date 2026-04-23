@@ -8,7 +8,9 @@ type WorkspaceFromUrlPromptProps = {
   error: string | null;
   isBusy: boolean;
   canSubmit: boolean;
+  canChooseDestinationPath: boolean;
   onUrlChange: (value: string) => void;
+  onDestinationPathChange: (value: string) => void;
   onTargetFolderNameChange: (value: string) => void;
   onChooseDestinationPath: () => void;
   onClearDestinationPath: () => void;
@@ -23,7 +25,9 @@ export function WorkspaceFromUrlPrompt({
   error,
   isBusy,
   canSubmit,
+  canChooseDestinationPath,
   onUrlChange,
+  onDestinationPathChange,
   onTargetFolderNameChange,
   onChooseDestinationPath,
   onClearDestinationPath,
@@ -78,14 +82,22 @@ export function WorkspaceFromUrlPrompt({
             id="workspace-url-destination"
             className="ds-modal-input"
             value={destinationPath}
-            placeholder="Not set"
-            readOnly
+            onChange={(event) => onDestinationPathChange(event.target.value)}
+            placeholder={canChooseDestinationPath ? "Not set" : "/Users/you/workspace"}
+            readOnly={!canChooseDestinationPath}
             rows={1}
             wrap="off"
           />
-          <button type="button" className="ghost ds-modal-button" onClick={onChooseDestinationPath}>
-            Choose…
-          </button>
+          {canChooseDestinationPath && (
+            <button
+              type="button"
+              className="ghost ds-modal-button"
+              onClick={onChooseDestinationPath}
+              disabled={isBusy}
+            >
+              Choose…
+            </button>
+          )}
           <button
             type="button"
             className="ghost ds-modal-button"

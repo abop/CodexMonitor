@@ -11,6 +11,7 @@ import {
   removeWorkspace,
 } from "../../../services/tauri";
 import { isMobilePlatform } from "../../../utils/platformPaths";
+import { isWebRuntime } from "../../../services/runtime";
 import { useWorkspaceController } from "./useWorkspaceController";
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -36,6 +37,10 @@ vi.mock("../../../services/tauri", () => ({
 
 vi.mock("../../../utils/platformPaths", () => ({
   isMobilePlatform: vi.fn(() => false),
+}));
+
+vi.mock("../../../services/runtime", () => ({
+  isWebRuntime: vi.fn(() => false),
 }));
 
 const workspaceOne: WorkspaceInfo = {
@@ -70,6 +75,7 @@ describe("useWorkspaceController dialogs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isMobilePlatform).mockReturnValue(false);
+    vi.mocked(isWebRuntime).mockReturnValue(false);
     window.localStorage.clear();
   });
 
@@ -177,6 +183,52 @@ describe("useWorkspaceController dialogs", () => {
     expect(added).toMatchObject({ id: workspaceOne.id });
     expect(isWorkspacePathDir).toHaveBeenCalledWith("/srv/codex-monitor");
     expect(result.current.mobileRemoteWorkspacePathPrompt).toBeNull();
+    expect(window.localStorage.getItem("mobile-remote-workspace-recent-paths")).toBe(
+      JSON.stringify(["/tmp/ws-1"]),
+    );
+  });
+
+  it("opens the in-app path prompt in web runtime", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.mocked(listWorkspaces).mockResolvedValue([]);
+    vi.mocked(isWorkspacePathDir).mockResolvedValue(true);
+    vi.mocked(addWorkspace).mockResolvedValue(workspaceOne);
+
+    const { result } = renderHook(() =>
+      useWorkspaceController({
+        appSettings: baseAppSettings,
+        addDebugEntry: vi.fn(),
+        queueSaveSettings: vi.fn(async (next) => next),
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    let addPromise: Promise<WorkspaceInfo | null> = Promise.resolve(null);
+    await act(async () => {
+      addPromise = result.current.addWorkspace();
+    });
+
+    expect(result.current.mobileRemoteWorkspacePathPrompt).not.toBeNull();
+    expect(pickWorkspacePaths).not.toHaveBeenCalled();
+
+    await act(async () => {
+      result.current.updateMobileRemoteWorkspacePathInput("/Users/gufei/workspace/CodexMonitor");
+    });
+
+    await act(async () => {
+      result.current.submitMobileRemoteWorkspacePathPrompt();
+    });
+
+    let added: WorkspaceInfo | null = null;
+    await act(async () => {
+      added = await addPromise;
+    });
+
+    expect(added).toMatchObject({ id: workspaceOne.id });
+    expect(isWorkspacePathDir).toHaveBeenCalledWith("/Users/gufei/workspace/CodexMonitor");
     expect(window.localStorage.getItem("mobile-remote-workspace-recent-paths")).toBe(
       JSON.stringify(["/tmp/ws-1"]),
     );

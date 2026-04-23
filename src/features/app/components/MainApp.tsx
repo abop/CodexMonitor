@@ -929,8 +929,10 @@ export default function MainApp() {
     chooseWorkspaceFromUrlDestinationPath,
     submitWorkspaceFromUrlPrompt,
     updateWorkspaceFromUrlUrl,
+    updateWorkspaceFromUrlDestinationPath,
     updateWorkspaceFromUrlTargetFolderName,
     clearWorkspaceFromUrlDestinationPath,
+    canChooseWorkspaceFromUrlDestinationPath,
     canSubmitWorkspaceFromUrlPrompt,
   } = useWorkspaceFromUrlPrompt({
     onSubmit: async (url, destinationPath, targetFolderName) => {
@@ -988,7 +990,11 @@ export default function MainApp() {
       workspaceFromUrl: {
         workspaceFromUrlPrompt,
         workspaceFromUrlCanSubmit: canSubmitWorkspaceFromUrlPrompt,
+        workspaceFromUrlCanChooseDestinationPath:
+          canChooseWorkspaceFromUrlDestinationPath,
         onWorkspaceFromUrlPromptUrlChange: updateWorkspaceFromUrlUrl,
+        onWorkspaceFromUrlPromptDestinationPathChange:
+          updateWorkspaceFromUrlDestinationPath,
         onWorkspaceFromUrlPromptTargetFolderNameChange:
           updateWorkspaceFromUrlTargetFolderName,
         onWorkspaceFromUrlPromptChooseDestinationPath:
