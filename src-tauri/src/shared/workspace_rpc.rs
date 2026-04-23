@@ -39,6 +39,7 @@ pub(crate) struct AddWorkspaceRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct AddWorkspaceFromGitUrlRequest {
     pub(crate) url: String,
     pub(crate) destination_path: String,
@@ -107,4 +108,26 @@ pub(crate) struct OpenWorkspaceInRequest {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GetOpenAppIconRequest {
     pub(crate) app_name: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{from_params, AddWorkspaceFromGitUrlRequest};
+    use serde_json::json;
+
+    #[test]
+    fn add_workspace_from_git_url_accepts_frontend_camel_case_params() {
+        let params = json!({
+            "url": "git@github.com:org/repo.git",
+            "destinationPath": "/tmp/workspaces",
+            "targetFolderName": null,
+        });
+
+        let request: AddWorkspaceFromGitUrlRequest =
+            from_params(&params).expect("frontend params should deserialize");
+
+        assert_eq!(request.url, "git@github.com:org/repo.git");
+        assert_eq!(request.destination_path, "/tmp/workspaces");
+        assert_eq!(request.target_folder_name, None);
+    }
 }

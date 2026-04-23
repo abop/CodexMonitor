@@ -303,7 +303,7 @@ where
     if destination_path.is_empty() {
         return Err("Destination folder is required.".to_string());
     }
-    let destination_parent = PathBuf::from(&destination_path);
+    let destination_parent = normalize_workspace_path_input(&destination_path);
     if !destination_parent.is_dir() {
         return Err("Destination folder must be an existing directory.".to_string());
     }
