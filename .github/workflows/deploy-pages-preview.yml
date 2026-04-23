@@ -37,7 +37,7 @@ jobs:
         run: npm run build:web
 
       - name: Deploy preview
-        uses: cloudflare/wrangler-action@v5
+        uses: cloudflare/wrangler-action@v3.15.0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
