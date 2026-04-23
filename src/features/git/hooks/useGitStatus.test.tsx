@@ -228,4 +228,30 @@ describe("useGitStatus", () => {
 
     unmount();
   });
+
+  it("stops interval polling after the workspace is identified as a missing repo", async () => {
+    const getGitStatusMock = vi.mocked(getGitStatus);
+    getGitStatusMock.mockRejectedValueOnce(new Error("not a git repository"));
+
+    const { result, unmount } = renderHook(
+      ({ active }: { active: WorkspaceInfo | null }) => useGitStatus(active),
+      { initialProps: { active: workspace } },
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getGitStatusMock).toHaveBeenCalledTimes(1);
+    expect(result.current.status.error).toBe("not a git repository");
+
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+      await Promise.resolve();
+    });
+
+    expect(getGitStatusMock).toHaveBeenCalledTimes(1);
+
+    unmount();
+  });
 });
