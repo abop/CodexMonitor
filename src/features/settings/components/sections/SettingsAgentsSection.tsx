@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { revealPathInFileManager } from "@services/openers";
 import type { ModelOption } from "@/types";
 import {
   MagicSparkleIcon,
@@ -159,7 +159,7 @@ export function SettingsAgentsSection({
   const handleOpenPath = async (path: string) => {
     setOpenPathError(null);
     try {
-      await revealItemInDir(path);
+      await revealPathInFileManager(path);
     } catch (openError) {
       setOpenPathError(
         openError instanceof Error ? openError.message : "Unable to open path.",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import type { AppSettings, CodexFeature, CodexFeatureStage } from "@/types";
+import { revealPathInFileManager } from "@services/openers";
 import {
   getCodexConfigPath,
   getExperimentalFeatureList,
@@ -152,7 +152,7 @@ export const useSettingsFeaturesSection = ({
     setOpenConfigError(null);
     try {
       const configPath = await getCodexConfigPath();
-      await revealItemInDir(configPath);
+      await revealPathInFileManager(configPath);
     } catch (error) {
       setOpenConfigError(
         error instanceof Error ? error.message : "Unable to open config.",

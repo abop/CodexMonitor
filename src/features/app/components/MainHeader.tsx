@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Check from "lucide-react/dist/esm/icons/check";
 import Copy from "lucide-react/dist/esm/icons/copy";
 import Terminal from "lucide-react/dist/esm/icons/terminal";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import type { BranchInfo, OpenAppTarget, WorkspaceInfo } from "../../../types";
 import type { ReactNode } from "react";
+import { revealPathInFileManager } from "../../../services/openers";
+import { pushErrorToast } from "../../../services/toasts";
 import { revealInFileManagerLabel } from "../../../utils/platformPaths";
 import { BranchList } from "../../git/components/BranchList";
 import { filterBranches, findExactBranch } from "../../git/utils/branchSearch";
@@ -326,7 +327,16 @@ export function MainHeader({
                       type="button"
                       className="worktree-info-reveal"
                       onClick={async () => {
-                        await revealItemInDir(resolvedWorktreePath);
+                        try {
+                          await revealPathInFileManager(resolvedWorktreePath);
+                        } catch (error) {
+                          const message =
+                            error instanceof Error ? error.message : String(error);
+                          pushErrorToast({
+                            title: "Couldn't show worktree",
+                            message,
+                          });
+                        }
                       }}
                       data-tauri-drag-region="false"
                     >

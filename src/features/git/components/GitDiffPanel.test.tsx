@@ -1,20 +1,33 @@
 /** @vitest-environment jsdom */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitLogEntry } from "../../../types";
 import { GitDiffPanel } from "./GitDiffPanel";
 import { fileManagerName } from "../../../utils/platformPaths";
 
+const isWebRuntimeMock = vi.hoisted(() => vi.fn(() => false));
 const menuNew = vi.hoisted(() =>
   vi.fn(async ({ items }) => ({ popup: vi.fn(), items })),
 );
 const menuItemNew = vi.hoisted(() => vi.fn(async (options) => options));
+const predefinedMenuItemNew = vi.hoisted(() => vi.fn(async (options) => options));
 const clipboardWriteText = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/menu", () => ({
   Menu: { new: menuNew },
   MenuItem: { new: menuItemNew },
+  PredefinedMenuItem: { new: predefinedMenuItemNew },
 }));
+
+vi.mock("@services/runtime", async () => {
+  const actual = await vi.importActual<typeof import("@services/runtime")>(
+    "@services/runtime",
+  );
+  return {
+    ...actual,
+    isWebRuntime: isWebRuntimeMock,
+  };
+});
 
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ scaleFactor: () => 1 }),
@@ -33,9 +46,10 @@ vi.mock("@tauri-apps/api/dpi", () => ({
 
 const revealItemInDir = vi.hoisted(() => vi.fn());
 
-vi.mock("@tauri-apps/plugin-opener", () => ({
+vi.mock("../../../services/openers", () => ({
   openUrl: vi.fn(),
-  revealItemInDir: (...args: unknown[]) => revealItemInDir(...args),
+  openExternalUrl: vi.fn(),
+  revealPathInFileManager: (...args: unknown[]) => revealItemInDir(...args),
 }));
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -68,6 +82,11 @@ const baseProps = {
 };
 
 describe("GitDiffPanel", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isWebRuntimeMock.mockReturnValue(false);
+  });
+
   it("shows an initialize git button when the repo is missing", () => {
     const onInitGitRepo = vi.fn();
     const { container } = render(
@@ -256,6 +275,32 @@ describe("GitDiffPanel", () => {
     await copyPathItem.action();
 
     expect(clipboardWriteText).toHaveBeenCalledWith("apps/src/sample.ts");
+  });
+
+  it("opens a web context menu for file rows in web runtime", async () => {
+    isWebRuntimeMock.mockReturnValue(true);
+    const { container } = render(
+      <GitDiffPanel
+        {...baseProps}
+        workspacePath="/tmp/repo"
+        gitRoot="/tmp/repo"
+        unstagedFiles={[
+          { path: "src/sample.ts", status: "M", additions: 1, deletions: 0 },
+        ]}
+      />,
+    );
+
+    const row = container.querySelector(".diff-row");
+    expect(row).not.toBeNull();
+    fireEvent.contextMenu(row as Element);
+
+    expect(menuNew).not.toHaveBeenCalled();
+    expect(await screen.findByRole("menuitem", { name: "Copy file path" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Copy file path" }));
+
+    await waitFor(() => {
+      expect(clipboardWriteText).toHaveBeenCalledWith("src/sample.ts");
+    });
   });
 
   it("does not trim paths when the git root only shares a prefix", async () => {

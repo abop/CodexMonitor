@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
-import { act, renderHook } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { openWorkspaceIn } from "../../../services/tauri";
 import { fileTarget } from "../test/fileLinkAssertions";
 import { useFileLinkOpener } from "./useFileLinkOpener";
+
+const isWebRuntimeMock = vi.hoisted(() => vi.fn(() => false));
 
 const {
   menuNewMock,
@@ -22,6 +24,16 @@ const {
 vi.mock("../../../services/tauri", () => ({
   openWorkspaceIn: vi.fn(),
 }));
+
+vi.mock("@services/runtime", async () => {
+  const actual = await vi.importActual<typeof import("@services/runtime")>(
+    "@services/runtime",
+  );
+  return {
+    ...actual,
+    isWebRuntime: isWebRuntimeMock,
+  };
+});
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
   revealItemInDir: vi.fn(),
@@ -49,9 +61,31 @@ vi.mock("../../../services/toasts", () => ({
   pushErrorToast: vi.fn(),
 }));
 
+type FileLinkOpenerApi = ReturnType<typeof useFileLinkOpener>;
+
+function FileLinkOpenerHarness({
+  onReady,
+}: {
+  onReady: (api: FileLinkOpenerApi) => void;
+}) {
+  const api = useFileLinkOpener(null, [], "");
+  onReady(api);
+  return <>{api.fileLinkContextMenu}</>;
+}
+
+function makeMenuEvent() {
+  return {
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
+    clientX: 12,
+    clientY: 24,
+  } as never;
+}
+
 describe("useFileLinkOpener", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    isWebRuntimeMock.mockReturnValue(false);
   });
 
   async function copyLinkFor(rawPath: string) {
@@ -70,15 +104,7 @@ describe("useFileLinkOpener", () => {
     const { result } = renderHook(() => useFileLinkOpener(null, [], ""));
 
     await act(async () => {
-      await result.current.showFileLinkMenu(
-        {
-          preventDefault: vi.fn(),
-          stopPropagation: vi.fn(),
-          clientX: 12,
-          clientY: 24,
-        } as never,
-        fileTarget(rawPath),
-      );
+      await result.current.showFileLinkMenu(makeMenuEvent(), fileTarget(rawPath));
     });
 
     const items = menuNewMock.mock.calls[0]?.[0]?.items ?? [];
@@ -89,6 +115,37 @@ describe("useFileLinkOpener", () => {
     await copyLinkItem?.action?.();
     return clipboardWriteTextMock.mock.calls[0]?.[0];
   }
+
+  it("opens a web context menu for file links in web runtime", async () => {
+    isWebRuntimeMock.mockReturnValue(true);
+    const clipboardWriteTextMock = vi.fn();
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: clipboardWriteTextMock },
+      configurable: true,
+    });
+    let api: FileLinkOpenerApi | null = null;
+    render(
+      <FileLinkOpenerHarness
+        onReady={(next) => {
+          api = next;
+        }}
+      />,
+    );
+
+    await act(async () => {
+      await api?.showFileLinkMenu(makeMenuEvent(), fileTarget("src/App.tsx:12"));
+    });
+
+    expect(menuNewMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("menuitem", { name: "Open in Visual Studio Code" })).toBeTruthy();
+    const copyLinkItem = screen.getByRole("menuitem", { name: "Copy Link" });
+
+    fireEvent.click(copyLinkItem);
+
+    await waitFor(() => {
+      expect(clipboardWriteTextMock).toHaveBeenCalledWith("src/App.tsx#L12");
+    });
+  });
 
   it("copies namespace-prefixed Windows drive paths as round-trippable file URLs", async () => {
     expect(await copyLinkFor("\\\\?\\C:\\repo\\src\\App.tsx:42")).toBe(
