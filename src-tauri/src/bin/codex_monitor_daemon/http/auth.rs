@@ -21,6 +21,21 @@ fn is_local_browser_origin(origin: &str) -> bool {
         || origin.starts_with("https://localhost:")
 }
 
+fn origin_matches_allowed_entry(origin: &str, entry: &str) -> bool {
+    if entry == origin {
+        return true;
+    }
+    let Some(host_suffix) = entry.strip_prefix("https://*.") else {
+        return false;
+    };
+    let Some(origin_host) = origin.strip_prefix("https://") else {
+        return false;
+    };
+    origin_host.len() > host_suffix.len()
+        && origin_host.ends_with(host_suffix)
+        && origin_host.as_bytes()[origin_host.len() - host_suffix.len() - 1] == b'.'
+}
+
 pub(crate) fn resolve_allowed_origin(
     headers: &HeaderMap,
     config: &DaemonConfig,
@@ -35,7 +50,7 @@ pub(crate) fn resolve_allowed_origin(
         || config
             .allowed_origins
             .iter()
-            .any(|entry| entry == origin_value);
+            .any(|entry| origin_matches_allowed_entry(origin_value, entry));
     if !allowed {
         return Err((StatusCode::FORBIDDEN, "daemon denied origin".to_string()));
     }
@@ -133,7 +148,7 @@ pub(crate) fn error_response(
 
 #[cfg(test)]
 mod tests {
-    use super::require_http_auth;
+    use super::{require_http_auth, resolve_allowed_origin};
     use crate::DaemonConfig;
     use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -148,6 +163,48 @@ mod tests {
             allowed_origins: vec![],
             require_cf_access_header: false,
         }
+    }
+
+    #[test]
+    fn accepts_allowed_wildcard_https_subdomain_origin() {
+        let mut config = test_config();
+        config
+            .allowed_origins
+            .push("https://*.codex-monitor-web.pages.dev".to_string());
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::ORIGIN,
+            HeaderValue::from_static("https://pr-9.codex-monitor-web.pages.dev"),
+        );
+
+        let result = resolve_allowed_origin(&headers, &config);
+
+        assert_eq!(
+            result,
+            Ok(Some(HeaderValue::from_static(
+                "https://pr-9.codex-monitor-web.pages.dev"
+            )))
+        );
+    }
+
+    #[test]
+    fn rejects_wildcard_origin_without_required_subdomain_boundary() {
+        let mut config = test_config();
+        config
+            .allowed_origins
+            .push("https://*.codex-monitor-web.pages.dev".to_string());
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::ORIGIN,
+            HeaderValue::from_static("https://evilcodex-monitor-web.pages.dev"),
+        );
+
+        let result = resolve_allowed_origin(&headers, &config);
+
+        assert_eq!(
+            result,
+            Err((StatusCode::FORBIDDEN, "daemon denied origin".to_string()))
+        );
     }
 
     #[test]
