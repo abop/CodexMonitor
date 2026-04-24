@@ -3,6 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import type { Options as NotificationOptions } from "@tauri-apps/plugin-notification";
 import { backendRpc } from "./backend/http";
 import { pickBrowserImageFiles } from "./browserFiles";
+import { createWebLocalPathUnsupportedError } from "./runtimeErrors";
 import { isWebRuntime, readRuntimeConfig } from "./runtime";
 import type {
   AccessMode,
@@ -81,6 +82,9 @@ function isWebNoopCommand(command: string) {
 }
 
 function unsupportedInWeb(command: string): Error {
+  if (command === "open_workspace_in") {
+    return createWebLocalPathUnsupportedError();
+  }
   return new Error(`${command} is not available in the web runtime.`);
 }
 

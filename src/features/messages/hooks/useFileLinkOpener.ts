@@ -1,13 +1,14 @@
 import { useCallback } from "react";
 import type { MouseEvent } from "react";
-import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import * as Sentry from "@sentry/react";
 import { openWorkspaceIn } from "../../../services/tauri";
+import { revealPathInFileManager } from "../../../services/openers";
 import { pushErrorToast } from "../../../services/toasts";
 import type { OpenAppTarget } from "../../../types";
+import {
+  type RuntimeContextMenuItem,
+  useRuntimeContextMenu,
+} from "../../design-system/components/popover/useRuntimeContextMenu";
 import {
   type ParsedFileLocation,
   formatFileLocation,
@@ -97,6 +98,12 @@ export function useFileLinkOpener(
   openTargets: OpenAppTarget[],
   selectedOpenAppId: string,
 ) {
+  const { showContextMenu, menuNode: fileLinkContextMenu } =
+    useRuntimeContextMenu({
+      width: 220,
+      className: "message-file-link-context-menu",
+    });
+
   const reportOpenError = useCallback(
     (error: unknown, context: Record<string, string | null>) => {
       const message = error instanceof Error ? error.message : String(error);
@@ -135,7 +142,7 @@ export function useFileLinkOpener(
           return;
         }
         if (target.kind === "finder") {
-          await revealItemInDir(resolvedPath);
+          await revealPathInFileManager(resolvedPath);
           return;
         }
 
@@ -178,8 +185,6 @@ export function useFileLinkOpener(
 
   const showFileLinkMenu = useCallback(
     async (event: MouseEvent, targetLocation: ParsedFileLocation) => {
-      event.preventDefault();
-      event.stopPropagation();
       const target = resolveOpenTarget(openTargets, selectedOpenAppId);
       const { fileLocation, rawPathLabel, resolvedPath } = resolveFileLinkContext(
         targetLocation,
@@ -198,22 +203,24 @@ export function useFileLinkOpener(
             : appName
               ? `Open in ${appName}`
               : "Set app name in Settings";
-      const items = [
-        await MenuItem.new({
+      const items: RuntimeContextMenuItem[] = [
+        {
+          id: "open",
           text: openLabel,
           enabled: canOpen,
           action: async () => {
             await openFileLink(fileLocation);
           },
-        }),
+        },
         ...(target.kind === "finder"
           ? []
           : [
-              await MenuItem.new({
+              {
+                id: "reveal",
                 text: revealInFileManagerLabel(),
                 action: async () => {
                   try {
-                    await revealItemInDir(resolvedPath);
+                    await revealPathInFileManager(resolvedPath);
                   } catch (error) {
                     reportOpenError(error, {
                       rawPath: rawPathLabel,
@@ -226,13 +233,15 @@ export function useFileLinkOpener(
                     });
                   }
                 },
-              }),
+              },
             ]),
-        await MenuItem.new({
+        {
+          id: "download",
           text: "Download Linked File",
           enabled: false,
-        }),
-        await MenuItem.new({
+        },
+        {
+          id: "copy-link",
           text: "Copy Link",
           action: async () => {
             const link = toFileUrl(resolvedPath, fileLocation.line, fileLocation.column);
@@ -242,18 +251,22 @@ export function useFileLinkOpener(
               // Clipboard failures are non-fatal here.
             }
           },
-        }),
-        await PredefinedMenuItem.new({ item: "Separator" }),
-        await PredefinedMenuItem.new({ item: "Services" }),
+        },
+        { id: "separator", kind: "separator" },
+        { id: "services", kind: "services" },
       ];
 
-      const menu = await Menu.new({ items });
-      const window = getCurrentWindow();
-      const position = new LogicalPosition(event.clientX, event.clientY);
-      await menu.popup(position, window);
+      await showContextMenu(event, items);
     },
-    [openFileLink, openTargets, reportOpenError, selectedOpenAppId, workspacePath],
+    [
+      openFileLink,
+      openTargets,
+      reportOpenError,
+      selectedOpenAppId,
+      showContextMenu,
+      workspacePath,
+    ],
   );
 
-  return { openFileLink, showFileLinkMenu };
+  return { openFileLink, showFileLinkMenu, fileLinkContextMenu };
 }

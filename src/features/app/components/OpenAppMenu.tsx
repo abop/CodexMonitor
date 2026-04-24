@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import * as Sentry from "@sentry/react";
 import { openWorkspaceIn } from "../../../services/tauri";
+import { revealPathInFileManager } from "../../../services/openers";
 import { pushErrorToast } from "../../../services/toasts";
 import type { OpenAppTarget } from "../../../types";
 import {
@@ -131,7 +131,7 @@ export function OpenAppMenu({
   const openWithTarget = async (target: OpenTarget) => {
     try {
       if (target.target.kind === "finder") {
-        await revealItemInDir(path);
+        await revealPathInFileManager(path);
         return;
       }
       if (target.target.kind === "command") {

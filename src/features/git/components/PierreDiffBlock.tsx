@@ -53,9 +53,8 @@ export function PierreDiffBlock({
       ...parsed,
       name: normalizedName,
       prevName: normalizedPrevName,
-      deletionLines: oldLines ?? parsed.deletionLines,
-      additionLines: newLines ?? parsed.additionLines,
-      isPartial: oldLines || newLines ? false : parsed.isPartial,
+      oldLines: oldLines ?? parsed.oldLines,
+      newLines: newLines ?? parsed.newLines,
     } satisfies FileDiffMetadata;
   }, [diff, displayPath, oldLines, newLines]);
 

@@ -3,10 +3,6 @@ import type { MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { Menu, MenuItem } from "@tauri-apps/api/menu";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import Plus from "lucide-react/dist/esm/icons/plus";
 import ChevronsUpDown from "lucide-react/dist/esm/icons/chevrons-up-down";
 import File from "lucide-react/dist/esm/icons/file";
@@ -14,11 +10,17 @@ import Folder from "lucide-react/dist/esm/icons/folder";
 import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import Search from "lucide-react/dist/esm/icons/search";
 import type { PanelTabId } from "../../layout/components/PanelTabs";
+import { revealPathInFileManager } from "../../../services/openers";
+import { pushErrorToast } from "../../../services/toasts";
 import { PanelShell } from "../../layout/components/PanelShell";
 import {
   PanelMeta,
   PanelSearchField,
 } from "../../design-system/components/panel/PanelPrimitives";
+import {
+  type RuntimeContextMenuItem,
+  useRuntimeContextMenu,
+} from "../../design-system/components/popover/useRuntimeContextMenu";
 import { readWorkspaceFile } from "../../../services/tauri";
 import type { OpenAppTarget } from "../../../types";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
@@ -199,6 +201,10 @@ export function FileTreePanel({
   const hasManualToggle = useRef(false);
   const showLoading = isLoading && files.length === 0;
   const listRef = useRef<HTMLDivElement | null>(null);
+  const { showContextMenu, menuNode: fileTreeContextMenu } =
+    useRuntimeContextMenu({
+      className: "file-tree-context-menu",
+    });
   const debouncedQuery = useDebouncedValue(query, 150);
   const normalizedQuery = debouncedQuery.trim().toLowerCase();
   const modifiedPathSet = useMemo(() => new Set(modifiedFiles), [modifiedFiles]);
@@ -551,33 +557,37 @@ export function FileTreePanel({
 
   const showMenu = useCallback(
     async (event: MouseEvent<HTMLButtonElement>, relativePath: string) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const menu = await Menu.new({
-        items: [
-          await MenuItem.new({
-            text: "Add to chat",
-            enabled: canInsertText,
-            action: async () => {
-              if (!canInsertText) {
-                return;
-              }
-              onInsertText?.(relativePath);
-            },
-          }),
-          await MenuItem.new({
-            text: revealInFileManagerLabel(),
-            action: async () => {
-              await revealItemInDir(resolvePath(relativePath));
-            },
-          }),
-        ],
-      });
-      const window = getCurrentWindow();
-      const position = new LogicalPosition(event.clientX, event.clientY);
-      await menu.popup(position, window);
+      const items: RuntimeContextMenuItem[] = [
+        {
+          id: "add-to-chat",
+          text: "Add to chat",
+          enabled: canInsertText,
+          action: async () => {
+            if (!canInsertText) {
+              return;
+            }
+            onInsertText?.(relativePath);
+          },
+        },
+        {
+          id: "reveal",
+          text: revealInFileManagerLabel(),
+          action: async () => {
+            try {
+              await revealPathInFileManager(resolvePath(relativePath));
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              pushErrorToast({
+                title: "Couldn't show file",
+                message,
+              });
+            }
+          },
+        },
+      ];
+      await showContextMenu(event, items);
     },
-    [canInsertText, onInsertText, resolvePath],
+    [canInsertText, onInsertText, resolvePath, showContextMenu],
   );
 
   const renderRow = (entry: FileTreeRowEntry) => {
@@ -800,6 +810,7 @@ export function FileTreePanel({
             document.body,
           )
         : null}
+      {fileTreeContextMenu}
     </PanelShell>
   );
 }

@@ -1,10 +1,6 @@
 import type { GitHubIssue, GitHubPullRequest, GitLogEntry } from "../../../types";
 import type { MouseEvent as ReactMouseEvent } from "react";
-import { Menu, MenuItem } from "@tauri-apps/api/menu";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask } from "@tauri-apps/plugin-dialog";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import FileText from "lucide-react/dist/esm/icons/file-text";
 import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import ScrollText from "lucide-react/dist/esm/icons/scroll-text";
@@ -12,6 +8,14 @@ import Search from "lucide-react/dist/esm/icons/search";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PanelTabId } from "../../layout/components/PanelTabs";
 import { PanelShell } from "../../layout/components/PanelShell";
+import {
+  type RuntimeContextMenuItem,
+  useRuntimeContextMenu,
+} from "../../design-system/components/popover/useRuntimeContextMenu";
+import {
+  openExternalUrl,
+  revealPathInFileManager,
+} from "../../../services/openers";
 import { pushErrorToast } from "../../../services/toasts";
 import {
   fileManagerName,
@@ -246,6 +250,10 @@ export function GitDiffPanel({
     unstagedFiles,
     onSelectFile,
   });
+  const { showContextMenu, menuNode: gitContextMenu } = useRuntimeContextMenu({
+    width: 210,
+    className: "git-context-menu",
+  });
 
   const ModeIcon = useMemo(() => {
     switch (mode) {
@@ -291,53 +299,44 @@ export function GitDiffPanel({
 
   const showLogMenu = useCallback(
     async (event: ReactMouseEvent<HTMLDivElement>, entry: GitLogEntry) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      const copyItem = await MenuItem.new({
-        text: "Copy SHA",
-        action: async () => {
-          await navigator.clipboard.writeText(entry.sha);
+      const items: RuntimeContextMenuItem[] = [
+        {
+          id: "copy-sha",
+          text: "Copy SHA",
+          action: async () => {
+            await navigator.clipboard.writeText(entry.sha);
+          },
         },
-      });
+      ];
 
-      const items = [copyItem];
       if (githubBaseUrl) {
-        const openItem = await MenuItem.new({
+        items.push({
+          id: "open-github",
           text: "Open on GitHub",
           action: async () => {
-            await openUrl(`${githubBaseUrl}/commit/${entry.sha}`);
+            await openExternalUrl(`${githubBaseUrl}/commit/${entry.sha}`);
           },
         });
-        items.push(openItem);
       }
 
-      const menu = await Menu.new({ items });
-      const window = getCurrentWindow();
-      const position = new LogicalPosition(event.clientX, event.clientY);
-      await menu.popup(position, window);
+      await showContextMenu(event, items);
     },
-    [githubBaseUrl],
+    [githubBaseUrl, showContextMenu],
   );
 
   const showPullRequestMenu = useCallback(
     async (event: ReactMouseEvent<HTMLDivElement>, pullRequest: GitHubPullRequest) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      const openItem = await MenuItem.new({
-        text: "Open on GitHub",
-        action: async () => {
-          await openUrl(pullRequest.url);
+      await showContextMenu(event, [
+        {
+          id: "open-github",
+          text: "Open on GitHub",
+          action: async () => {
+            await openExternalUrl(pullRequest.url);
+          },
         },
-      });
-
-      const menu = await Menu.new({ items: [openItem] });
-      const window = getCurrentWindow();
-      const position = new LogicalPosition(event.clientX, event.clientY);
-      await menu.popup(position, window);
+      ]);
     },
-    [],
+    [showContextMenu],
   );
 
   const discardFiles = useCallback(
@@ -381,9 +380,6 @@ export function GitDiffPanel({
       path: string,
       _section: "staged" | "unstaged",
     ) => {
-      event.preventDefault();
-      event.stopPropagation();
-
       const isInSelection = selectedFiles.has(path);
       const targetPaths = isInSelection && selectedFiles.size > 1 ? Array.from(selectedFiles) : [path];
 
@@ -409,32 +405,30 @@ export function GitDiffPanel({
         unstagedFiles.some((file) => file.path === targetPath),
       );
 
-      const items: MenuItem[] = [];
+      const items: RuntimeContextMenuItem[] = [];
 
       if (stagedPaths.length > 0 && onUnstageFile) {
-        items.push(
-          await MenuItem.new({
-            text: `Unstage file${stagedPaths.length > 1 ? `s (${stagedPaths.length})` : ""}`,
-            action: async () => {
-              for (const stagedPath of stagedPaths) {
-                await onUnstageFile(stagedPath);
-              }
-            },
-          }),
-        );
+        items.push({
+          id: "unstage",
+          text: `Unstage file${stagedPaths.length > 1 ? `s (${stagedPaths.length})` : ""}`,
+          action: async () => {
+            for (const stagedPath of stagedPaths) {
+              await onUnstageFile(stagedPath);
+            }
+          },
+        });
       }
 
       if (unstagedPaths.length > 0 && onStageFile) {
-        items.push(
-          await MenuItem.new({
-            text: `Stage file${unstagedPaths.length > 1 ? `s (${unstagedPaths.length})` : ""}`,
-            action: async () => {
-              for (const unstagedPath of unstagedPaths) {
-                await onStageFile(unstagedPath);
-              }
-            },
-          }),
-        );
+        items.push({
+          id: "stage",
+          text: `Stage file${unstagedPaths.length > 1 ? `s (${unstagedPaths.length})` : ""}`,
+          action: async () => {
+            for (const unstagedPath of unstagedPaths) {
+              await onStageFile(unstagedPath);
+            }
+          },
+        });
       }
 
       if (targetPaths.length === 1) {
@@ -447,70 +441,68 @@ export function GitDiffPanel({
           relativeRoot !== null ? joinRootAndPath(relativeRoot, rawPath) : rawPath;
         const fileName = getFileName(rawPath);
 
-        items.push(
-          await MenuItem.new({
-            text: `Show in ${fileManagerLabel}`,
-            action: async () => {
-              try {
-                if (!resolvedRoot && !isAbsolutePathForPlatform(absolutePath)) {
-                  pushErrorToast({
-                    title: `Couldn't show file in ${fileManagerLabel}`,
-                    message: "Select a git root first.",
-                  });
-                  return;
-                }
-                const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
-                await revealItemInDir(absolutePath);
-              } catch (menuError) {
-                const message = menuError instanceof Error ? menuError.message : String(menuError);
+        items.push({
+          id: "show",
+          text: `Show in ${fileManagerLabel}`,
+          action: async () => {
+            try {
+              if (!resolvedRoot && !isAbsolutePathForPlatform(absolutePath)) {
                 pushErrorToast({
                   title: `Couldn't show file in ${fileManagerLabel}`,
-                  message,
+                  message: "Select a git root first.",
                 });
-                console.warn("Failed to reveal file", {
-                  message,
-                  path: absolutePath,
-                });
+                return;
               }
-            },
-          }),
-        );
+              await revealPathInFileManager(absolutePath);
+            } catch (menuError) {
+              const message = menuError instanceof Error ? menuError.message : String(menuError);
+              pushErrorToast({
+                title: `Couldn't show file in ${fileManagerLabel}`,
+                message,
+              });
+              console.warn("Failed to reveal file", {
+                message,
+                path: absolutePath,
+              });
+            }
+          },
+        });
 
         items.push(
-          await MenuItem.new({
+          {
+            id: "copy-name",
             text: "Copy file name",
             action: async () => {
               await navigator.clipboard.writeText(fileName);
             },
-          }),
-          await MenuItem.new({
+          },
+          {
+            id: "copy-path",
             text: "Copy file path",
             action: async () => {
               await navigator.clipboard.writeText(projectRelativePath);
             },
-          }),
+          },
         );
       }
 
       if (onRevertFile) {
-        items.push(
-          await MenuItem.new({
-            text: `Discard change${plural}${countSuffix}`,
-            action: async () => {
-              await discardFiles(targetPaths);
-            },
-          }),
-        );
+        items.push({
+          id: "discard",
+          text: `Discard change${plural}${countSuffix}`,
+          action: async () => {
+            await discardFiles(targetPaths);
+          },
+        });
       }
 
       if (!items.length) {
+        event.preventDefault();
+        event.stopPropagation();
         return;
       }
 
-      const menu = await Menu.new({ items });
-      const window = getCurrentWindow();
-      const position = new LogicalPosition(event.clientX, event.clientY);
-      await menu.popup(position, window);
+      await showContextMenu(event, items);
     },
     [
       selectedFiles,
@@ -524,6 +516,7 @@ export function GitDiffPanel({
       gitRoot,
       gitRootCandidates,
       workspacePath,
+      showContextMenu,
     ],
   );
 
@@ -806,6 +799,7 @@ export function GitDiffPanel({
           }
         />
       )}
+      {gitContextMenu}
     </PanelShell>
   );
 }
