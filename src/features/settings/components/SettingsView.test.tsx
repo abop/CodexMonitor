@@ -85,7 +85,7 @@ const baseSettings: AppSettings = {
   ],
   activeRemoteBackendId: "remote-default",
   keepDaemonRunningAfterAppClose: false,
-  defaultAccessMode: "current",
+  defaultAccessMode: "default",
   reviewDeliveryMode: "inline",
   composerModelShortcut: null,
   composerAccessShortcut: null,

@@ -7,6 +7,7 @@ import {
   type ClipboardEvent,
 } from "react";
 import type {
+  AccessMode,
   AppMention,
   AppOption,
   ComposerSendIntent,
@@ -74,8 +75,8 @@ type ComposerProps = {
   codexArgsOptions?: CodexArgsOption[];
   selectedCodexArgsOverride?: string | null;
   onSelectCodexArgsOverride?: (value: string | null) => void;
-  accessMode: "read-only" | "current" | "full-access";
-  onSelectAccessMode: (mode: "read-only" | "current" | "full-access") => void;
+  accessMode: AccessMode;
+  onSelectAccessMode: (mode: AccessMode) => void;
   skills: { name: string; description?: string }[];
   apps: AppOption[];
   prompts: CustomPromptOption[];

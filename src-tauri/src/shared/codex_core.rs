@@ -471,6 +471,40 @@ pub(crate) fn insert_optional_nullable_string(
     }
 }
 
+struct AccessModeOverrides {
+    approval_policy: &'static str,
+    approvals_reviewer: &'static str,
+    sandbox_policy: Value,
+}
+
+fn resolve_access_mode_overrides(access_mode: &str, workspace_path: &str) -> AccessModeOverrides {
+    match access_mode {
+        "auto-review" => AccessModeOverrides {
+            approval_policy: "on-request",
+            approvals_reviewer: "auto_review",
+            sandbox_policy: json!({
+                "type": "workspaceWrite",
+                "writableRoots": [workspace_path],
+                "networkAccess": true
+            }),
+        },
+        "full-access" => AccessModeOverrides {
+            approval_policy: "never",
+            approvals_reviewer: "user",
+            sandbox_policy: json!({ "type": "dangerFullAccess" }),
+        },
+        _ => AccessModeOverrides {
+            approval_policy: "on-request",
+            approvals_reviewer: "user",
+            sandbox_policy: json!({
+                "type": "workspaceWrite",
+                "writableRoots": [workspace_path],
+                "networkAccess": true
+            }),
+        },
+    }
+}
+
 pub(crate) async fn send_user_message_core(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
@@ -487,22 +521,9 @@ pub(crate) async fn send_user_message_core(
 ) -> Result<Value, String> {
     let session = get_session_clone(sessions, &workspace_id).await?;
     let workspace_path = resolve_workspace_path_core(workspaces, &workspace_id).await?;
-    let access_mode = access_mode.unwrap_or_else(|| "current".to_string());
-    let sandbox_policy = match access_mode.as_str() {
-        "full-access" => json!({ "type": "dangerFullAccess" }),
-        "read-only" => json!({ "type": "readOnly" }),
-        _ => json!({
-            "type": "workspaceWrite",
-            "writableRoots": [workspace_path.clone()],
-            "networkAccess": true
-        }),
-    };
-
-    let approval_policy = if access_mode == "full-access" {
-        "never"
-    } else {
-        "on-request"
-    };
+    let access_mode = access_mode.unwrap_or_else(|| "default".to_string());
+    let access_mode_overrides =
+        resolve_access_mode_overrides(access_mode.as_str(), workspace_path.as_str());
 
     let input = build_turn_input_items(text, images, app_mentions)?;
 
@@ -510,8 +531,18 @@ pub(crate) async fn send_user_message_core(
     params.insert("threadId".to_string(), json!(thread_id));
     params.insert("input".to_string(), json!(input));
     params.insert("cwd".to_string(), json!(workspace_path));
-    params.insert("approvalPolicy".to_string(), json!(approval_policy));
-    params.insert("sandboxPolicy".to_string(), json!(sandbox_policy));
+    params.insert(
+        "approvalPolicy".to_string(),
+        json!(access_mode_overrides.approval_policy),
+    );
+    params.insert(
+        "approvalsReviewer".to_string(),
+        json!(access_mode_overrides.approvals_reviewer),
+    );
+    params.insert(
+        "sandboxPolicy".to_string(),
+        access_mode_overrides.sandbox_policy,
+    );
     params.insert("model".to_string(), json!(model));
     params.insert("effort".to_string(), json!(effort));
     insert_optional_nullable_string(&mut params, "serviceTier", service_tier);
@@ -1021,6 +1052,53 @@ mod tests {
 
         insert_optional_nullable_string(&mut params, "serviceTier", Some(Some("fast".to_string())));
         assert_eq!(params.get("serviceTier"), Some(&json!("fast")));
+    }
+
+    #[test]
+    fn resolve_access_mode_overrides_matches_codex_permission_profiles() {
+        let default_mode = resolve_access_mode_overrides("default", "/tmp/project");
+        assert_eq!(default_mode.approval_policy, "on-request");
+        assert_eq!(default_mode.approvals_reviewer, "user");
+        assert_eq!(
+            default_mode.sandbox_policy,
+            json!({
+                "type": "workspaceWrite",
+                "writableRoots": ["/tmp/project"],
+                "networkAccess": true
+            })
+        );
+
+        let auto_review_mode = resolve_access_mode_overrides("auto-review", "/tmp/project");
+        assert_eq!(auto_review_mode.approval_policy, "on-request");
+        assert_eq!(auto_review_mode.approvals_reviewer, "auto_review");
+        assert_eq!(
+            auto_review_mode.sandbox_policy,
+            json!({
+                "type": "workspaceWrite",
+                "writableRoots": ["/tmp/project"],
+                "networkAccess": true
+            })
+        );
+
+        let full_access_mode = resolve_access_mode_overrides("full-access", "/tmp/project");
+        assert_eq!(full_access_mode.approval_policy, "never");
+        assert_eq!(full_access_mode.approvals_reviewer, "user");
+        assert_eq!(
+            full_access_mode.sandbox_policy,
+            json!({ "type": "dangerFullAccess" })
+        );
+    }
+
+    #[test]
+    fn resolve_access_mode_overrides_maps_legacy_values_to_default() {
+        let current_mode = resolve_access_mode_overrides("current", "/tmp/project");
+        let read_only_mode = resolve_access_mode_overrides("read-only", "/tmp/project");
+
+        assert_eq!(current_mode.approval_policy, "on-request");
+        assert_eq!(current_mode.approvals_reviewer, "user");
+        assert_eq!(read_only_mode.approval_policy, "on-request");
+        assert_eq!(read_only_mode.approvals_reviewer, "user");
+        assert_eq!(current_mode.sandbox_policy, read_only_mode.sandbox_policy);
     }
 
     #[test]

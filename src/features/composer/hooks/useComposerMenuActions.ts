@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { AccessMode } from "../../../types";
+import { ACCESS_MODE_ORDER } from "@utils/accessMode";
 import { useTauriEvent } from "../../app/hooks/useTauriEvent";
 import {
   subscribeMenuCycleAccessMode,
@@ -25,8 +26,6 @@ type UseComposerMenuActionsOptions = {
   reasoningSupported: boolean;
   onFocusComposer?: () => void;
 };
-
-const ACCESS_ORDER: AccessMode[] = ["read-only", "current", "full-access"];
 
 export function useComposerMenuActions({
   models,
@@ -58,10 +57,10 @@ export function useComposerMenuActions({
         }
       },
       cycleAccessMode() {
-        const currentIndex = ACCESS_ORDER.indexOf(accessMode);
+        const currentIndex = ACCESS_MODE_ORDER.indexOf(accessMode);
         const nextIndex =
-          currentIndex >= 0 ? (currentIndex + 1) % ACCESS_ORDER.length : 0;
-        const nextAccess = ACCESS_ORDER[nextIndex];
+          currentIndex >= 0 ? (currentIndex + 1) % ACCESS_MODE_ORDER.length : 0;
+        const nextAccess = ACCESS_MODE_ORDER[nextIndex];
         if (nextAccess) {
           onFocusComposer?.();
           onSelectAccessMode(nextAccess);

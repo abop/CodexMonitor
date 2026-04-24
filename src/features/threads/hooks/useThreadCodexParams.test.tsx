@@ -89,7 +89,7 @@ describe("useThreadCodexParams", () => {
       expect.objectContaining({
         modelId: "gpt-4.1",
         effort: "medium",
-        accessMode: "current",
+        accessMode: "default",
         collaborationModeId: "default",
         updatedAt: 123,
       }),
@@ -130,11 +130,32 @@ describe("useThreadCodexParams", () => {
       modelId: "gpt-5",
       effort: "low",
       serviceTier: "fast",
-      accessMode: "current",
+      accessMode: "default",
       collaborationModeId: "default",
       codexArgsOverride: "--profile ws",
       updatedAt: 1,
     });
+  });
+
+  it("keeps supported auto-review access mode", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY_THREAD_CODEX_PARAMS,
+      JSON.stringify({
+        "ws-1:thread-auto-review": {
+          accessMode: "auto-review",
+          updatedAt: 5,
+        },
+      }),
+    );
+
+    const { result } = renderHook(() => useThreadCodexParams());
+
+    expect(result.current.getThreadCodexParams("ws-1", "thread-auto-review")).toEqual(
+      expect.objectContaining({
+        accessMode: "auto-review",
+        updatedAt: 5,
+      }),
+    );
   });
 
   it("deletes per-thread overrides", () => {

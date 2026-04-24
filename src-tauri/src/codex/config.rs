@@ -26,6 +26,14 @@ pub(crate) fn read_personality() -> Result<Option<String>, String> {
     Ok(read_personality_from_document(&document))
 }
 
+pub(crate) fn read_approvals_reviewer() -> Result<Option<String>, String> {
+    let Some(root) = resolve_default_codex_home() else {
+        return Ok(None);
+    };
+    let (_, document) = config_toml_core::load_global_config_document(&root)?;
+    Ok(read_approvals_reviewer_from_document(&document))
+}
+
 pub(crate) fn write_steer_enabled(enabled: bool) -> Result<(), String> {
     write_feature_flag("steer", enabled)
 }
@@ -60,6 +68,16 @@ pub(crate) fn write_personality(personality: &str) -> Result<(), String> {
     let (_, mut document) = config_toml_core::load_global_config_document(&root)?;
     let normalized = normalize_personality_value(personality);
     config_toml_core::set_top_level_string(&mut document, "personality", normalized);
+    config_toml_core::persist_global_config_document(&root, &document)
+}
+
+pub(crate) fn write_approvals_reviewer(reviewer: &str) -> Result<(), String> {
+    let Some(root) = resolve_default_codex_home() else {
+        return Ok(());
+    };
+    let (_, mut document) = config_toml_core::load_global_config_document(&root)?;
+    let normalized = normalize_approvals_reviewer_value(reviewer);
+    config_toml_core::set_top_level_string(&mut document, "approvals_reviewer", normalized);
     config_toml_core::persist_global_config_document(&root, &document)
 }
 
@@ -104,6 +122,13 @@ fn read_personality_from_document(document: &toml_edit::Document) -> Option<Stri
         .map(|value| value.to_string())
 }
 
+fn read_approvals_reviewer_from_document(document: &toml_edit::Document) -> Option<String> {
+    config_toml_core::read_top_level_string(document, "approvals_reviewer")
+        .as_deref()
+        .and_then(normalize_approvals_reviewer_value)
+        .map(|value| value.to_string())
+}
+
 fn normalize_personality_value(value: &str) -> Option<&'static str> {
     match value.trim().to_ascii_lowercase().as_str() {
         "friendly" => Some("friendly"),
@@ -112,9 +137,20 @@ fn normalize_personality_value(value: &str) -> Option<&'static str> {
     }
 }
 
+fn normalize_approvals_reviewer_value(value: &str) -> Option<&'static str> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "user" => Some("user"),
+        "auto_review" | "guardian_subagent" => Some("auto_review"),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{normalize_personality_value, read_personality_from_document};
+    use super::{
+        normalize_approvals_reviewer_value, normalize_personality_value,
+        read_approvals_reviewer_from_document, read_personality_from_document,
+    };
     use crate::shared::config_toml_core;
 
     #[test]
@@ -142,5 +178,44 @@ mod tests {
         assert_eq!(normalize_personality_value("Friendly"), Some("friendly"));
         assert_eq!(normalize_personality_value("PRAGMATIC"), Some("pragmatic"));
         assert_eq!(normalize_personality_value("unknown"), None);
+    }
+
+    #[test]
+    fn parse_approvals_reviewer_reads_supported_values() {
+        let user =
+            config_toml_core::parse_document("approvals_reviewer = \"user\"\n").expect("parse");
+        let auto_review =
+            config_toml_core::parse_document("approvals_reviewer = \"auto_review\"\n")
+                .expect("parse");
+        let guardian =
+            config_toml_core::parse_document("approvals_reviewer = \"guardian_subagent\"\n")
+                .expect("parse");
+
+        assert_eq!(
+            read_approvals_reviewer_from_document(&user),
+            Some("user".to_string())
+        );
+        assert_eq!(
+            read_approvals_reviewer_from_document(&auto_review),
+            Some("auto_review".to_string())
+        );
+        assert_eq!(
+            read_approvals_reviewer_from_document(&guardian),
+            Some("auto_review".to_string())
+        );
+    }
+
+    #[test]
+    fn normalize_approvals_reviewer_is_case_insensitive_and_accepts_legacy() {
+        assert_eq!(normalize_approvals_reviewer_value("USER"), Some("user"));
+        assert_eq!(
+            normalize_approvals_reviewer_value("guardian_subagent"),
+            Some("auto_review")
+        );
+        assert_eq!(
+            normalize_approvals_reviewer_value("AUTO_REVIEW"),
+            Some("auto_review")
+        );
+        assert_eq!(normalize_approvals_reviewer_value("unknown"), None);
     }
 }

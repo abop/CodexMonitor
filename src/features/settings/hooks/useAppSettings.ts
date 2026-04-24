@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AppSettings } from "@/types";
 import { getAppSettings, runCodexDoctor, updateAppSettings } from "@services/tauri";
+import { normalizeAccessMode } from "@utils/accessMode";
 import { clampUiScale, UI_SCALE_DEFAULT } from "@utils/uiScale";
 import { CHAT_SCROLLBACK_DEFAULT, normalizeChatHistoryScrollbackItems } from "@utils/chatScrollback";
 import {
@@ -143,7 +144,7 @@ function buildDefaultSettings(): AppSettings {
     remoteBackends: [defaultRemote],
     activeRemoteBackendId: defaultRemote.id,
     keepDaemonRunningAfterAppClose: false,
-    defaultAccessMode: "current",
+    defaultAccessMode: "default",
     reviewDeliveryMode: "inline",
     composerModelShortcut: isMac ? "cmd+shift+m" : "ctrl+shift+m",
     composerAccessShortcut: isMac ? "cmd+shift+a" : "ctrl+shift+a",
@@ -246,6 +247,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     codexBin: settings.codexBin?.trim() ? settings.codexBin.trim() : null,
     codexArgs: settings.codexArgs?.trim() ? settings.codexArgs.trim() : null,
     uiScale: clampUiScale(settings.uiScale),
+    defaultAccessMode: normalizeAccessMode(settings.defaultAccessMode) ?? "default",
     theme: allowedThemes.has(settings.theme) ? settings.theme : "system",
     uiFontFamily: normalizeFontFamily(
       settings.uiFontFamily,

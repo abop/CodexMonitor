@@ -676,7 +676,7 @@ impl Default for RemoteBackendProvider {
 }
 
 fn default_access_mode() -> String {
-    "current".to_string()
+    "default".to_string()
 }
 
 fn default_review_delivery_mode() -> String {
@@ -1132,7 +1132,7 @@ impl Default for AppSettings {
             remote_backends: default_remote_backends(),
             active_remote_backend_id: None,
             keep_daemon_running_after_app_close: false,
-            default_access_mode: "current".to_string(),
+            default_access_mode: "default".to_string(),
             review_delivery_mode: default_review_delivery_mode(),
             composer_model_shortcut: default_composer_model_shortcut(),
             composer_access_shortcut: default_composer_access_shortcut(),
@@ -1232,7 +1232,7 @@ mod tests {
         assert!(settings.remote_backends.is_empty());
         assert!(settings.active_remote_backend_id.is_none());
         assert!(!settings.keep_daemon_running_after_app_close);
-        assert_eq!(settings.default_access_mode, "current");
+        assert_eq!(settings.default_access_mode, "default");
         assert_eq!(settings.review_delivery_mode, "inline");
         let expected_primary = if cfg!(target_os = "macos") {
             "cmd"

@@ -32,6 +32,7 @@ describe("useAppSettings", () => {
   it("loads settings and normalizes theme + uiScale", async () => {
     getAppSettingsMock.mockResolvedValue(
       ({
+        defaultAccessMode: "current",
         uiScale: UI_SCALE_MAX + 1,
         theme: "nope" as unknown as AppSettings["theme"],
         backendMode: "remote",
@@ -53,6 +54,7 @@ describe("useAppSettings", () => {
     expect(result.current.settings.codeFontFamily).toContain("ui-monospace");
     expect(result.current.settings.codeFontSize).toBe(16);
     expect(result.current.settings.personality).toBe("friendly");
+    expect(result.current.settings.defaultAccessMode).toBe("default");
     expect(result.current.settings.backendMode).toBe("remote");
     expect(result.current.settings.remoteBackendHost).toBe("example:1234");
   });
@@ -69,6 +71,7 @@ describe("useAppSettings", () => {
     expect(result.current.settings.uiFontFamily).toContain("system-ui");
     expect(result.current.settings.codeFontFamily).toContain("ui-monospace");
     expect(result.current.settings.backendMode).toBe("local");
+    expect(result.current.settings.defaultAccessMode).toBe("default");
     expect(result.current.settings.dictationModelId).toBe("base");
     expect(result.current.settings.interruptShortcut).toBeTruthy();
   });
@@ -158,5 +161,17 @@ describe("useAppSettings", () => {
     await expect(result.current.doctor("/bin/codex", null)).resolves.toEqual(
       response,
     );
+  });
+
+  it("preserves supported auto-review mode", async () => {
+    getAppSettingsMock.mockResolvedValue({
+      defaultAccessMode: "auto-review",
+    } as AppSettings);
+
+    const { result } = renderHook(() => useAppSettings());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.defaultAccessMode).toBe("auto-review");
   });
 });

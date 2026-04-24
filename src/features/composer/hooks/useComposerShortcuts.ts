@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { AccessMode } from "../../../types";
+import { ACCESS_MODE_ORDER } from "@utils/accessMode";
 import { matchesShortcut } from "../../../utils/shortcuts";
 
 type ModelOption = { id: string; displayName: string; model: string };
@@ -23,8 +24,6 @@ type UseComposerShortcutsOptions = {
   onSelectEffort: (effort: string) => void;
   reasoningSupported: boolean;
 };
-
-const ACCESS_ORDER: AccessMode[] = ["read-only", "current", "full-access"];
 
 export function useComposerShortcuts({
   textareaRef,
@@ -68,9 +67,10 @@ export function useComposerShortcuts({
       }
       if (matchesShortcut(event, accessShortcut)) {
         event.preventDefault();
-        const currentIndex = ACCESS_ORDER.indexOf(accessMode);
-        const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % ACCESS_ORDER.length : 0;
-        const nextAccess = ACCESS_ORDER[nextIndex];
+        const currentIndex = ACCESS_MODE_ORDER.indexOf(accessMode);
+        const nextIndex =
+          currentIndex >= 0 ? (currentIndex + 1) % ACCESS_MODE_ORDER.length : 0;
+        const nextAccess = ACCESS_MODE_ORDER[nextIndex];
         if (nextAccess) {
           onSelectAccessMode(nextAccess);
         }
