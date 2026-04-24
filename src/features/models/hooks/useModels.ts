@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DebugEntry, ModelOption, WorkspaceInfo } from "../../../types";
 import { getConfigModel, getModelList } from "../../../services/tauri";
 import {
+  createConfigModelOption,
   normalizeEffortValue,
   parseModelListResponse,
 } from "../utils/modelListResponse";
@@ -13,8 +14,6 @@ type UseModelsOptions = {
   preferredEffort?: string | null;
   selectionKey?: string | null;
 };
-
-const CONFIG_MODEL_DESCRIPTION = "Configured in CODEX_HOME/config.toml";
 
 const findModelByIdOrModel = (
   models: ModelOption[],
@@ -213,16 +212,7 @@ export function useModels({
         if (hasConfigModel) {
           return dataFromServer;
         }
-        const configOption: ModelOption = {
-          id: configModelFromConfig,
-          model: configModelFromConfig,
-          displayName: `${configModelFromConfig} (config)`,
-          description: CONFIG_MODEL_DESCRIPTION,
-          supportedReasoningEfforts: [],
-          defaultReasoningEffort: null,
-          isDefault: false,
-        };
-        return [configOption, ...dataFromServer];
+        return [createConfigModelOption(configModelFromConfig), ...dataFromServer];
       })();
       setModels(data);
       lastFetchedWorkspaceId.current = workspaceId;

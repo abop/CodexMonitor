@@ -1,5 +1,14 @@
 import type { ModelOption } from "../../../types";
 
+const DEFAULT_GPT_REASONING_EFFORT = "medium";
+const GPT_REASONING_EFFORTS: ModelOption["supportedReasoningEfforts"] = [
+  { reasoningEffort: "low", description: "" },
+  { reasoningEffort: "medium", description: "" },
+  { reasoningEffort: "high", description: "" },
+  { reasoningEffort: "xhigh", description: "" },
+];
+const CONFIG_MODEL_DESCRIPTION = "Configured in CODEX_HOME/config.toml";
+
 export function normalizeEffortValue(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -70,6 +79,25 @@ function parseReasoningEfforts(item: Record<string, unknown>): ModelOption["supp
   }
 
   return [];
+}
+
+function isGptModelSlug(model: string) {
+  return /^gpt-[A-Za-z0-9][A-Za-z0-9._-]*$/i.test(model.trim());
+}
+
+export function createConfigModelOption(model: string): ModelOption {
+  const supportsReasoning = isGptModelSlug(model);
+  return {
+    id: model,
+    model,
+    displayName: `${model} (config)`,
+    description: CONFIG_MODEL_DESCRIPTION,
+    // Some Codex CLI releases accept new GPT model slugs before app-server
+    // model/list includes their metadata, so keep the UI controls usable.
+    supportedReasoningEfforts: supportsReasoning ? GPT_REASONING_EFFORTS : [],
+    defaultReasoningEffort: supportsReasoning ? DEFAULT_GPT_REASONING_EFFORT : null,
+    isDefault: false,
+  };
 }
 
 export function parseModelListResponse(response: unknown): ModelOption[] {
