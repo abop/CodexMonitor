@@ -117,6 +117,13 @@ Do not reintroduce duplicated modal/toast/panel/popover shell styling in feature
 - If conflicts impact correctness, call them out and choose the safest path.
 - Fix root cause, not band-aids.
 
+## Pull Request Workflow
+
+- In this workspace, `origin` is the user's fork and `upstream` is the canonical upstream repository.
+- Create and merge PRs against `origin` unless the user explicitly asks to target `upstream`.
+- Before merging, verify `gh pr checks` and `gh pr view --json mergeStateStatus,mergeable`.
+- Do not bypass branch protection with admin merge unless the user explicitly requests it after seeing the failing or pending checks.
+
 ## Validation Matrix
 
 Run validations based on touched areas:
