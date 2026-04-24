@@ -1,0 +1,18 @@
+{
+  "name": "Codex Monitor",
+  "short_name": "Codex Monitor",
+  "description": "Orchestrate Codex agents across workspaces with threads, reviews, worktrees, and live activity.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
