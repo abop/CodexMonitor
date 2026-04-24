@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import * as Sentry from "@sentry/react";
 import type {
+  AccessMode,
   CollabAgentRef,
   CustomPromptOption,
   DebugEntry,
@@ -52,7 +53,7 @@ type UseThreadsOptions = {
   effort?: string | null;
   serviceTier?: ServiceTier | null | undefined;
   collaborationMode?: Record<string, unknown> | null;
-  accessMode?: "read-only" | "current" | "full-access";
+  accessMode?: AccessMode;
   onSelectServiceTier?: (tier: ServiceTier | null | undefined) => void;
   reviewDeliveryMode?: "inline" | "detached";
   steerEnabled?: boolean;

@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { BrainCog, SlidersHorizontal, Zap } from "lucide-react";
 import type { AccessMode, ServiceTier, ThreadTokenUsage } from "../../../types";
+import { normalizeAccessMode } from "@utils/accessMode";
 import type { CodexArgsOption } from "../../threads/utils/codexArgsProfiles";
 
 type ComposerMetaBarProps = {
@@ -259,15 +260,15 @@ export function ComposerMetaBar({
           </span>
           <select
             className="composer-select composer-select--approval"
-            aria-label="Agent access"
+            aria-label="Permissions"
             disabled={disabled}
-            value={accessMode}
+            value={normalizeAccessMode(accessMode) ?? "default"}
             onChange={(event) =>
               onSelectAccessMode(event.target.value as AccessMode)
             }
           >
-            <option value="read-only">Read only</option>
-            <option value="current">On-Request</option>
+            <option value="default">Default</option>
+            <option value="auto-review">Auto-review</option>
             <option value="full-access">Full access</option>
           </select>
         </div>

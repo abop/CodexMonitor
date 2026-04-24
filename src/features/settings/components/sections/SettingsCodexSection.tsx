@@ -7,6 +7,7 @@ import type {
   CodexUpdateResult,
   ModelOption,
 } from "@/types";
+import { normalizeAccessMode } from "@utils/accessMode";
 import {
   SettingsSection,
   SettingsToggleRow,
@@ -478,7 +479,7 @@ export function SettingsCodexSection({
       <SettingsToggleRow
         title={
           <label htmlFor="default-access">
-            Access mode
+            Permissions
           </label>
         }
         subtitle="Used when there is no thread-specific override."
@@ -486,7 +487,7 @@ export function SettingsCodexSection({
         <select
           id="default-access"
           className="settings-select"
-          value={appSettings.defaultAccessMode}
+          value={normalizeAccessMode(appSettings.defaultAccessMode) ?? "default"}
           onChange={(event) =>
             void onUpdateAppSettings({
               ...appSettings,
@@ -494,8 +495,8 @@ export function SettingsCodexSection({
             })
           }
         >
-          <option value="read-only">Read only</option>
-          <option value="current">On-request</option>
+          <option value="default">Default</option>
+          <option value="auto-review">Auto-review</option>
           <option value="full-access">Full access</option>
         </select>
       </SettingsToggleRow>

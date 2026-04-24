@@ -5,6 +5,7 @@ import { backendRpc } from "./backend/http";
 import { pickBrowserImageFiles } from "./browserFiles";
 import { isWebRuntime, readRuntimeConfig } from "./runtime";
 import type {
+  AccessMode,
   AppSettings,
   CodexUpdateResult,
   CodexDoctorResult,
@@ -576,7 +577,7 @@ export async function sendUserMessage(
     model?: string | null;
     effort?: string | null;
     serviceTier?: "fast" | "flex" | null | undefined;
-    accessMode?: "read-only" | "current" | "full-access";
+    accessMode?: AccessMode;
     images?: string[];
     collaborationMode?: Record<string, unknown> | null;
     appMentions?: AppMention[];

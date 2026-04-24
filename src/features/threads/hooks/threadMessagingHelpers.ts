@@ -6,6 +6,7 @@ import type {
   ReviewTarget,
   ServiceTier,
 } from "@/types";
+import { getAccessModeLabel } from "@utils/accessMode";
 import { clampThreadName } from "@threads/utils/threadNaming";
 import { formatRelativeTime } from "@utils/time";
 
@@ -234,7 +235,7 @@ export function buildStatusLines({
     `- Model: ${model ?? "default"}`,
     `- Fast mode: ${serviceTier === "fast" ? "on" : "off"}`,
     `- Reasoning effort: ${effort ?? "default"}`,
-    `- Access: ${accessMode ?? "current"}`,
+    `- Permissions: ${getAccessModeLabel(accessMode)}`,
     `- Collaboration: ${getCollaborationModeId(collaborationMode) || "off"}`,
   ];
 

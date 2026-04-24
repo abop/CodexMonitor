@@ -54,7 +54,7 @@ describe("threadCodexParamsSeed", () => {
     const storedResolved = resolveThreadCodexState({
       workspaceId: "ws-1",
       threadId: "thread-1",
-      defaultAccessMode: "current",
+      defaultAccessMode: "default",
       lastComposerModelId: "gpt-5",
       lastComposerReasoningEffort: "medium",
       stored: {
@@ -78,7 +78,7 @@ describe("threadCodexParamsSeed", () => {
 
     expect(storedResolved).toEqual({
       scopeKey: "ws-1:thread-1",
-      accessMode: "read-only",
+      accessMode: "default",
       preferredModelId: "gpt-4.1",
       preferredEffort: "low",
       preferredServiceTier: null,
@@ -89,7 +89,7 @@ describe("threadCodexParamsSeed", () => {
     const seededResolved = resolveThreadCodexState({
       workspaceId: "ws-1",
       threadId: "thread-2",
-      defaultAccessMode: "current",
+      defaultAccessMode: "default",
       lastComposerModelId: "gpt-5",
       lastComposerReasoningEffort: "medium",
       stored: null,
@@ -116,7 +116,7 @@ describe("threadCodexParamsSeed", () => {
     const explicitDefaultResolved = resolveThreadCodexState({
       workspaceId: "ws-1",
       threadId: "thread-3",
-      defaultAccessMode: "current",
+      defaultAccessMode: "default",
       lastComposerModelId: "gpt-5",
       lastComposerReasoningEffort: "medium",
       stored: {
@@ -143,7 +143,7 @@ describe("threadCodexParamsSeed", () => {
     const legacyMissingResolved = resolveThreadCodexState({
       workspaceId: "ws-1",
       threadId: "thread-4",
-      defaultAccessMode: "current",
+      defaultAccessMode: "default",
       lastComposerModelId: "gpt-5",
       lastComposerReasoningEffort: "medium",
       stored: {
@@ -170,7 +170,7 @@ describe("threadCodexParamsSeed", () => {
     const inheritedFromNoThreadResolved = resolveThreadCodexState({
       workspaceId: "ws-1",
       threadId: "thread-5",
-      defaultAccessMode: "current",
+      defaultAccessMode: "default",
       lastComposerModelId: "gpt-5",
       lastComposerReasoningEffort: "medium",
       stored: {
@@ -203,7 +203,7 @@ describe("threadCodexParamsSeed", () => {
     const resolved = resolveThreadCodexState({
       workspaceId: "ws-1",
       threadId: null,
-      defaultAccessMode: "current",
+      defaultAccessMode: "default",
       lastComposerModelId: "gpt-5",
       lastComposerReasoningEffort: "medium",
       stored: {
@@ -221,7 +221,7 @@ describe("threadCodexParamsSeed", () => {
 
     expect(resolved).toEqual({
       scopeKey: "ws-1:__no_thread__",
-      accessMode: "read-only",
+      accessMode: "default",
       preferredModelId: "gpt-4.1",
       preferredEffort: "low",
       preferredServiceTier: null,
@@ -234,7 +234,7 @@ describe("threadCodexParamsSeed", () => {
     const resolved = resolveThreadCodexState({
       workspaceId: "ws-1",
       threadId: "thread-1",
-      defaultAccessMode: "current",
+      defaultAccessMode: "default",
       lastComposerModelId: "gpt-5",
       lastComposerReasoningEffort: "medium",
       stored: {
@@ -482,7 +482,7 @@ describe("threadCodexParamsSeed", () => {
       modelId: "gpt-5",
       effort: "high",
       serviceTier: undefined,
-      accessMode: "current",
+      accessMode: "default",
       collaborationModeId: "default",
       codexArgsOverride: "--profile composer",
     });
@@ -500,7 +500,7 @@ describe("threadCodexParamsSeed", () => {
       modelId: "gpt-5",
       effort: "high",
       serviceTier: undefined,
-      accessMode: "current",
+      accessMode: "default",
       collaborationModeId: "default",
       codexArgsOverride: undefined,
     });

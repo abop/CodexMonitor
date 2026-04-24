@@ -75,7 +75,7 @@ function ComposerHarness({
       onSelectEffort={() => {}}
       selectedServiceTier={selectedServiceTier}
       reasoningSupported={false}
-      accessMode="current"
+      accessMode="default"
       onSelectAccessMode={() => {}}
       skills={[]}
       apps={apps}

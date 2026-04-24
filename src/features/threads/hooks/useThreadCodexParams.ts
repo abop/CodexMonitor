@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AccessMode, ServiceTier } from "@/types";
+import { normalizeAccessMode } from "@utils/accessMode";
 import {
   STORAGE_KEY_THREAD_CODEX_PARAMS,
   type ThreadCodexParams,
@@ -43,10 +44,7 @@ const DEFAULT_ENTRY: ThreadCodexParams = {
 };
 
 function coerceAccessMode(value: unknown): AccessMode | null {
-  if (value === "read-only" || value === "current" || value === "full-access") {
-    return value;
-  }
-  return null;
+  return normalizeAccessMode(value);
 }
 
 function coerceServiceTier(value: unknown): ServiceTier | null {

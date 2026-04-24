@@ -15,6 +15,14 @@ fn normalize_personality(value: &str) -> Option<&'static str> {
     }
 }
 
+fn normalize_default_access_mode(value: &str) -> &'static str {
+    match value.trim() {
+        "auto-review" => "auto-review",
+        "full-access" => "full-access",
+        _ => "default",
+    }
+}
+
 pub(crate) async fn get_app_settings_core(app_settings: &Mutex<AppSettings>) -> AppSettings {
     let mut settings = app_settings.lock().await.clone();
     if let Ok(Some(collaboration_modes_enabled)) = codex_config::read_collaboration_modes_enabled()
@@ -37,6 +45,21 @@ pub(crate) async fn get_app_settings_core(app_settings: &Mutex<AppSettings>) -> 
             .unwrap_or("friendly")
             .to_string();
     }
+    if settings.default_access_mode != "full-access" {
+        if let Ok(Some(reviewer)) = codex_config::read_approvals_reviewer() {
+            settings.default_access_mode = if reviewer == "auto_review" {
+                "auto-review".to_string()
+            } else {
+                "default".to_string()
+            };
+        } else {
+            settings.default_access_mode =
+                normalize_default_access_mode(&settings.default_access_mode).to_string();
+        }
+    } else {
+        settings.default_access_mode =
+            normalize_default_access_mode(&settings.default_access_mode).to_string();
+    }
     settings
 }
 
@@ -53,6 +76,14 @@ pub(crate) async fn update_app_settings_core(
     let _ = codex_config::write_unified_exec_enabled(settings.unified_exec_enabled);
     let _ = codex_config::write_apps_enabled(settings.experimental_apps_enabled);
     let _ = codex_config::write_personality(settings.personality.as_str());
+    settings.default_access_mode =
+        normalize_default_access_mode(&settings.default_access_mode).to_string();
+    let approvals_reviewer = if settings.default_access_mode == "auto-review" {
+        "auto_review"
+    } else {
+        "user"
+    };
+    let _ = codex_config::write_approvals_reviewer(approvals_reviewer);
     write_settings(settings_path, &settings)?;
     let mut current = app_settings.lock().await;
     *current = settings.clone();

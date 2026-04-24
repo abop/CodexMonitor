@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import type { Dispatch, MutableRefObject } from "react";
 import * as Sentry from "@sentry/react";
 import type {
+  AccessMode,
   AppMention,
   ComposerSendIntent,
   RateLimitSnapshot,
@@ -45,7 +46,7 @@ import {
 type UseThreadMessagingOptions = {
   activeWorkspace: WorkspaceInfo | null;
   activeThreadId: string | null;
-  accessMode?: "read-only" | "current" | "full-access";
+  accessMode?: AccessMode;
   model?: string | null;
   effort?: string | null;
   serviceTier?: ServiceTier | null | undefined;

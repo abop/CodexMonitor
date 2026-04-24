@@ -856,6 +856,25 @@ describe("tauri invoke wrappers", () => {
     });
   });
 
+  it("passes through auto-review access mode", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await sendUserMessage("ws-4", "thread-1", "hello", {
+      accessMode: "auto-review",
+    });
+
+    expect(invokeMock).toHaveBeenLastCalledWith("send_user_message", {
+      workspaceId: "ws-4",
+      threadId: "thread-1",
+      text: "hello",
+      model: null,
+      effort: null,
+      accessMode: "auto-review",
+      images: null,
+    });
+  });
+
   it("preserves explicit null serviceTier overrides", async () => {
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockResolvedValueOnce({});

@@ -1,4 +1,5 @@
 import type { AccessMode, ServiceTier } from "@/types";
+import { normalizeAccessMode } from "@utils/accessMode";
 import {
   buildEffectiveCodexArgsBadgeLabel,
   sanitizeRuntimeCodexArgs,
@@ -106,7 +107,7 @@ export function createPendingThreadSeed(options: {
     workspaceId: activeWorkspaceId,
     serviceTier: selectedServiceTier,
     collaborationModeId: selectedCollaborationModeId,
-    accessMode,
+    accessMode: normalizeAccessMode(accessMode) ?? "default",
     codexArgsOverride,
   };
 }
@@ -128,7 +129,10 @@ export function resolveThreadCodexState(
   if (!threadId) {
     return {
       scopeKey: `${workspaceId}:${NO_THREAD_SCOPE_SUFFIX}`,
-      accessMode: stored?.accessMode ?? defaultAccessMode,
+      accessMode:
+        normalizeAccessMode(stored?.accessMode) ??
+        normalizeAccessMode(defaultAccessMode) ??
+        "default",
       preferredModelId: stored?.modelId ?? lastComposerModelId ?? null,
       preferredEffort: stored?.effort ?? lastComposerReasoningEffort ?? null,
       preferredServiceTier: stored?.serviceTier,
@@ -142,7 +146,11 @@ export function resolveThreadCodexState(
 
   return {
     scopeKey: makeThreadCodexParamsKey(workspaceId, threadId),
-    accessMode: stored?.accessMode ?? pendingForWorkspace?.accessMode ?? defaultAccessMode,
+    accessMode:
+      normalizeAccessMode(stored?.accessMode) ??
+      normalizeAccessMode(pendingForWorkspace?.accessMode) ??
+      normalizeAccessMode(defaultAccessMode) ??
+      "default",
     preferredModelId: stored?.modelId ?? lastComposerModelId ?? null,
     preferredEffort: stored?.effort ?? lastComposerReasoningEffort ?? null,
     preferredServiceTier:
@@ -189,7 +197,10 @@ export function buildThreadCodexSeedPatch(options: {
     modelId: selectedModelId,
     effort: resolvedEffort,
     serviceTier: pendingForWorkspace ? pendingForWorkspace.serviceTier : undefined,
-    accessMode: pendingForWorkspace?.accessMode ?? accessMode,
+    accessMode:
+      normalizeAccessMode(pendingForWorkspace?.accessMode) ??
+      normalizeAccessMode(accessMode) ??
+      "default",
     collaborationModeId: pendingForWorkspace
       ? pendingForWorkspace.collaborationModeId
       : selectedCollaborationModeId,

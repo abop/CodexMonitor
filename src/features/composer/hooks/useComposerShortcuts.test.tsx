@@ -24,7 +24,7 @@ function ShortcutHarness(props: {
     onSelectModel: () => {},
     selectedCollaborationModeId: props.selectedCollaborationModeId,
     onSelectCollaborationMode: props.onSelectCollaborationMode,
-    accessMode: "read-only",
+    accessMode: "default",
     onSelectAccessMode: () => {},
     reasoningOptions: [],
     selectedEffort: null,
