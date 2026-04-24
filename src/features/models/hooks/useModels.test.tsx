@@ -55,6 +55,39 @@ describe("useModels", () => {
     expect(result.current.reasoningSupported).toBe(false);
   });
 
+  it("adds reasoning options for GPT config models missing from model/list", async () => {
+    vi.mocked(getModelList).mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            id: "remote-1",
+            model: "gpt-5.4",
+            displayName: "GPT-5.4",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: true,
+          },
+        ],
+      },
+    });
+    vi.mocked(getConfigModel).mockResolvedValueOnce("gpt-5.5");
+
+    const { result } = renderHook(() =>
+      useModels({ activeWorkspace: workspace }),
+    );
+
+    await waitFor(() => expect(result.current.selectedModelId).toBe("gpt-5.5"));
+
+    expect(result.current.reasoningSupported).toBe(true);
+    expect(result.current.reasoningOptions).toEqual([
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+    ]);
+    expect(result.current.selectedEffort).toBe("medium");
+  });
+
   it("prefers the provider entry when the config model matches by slug", async () => {
     vi.mocked(getModelList).mockResolvedValueOnce({
       result: {

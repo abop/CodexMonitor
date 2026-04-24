@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ModelOption, WorkspaceInfo } from "@/types";
 import { connectWorkspace, getConfigModel, getModelList } from "@services/tauri";
-import { parseModelListResponse } from "@/features/models/utils/modelListResponse";
+import {
+  createConfigModelOption,
+  parseModelListResponse,
+} from "@/features/models/utils/modelListResponse";
 
 type SettingsDefaultModelsState = {
   models: ModelOption[];
@@ -16,8 +19,6 @@ const EMPTY_STATE: SettingsDefaultModelsState = {
   error: null,
   connectedWorkspaceCount: 0,
 };
-
-const CONFIG_MODEL_DESCRIPTION = "Configured in CODEX_HOME/config.toml";
 
 const parseGptVersionScore = (slug: string): number | null => {
   const match = /^gpt-(\d+)(?:\.(\d+))?(?:\.(\d+))?/i.exec(slug.trim());
@@ -135,15 +136,7 @@ export function useSettingsDefaultModels(projects: WorkspaceInfo[]) {
         hasConfigModel || !configModel
           ? modelsFromList
           : [
-              {
-                id: configModel,
-                model: configModel,
-                displayName: `${configModel} (config)`,
-                description: CONFIG_MODEL_DESCRIPTION,
-                supportedReasoningEfforts: [],
-                defaultReasoningEffort: null,
-                isDefault: false,
-              },
+              createConfigModelOption(configModel),
               ...modelsFromList,
             ]
       ).sort(compareModelsByLatest);

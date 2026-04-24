@@ -179,4 +179,29 @@ describe("useSettingsDefaultModels", () => {
       expect(getModelListMock).not.toHaveBeenCalled();
     });
   });
+
+  it("keeps reasoning options for GPT config models missing from model/list", async () => {
+    getModelListMock.mockResolvedValueOnce(modelListResponse("gpt-5.4"));
+    getConfigModelMock.mockResolvedValueOnce("gpt-5.5");
+
+    const { result } = renderHook(
+      ({ projects }: { projects: WorkspaceInfo[] }) => useSettingsDefaultModels(projects),
+      {
+        initialProps: {
+          projects: [workspace("w1", true)],
+        },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.models[0]?.model).toBe("gpt-5.5");
+    });
+
+    expect(result.current.models[0]?.defaultReasoningEffort).toBe("medium");
+    expect(
+      result.current.models[0]?.supportedReasoningEfforts.map(
+        (option) => option.reasoningEffort,
+      ),
+    ).toEqual(["low", "medium", "high", "xhigh"]);
+  });
 });
