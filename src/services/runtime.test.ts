@@ -15,15 +15,24 @@ import {
   subscribeRuntimeConfig,
   upsertRuntimeWebBackend,
 } from "./runtime";
+import type { RuntimeConfig } from "./runtime";
+
+type RuntimeConfigHasRequiredDefaultBackendId =
+  RuntimeConfig extends { defaultBackendId: string | null } ? true : false;
+const runtimeConfigHasRequiredDefaultBackendId: RuntimeConfigHasRequiredDefaultBackendId =
+  true;
 
 describe("runtime config", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     resetRuntimeBackendBaseUrlForTests();
     window.localStorage.clear();
+    window.sessionStorage.clear();
+    window.history.replaceState(null, "", "/");
   });
 
   it("defaults to web outside tauri", () => {
+    expect(runtimeConfigHasRequiredDefaultBackendId).toBe(true);
     expect(resolveAppRuntime({ runtimeEnv: undefined, hasTauri: false })).toBe("web");
   });
 
@@ -255,6 +264,28 @@ describe("runtime config", () => {
       activeBackend: {
         id: backend.id,
         name: "https://daemon.example.com",
+      },
+    });
+  });
+
+  it("uses the first saved backend as both shared default and current window selection", () => {
+    const firstBackend = upsertRuntimeWebBackend({
+      name: "One",
+      baseUrl: "https://one.example.com",
+    });
+    const secondBackend = upsertRuntimeWebBackend({
+      name: "Two",
+      baseUrl: "https://two.example.com",
+    });
+
+    setDefaultRuntimeWebBackend(secondBackend.id);
+
+    expect(getActiveRuntimeWebBackendId()).toBe(firstBackend.id);
+    expect(readRuntimeConfig()).toMatchObject({
+      backendBaseUrl: "https://one.example.com",
+      defaultBackendId: secondBackend.id,
+      activeBackend: {
+        id: firstBackend.id,
       },
     });
   });

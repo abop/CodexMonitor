@@ -18,9 +18,13 @@ export type RuntimeConfig = {
   runtime: AppRuntime;
   backendBaseUrl: string | null;
   backendToken: string | null;
-  defaultBackendId?: string | null;
+  defaultBackendId: string | null;
   activeBackend: RuntimeWebBackend | null;
 };
+
+type RuntimeConfigReadResult =
+  | RuntimeConfig
+  | (Omit<RuntimeConfig, "defaultBackendId"> & { defaultBackendId?: never });
 
 type RuntimeWebBackendStore = {
   version: 1;
@@ -28,7 +32,7 @@ type RuntimeWebBackendStore = {
   backends: RuntimeWebBackend[];
 };
 
-type RuntimeConfigListener = (config: RuntimeConfig) => void;
+type RuntimeConfigListener = (config: RuntimeConfigReadResult) => void;
 
 const WEB_BACKEND_STORAGE_KEY = "codexmonitor.web-backends";
 const WEB_BACKEND_SESSION_STORAGE_KEY = "codexmonitor.web-backend.current";
@@ -271,15 +275,16 @@ export function upsertRuntimeWebBackend(
   const nextBackends = store.backends.some((entry) => entry.id === backend.id)
     ? store.backends.map((entry) => (entry.id === backend.id ? backend : entry))
     : [...store.backends, backend];
+  const isFirstBackend = nextBackends.length === 1;
   const nextStore: RuntimeWebBackendStore = {
     version: 1,
-    activeBackendId: store.activeBackendId ?? backend.id,
+    activeBackendId: isFirstBackend ? backend.id : store.activeBackendId ?? backend.id,
     backends: nextBackends,
   };
 
   runtimeBackendBaseUrlOverride = null;
   writeStoredRuntimeWebBackends(nextStore);
-  if (options?.activate) {
+  if (options?.activate || isFirstBackend) {
     writeCurrentWindowBackendId(backend.id);
   }
   notifyRuntimeConfigListeners();
@@ -373,7 +378,7 @@ export function resolveAppRuntime(options: {
   return options.hasTauri ? "desktop" : "web";
 }
 
-export function readRuntimeConfig(): RuntimeConfig {
+export function readRuntimeConfig(): RuntimeConfigReadResult {
   const hasTauri =
     typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
   const runtime = resolveAppRuntime({
