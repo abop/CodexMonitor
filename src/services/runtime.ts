@@ -9,7 +9,7 @@ export type RuntimeWebBackend = {
 
 export type RuntimeWebBackendInput = {
   id?: string;
-  name: string;
+  name?: string;
   baseUrl: string;
   token?: string | null;
 };
@@ -18,6 +18,7 @@ export type RuntimeConfig = {
   runtime: AppRuntime;
   backendBaseUrl: string | null;
   backendToken: string | null;
+  defaultBackendId: string | null;
   activeBackend: RuntimeWebBackend | null;
 };
 
@@ -30,6 +31,8 @@ type RuntimeWebBackendStore = {
 type RuntimeConfigListener = (config: RuntimeConfig) => void;
 
 const WEB_BACKEND_STORAGE_KEY = "codexmonitor.web-backends";
+const WEB_BACKEND_SESSION_STORAGE_KEY = "codexmonitor.web-backend.current";
+const WEB_BACKEND_URL_PARAM = "backend";
 
 let runtimeBackendBaseUrlOverride: string | null = null;
 const runtimeConfigListeners = new Set<RuntimeConfigListener>();
@@ -63,6 +66,17 @@ function getStorage(): Storage | null {
   }
 }
 
+function getSessionStorage(): Storage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeRuntimeWebBackend(
   value: Partial<RuntimeWebBackend> | null | undefined,
 ): RuntimeWebBackend | null {
@@ -70,7 +84,7 @@ function normalizeRuntimeWebBackend(
     return null;
   }
   const baseUrl = normalizeBackendBaseUrl(value.baseUrl);
-  const name = normalizeBackendName(value.name);
+  const name = normalizeBackendName(value.name) ?? baseUrl;
   const id = typeof value.id === "string" ? value.id.trim() : "";
   if (!baseUrl || !name || !id) {
     return null;
@@ -142,6 +156,51 @@ function writeStoredRuntimeWebBackends(store: RuntimeWebBackendStore) {
   storage.setItem(WEB_BACKEND_STORAGE_KEY, JSON.stringify(store));
 }
 
+function readCurrentWindowBackendId(): string | null {
+  return normalizeBackendName(getSessionStorage()?.getItem(WEB_BACKEND_SESSION_STORAGE_KEY));
+}
+
+function writeCurrentWindowBackendId(id: string | null) {
+  const storage = getSessionStorage();
+  if (!storage) {
+    return;
+  }
+  if (id) {
+    storage.setItem(WEB_BACKEND_SESSION_STORAGE_KEY, id);
+    return;
+  }
+  storage.removeItem(WEB_BACKEND_SESSION_STORAGE_KEY);
+}
+
+function readUrlBackendId(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return normalizeBackendName(
+    new URL(window.location.href).searchParams.get(WEB_BACKEND_URL_PARAM),
+  );
+}
+
+function writeUrlBackendId(id: string) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(WEB_BACKEND_URL_PARAM)) {
+    return false;
+  }
+  url.searchParams.set(WEB_BACKEND_URL_PARAM, id);
+  window.history.replaceState(window.history.state, "", url.toString());
+  return true;
+}
+
+function findStoredBackend(store: RuntimeWebBackendStore, id: string | null) {
+  if (!id) {
+    return null;
+  }
+  return store.backends.find((backend) => backend.id === id) ?? null;
+}
+
 function notifyRuntimeConfigListeners() {
   const config = readRuntimeConfig();
   const listeners = Array.from(runtimeConfigListeners);
@@ -150,12 +209,13 @@ function notifyRuntimeConfigListeners() {
   });
 }
 
-function resolveStoredActiveBackend(): RuntimeWebBackend | null {
+function resolveStoredSelectedBackend(): RuntimeWebBackend | null {
   const store = readStoredRuntimeWebBackends();
-  if (!store.activeBackendId) {
-    return null;
-  }
-  return store.backends.find((backend) => backend.id === store.activeBackendId) ?? null;
+  return (
+    findStoredBackend(store, readUrlBackendId()) ??
+    findStoredBackend(store, readCurrentWindowBackendId()) ??
+    findStoredBackend(store, store.activeBackendId)
+  );
 }
 
 function resolveConfiguredBackend(): RuntimeWebBackend | null {
@@ -196,6 +256,7 @@ export function resetRuntimeBackendBaseUrlForTests() {
   runtimeConfigListeners.clear();
   const storage = getStorage();
   storage?.removeItem(WEB_BACKEND_STORAGE_KEY);
+  writeCurrentWindowBackendId(null);
 }
 
 export function listRuntimeWebBackends() {
@@ -206,14 +267,11 @@ export function upsertRuntimeWebBackend(
   input: RuntimeWebBackendInput,
   options?: { activate?: boolean },
 ) {
-  const name = normalizeBackendName(input.name);
   const baseUrl = normalizeBackendBaseUrl(input.baseUrl);
-  if (!name) {
-    throw new Error("Backend name is required.");
-  }
   if (!baseUrl) {
     throw new Error("Backend URL is required.");
   }
+  const name = normalizeBackendName(input.name) ?? baseUrl;
 
   const existing = input.id ? normalizeBackendName(input.id) : null;
   const backend: RuntimeWebBackend = {
@@ -226,22 +284,38 @@ export function upsertRuntimeWebBackend(
   const nextBackends = store.backends.some((entry) => entry.id === backend.id)
     ? store.backends.map((entry) => (entry.id === backend.id ? backend : entry))
     : [...store.backends, backend];
+  const isFirstBackend = nextBackends.length === 1;
   const nextStore: RuntimeWebBackendStore = {
     version: 1,
-    activeBackendId:
-      options?.activate || nextBackends.length === 1
-        ? backend.id
-        : store.activeBackendId ?? backend.id,
+    activeBackendId: isFirstBackend ? backend.id : store.activeBackendId ?? backend.id,
     backends: nextBackends,
   };
 
   runtimeBackendBaseUrlOverride = null;
   writeStoredRuntimeWebBackends(nextStore);
+  if (options?.activate || isFirstBackend) {
+    writeCurrentWindowBackendId(backend.id);
+  }
   notifyRuntimeConfigListeners();
   return backend;
 }
 
 export function setActiveRuntimeWebBackend(id: string) {
+  const backendId = id.trim();
+  if (!backendId) {
+    throw new Error("Backend id is required.");
+  }
+  const store = readStoredRuntimeWebBackends();
+  if (!store.backends.some((backend) => backend.id === backendId)) {
+    throw new Error("Backend not found.");
+  }
+  runtimeBackendBaseUrlOverride = null;
+  writeCurrentWindowBackendId(backendId);
+  writeUrlBackendId(backendId);
+  notifyRuntimeConfigListeners();
+}
+
+export function setDefaultRuntimeWebBackend(id: string) {
   const backendId = id.trim();
   if (!backendId) {
     throw new Error("Backend id is required.");
@@ -258,6 +332,25 @@ export function setActiveRuntimeWebBackend(id: string) {
   notifyRuntimeConfigListeners();
 }
 
+export function getActiveRuntimeWebBackendId() {
+  const store = readStoredRuntimeWebBackends();
+  return (
+    findStoredBackend(store, readUrlBackendId()) ??
+    findStoredBackend(store, readCurrentWindowBackendId()) ??
+    findStoredBackend(store, store.activeBackendId)
+  )?.id ?? null;
+}
+
+export function buildRuntimeWebBackendWindowUrl(id: string) {
+  const backendId = id.trim();
+  if (!backendId) {
+    throw new Error("Backend id is required.");
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set(WEB_BACKEND_URL_PARAM, backendId);
+  return url.toString();
+}
+
 export function deleteRuntimeWebBackend(id: string) {
   const backendId = id.trim();
   if (!backendId) {
@@ -267,6 +360,9 @@ export function deleteRuntimeWebBackend(id: string) {
   const nextBackends = store.backends.filter((backend) => backend.id !== backendId);
   if (nextBackends.length === store.backends.length) {
     return;
+  }
+  if (readCurrentWindowBackendId() === backendId) {
+    writeCurrentWindowBackendId(null);
   }
   runtimeBackendBaseUrlOverride = null;
   writeStoredRuntimeWebBackends({
@@ -305,6 +401,7 @@ export function readRuntimeConfig(): RuntimeConfig {
       runtime,
       backendBaseUrl: runtimeBackendBaseUrlOverride,
       backendToken: null,
+      defaultBackendId: readStoredRuntimeWebBackends().activeBackendId,
       activeBackend: {
         id: "runtime-override",
         name: "Current backend",
@@ -314,11 +411,13 @@ export function readRuntimeConfig(): RuntimeConfig {
     };
   }
 
-  const activeBackend = resolveStoredActiveBackend() ?? resolveConfiguredBackend();
+  const store = readStoredRuntimeWebBackends();
+  const activeBackend = resolveStoredSelectedBackend() ?? resolveConfiguredBackend();
   return {
     runtime,
     backendBaseUrl: activeBackend?.baseUrl ?? null,
     backendToken: activeBackend?.token ?? null,
+    defaultBackendId: store.activeBackendId,
     activeBackend,
   };
 }

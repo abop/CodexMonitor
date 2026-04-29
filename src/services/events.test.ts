@@ -70,6 +70,7 @@ describe("events subscriptions", () => {
       runtime: "web",
       backendBaseUrl: "https://daemon.example.com",
       backendToken: "secret-token",
+      defaultBackendId: "backend-1",
       activeBackend: {
         id: "backend-1",
         name: "Remote Office",
