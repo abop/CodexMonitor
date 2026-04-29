@@ -1,18 +1,22 @@
+import ExternalLink from "lucide-react/dist/esm/icons/external-link";
 import Pencil from "lucide-react/dist/esm/icons/pencil";
 import Plus from "lucide-react/dist/esm/icons/plus";
 import ScrollText from "lucide-react/dist/esm/icons/scroll-text";
 import Server from "lucide-react/dist/esm/icons/server";
 import Settings from "lucide-react/dist/esm/icons/settings";
+import Star from "lucide-react/dist/esm/icons/star";
 import Trash2 from "lucide-react/dist/esm/icons/trash-2";
 import User from "lucide-react/dist/esm/icons/user";
 import X from "lucide-react/dist/esm/icons/x";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
+  buildRuntimeWebBackendWindowUrl,
   deleteRuntimeWebBackend,
   listRuntimeWebBackends,
   readRuntimeConfig,
   setActiveRuntimeWebBackend,
+  setDefaultRuntimeWebBackend,
   subscribeRuntimeBackendBaseUrl,
   type RuntimeWebBackend,
   upsertRuntimeWebBackend,
@@ -63,6 +67,10 @@ function createWebBackendDraft(backend?: RuntimeWebBackend | null): WebBackendDr
     baseUrl: backend?.baseUrl ?? "",
     token: backend?.token ?? "",
   };
+}
+
+function getWebBackendLabel(backend: RuntimeWebBackend) {
+  return backend.name || backend.baseUrl;
 }
 
 function UsageRow({ label, percent, resetLabel }: UsageRowProps) {
@@ -196,6 +204,33 @@ export function SidebarBottomRail({
     } catch (error) {
       setWebBackendError(
         error instanceof Error ? error.message : "Unable to switch web backend.",
+      );
+    }
+  };
+
+  const makeDefaultWebBackend = (backendId: string) => {
+    try {
+      setDefaultRuntimeWebBackend(backendId);
+      setWebBackendError(null);
+    } catch (error) {
+      setWebBackendError(
+        error instanceof Error ? error.message : "Unable to set default backend.",
+      );
+    }
+  };
+
+  const openWebBackendWindow = (backendId: string) => {
+    try {
+      const url = buildRuntimeWebBackendWindowUrl(backendId);
+      const opened = window.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) {
+        setWebBackendError("Unable to open new window.");
+        return;
+      }
+      setWebBackendError(null);
+    } catch (error) {
+      setWebBackendError(
+        error instanceof Error ? error.message : "Unable to open new window.",
       );
     }
   };
@@ -352,32 +387,59 @@ export function SidebarBottomRail({
                 <div className="sidebar-web-backend-list">
                   {savedWebBackends.map((backend) => {
                     const isActive = activeWebBackend?.id === backend.id;
+                    const isDefault = runtimeConfig.defaultBackendId === backend.id;
+                    const backendLabel = getWebBackendLabel(backend);
                     return (
                       <div
                         key={backend.id}
                         className={`sidebar-web-backend-row${isActive ? " is-active" : ""}`}
                       >
                         <div className="sidebar-web-backend-row-copy">
-                          <div className="sidebar-web-backend-row-name">{backend.name}</div>
+                          <div className="sidebar-web-backend-row-name">{backendLabel}</div>
                           <div className="sidebar-web-backend-row-url">{backend.baseUrl}</div>
                         </div>
                         <div className="sidebar-web-backend-row-actions">
-                          {isActive ? (
-                            <span className="sidebar-web-backend-badge">Active</span>
-                          ) : (
+                          {isActive && (
+                            <span className="sidebar-web-backend-badge">Current</span>
+                          )}
+                          {isDefault && (
+                            <span className="sidebar-web-backend-badge">Default</span>
+                          )}
+                          {!isActive && (
                             <button
                               type="button"
                               className="secondary sidebar-web-backend-row-button"
                               onClick={() => activateWebBackend(backend.id)}
+                              aria-label={`Use ${backendLabel}`}
                             >
                               Use
+                            </button>
+                          )}
+                          {!isDefault && (
+                            <button
+                              type="button"
+                              className="ghost sidebar-web-backend-icon-button"
+                              onClick={() => makeDefaultWebBackend(backend.id)}
+                              aria-label={`Set ${backendLabel} as default`}
+                              title="Set as default"
+                            >
+                              <Star size={12} aria-hidden />
                             </button>
                           )}
                           <button
                             type="button"
                             className="ghost sidebar-web-backend-icon-button"
+                            onClick={() => openWebBackendWindow(backend.id)}
+                            aria-label={`Open ${backendLabel} in new window`}
+                            title="Open in new window"
+                          >
+                            <ExternalLink size={12} aria-hidden />
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost sidebar-web-backend-icon-button"
                             onClick={() => startEditingWebBackend(backend)}
-                            aria-label={`Edit ${backend.name}`}
+                            aria-label={`Edit ${backendLabel}`}
                           >
                             <Pencil size={12} aria-hidden />
                           </button>
@@ -385,7 +447,7 @@ export function SidebarBottomRail({
                             type="button"
                             className="ghost sidebar-web-backend-icon-button"
                             onClick={() => removeWebBackend(backend.id)}
-                            aria-label={`Delete ${backend.name}`}
+                            aria-label={`Delete ${backendLabel}`}
                           >
                             <Trash2 size={12} aria-hidden />
                           </button>
@@ -397,6 +459,12 @@ export function SidebarBottomRail({
               ) : (
                 <div className="sidebar-web-backend-empty">
                   No saved web backends yet.
+                </div>
+              )}
+
+              {webBackendError && (
+                <div className="sidebar-web-backend-error" role="alert">
+                  {webBackendError}
                 </div>
               )}
 
@@ -459,11 +527,6 @@ export function SidebarBottomRail({
                       }}
                     />
                   </label>
-                  {webBackendError && (
-                    <div className="sidebar-web-backend-error" role="alert">
-                      {webBackendError}
-                    </div>
-                  )}
                   <div className="sidebar-web-backend-form-actions">
                     <button type="submit" className="primary sidebar-web-backend-save">
                       {webBackendDraft.id ? "Save" : "Add backend"}
