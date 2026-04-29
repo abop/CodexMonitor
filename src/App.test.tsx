@@ -23,6 +23,7 @@ vi.mock("@services/runtime", () => ({
     activeBackend: null,
   })),
   setRuntimeBackendBaseUrl: vi.fn(),
+  subscribeRuntimeConfig: vi.fn(() => () => {}),
   subscribeRuntimeBackendBaseUrl: vi.fn(() => () => {}),
   upsertRuntimeWebBackend: vi.fn(),
 }));
@@ -41,6 +42,8 @@ describe("App runtime boot", () => {
       defaultBackendId: null,
       activeBackend: null,
     });
+    document.title = "Codex Monitor";
+    vi.mocked(runtime.subscribeRuntimeConfig).mockReturnValue(() => {});
     vi.mocked(runtime.subscribeRuntimeBackendBaseUrl).mockReturnValue(() => {});
   });
 
@@ -111,5 +114,24 @@ describe("App runtime boot", () => {
       },
       { activate: true },
     );
+  });
+
+  it("adds the active backend name to the browser title in web runtime", () => {
+    vi.mocked(runtime.readRuntimeConfig).mockReturnValue({
+      runtime: "web",
+      backendBaseUrl: "https://daemon.example.com",
+      backendToken: null,
+      defaultBackendId: "office",
+      activeBackend: {
+        id: "office",
+        name: "Office Mac",
+        baseUrl: "https://daemon.example.com",
+        token: null,
+      },
+    });
+
+    render(<App />);
+
+    expect(document.title).toBe("CodexMonitor · Office Mac");
   });
 });

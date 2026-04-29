@@ -578,7 +578,7 @@
 
 .worktree-info-copy {
   border: 1px solid var(--border-muted);
-  background: rgba(12, 16, 26, 0.94);
+  background: var(--surface-control);
   color: var(--text-subtle);
   border-radius: 8px;
   width: 28px;
@@ -591,6 +591,7 @@
 }
 
 .worktree-info-copy:hover {
+  background: var(--surface-control-hover);
   color: var(--text-stronger);
   border-color: var(--border-strong);
 }
@@ -608,7 +609,7 @@
 
 .worktree-info-reveal {
   border: 1px solid var(--border-muted);
-  background: rgba(12, 16, 26, 0.94);
+  background: var(--surface-control);
   color: var(--text-stronger);
   border-radius: 8px;
   padding: 6px 10px;
@@ -619,6 +620,7 @@
 }
 
 .worktree-info-reveal:hover {
+  background: var(--surface-control-hover);
   border-color: var(--border-strong);
 }
 
@@ -630,7 +632,7 @@
 
 .worktree-info-input {
   border: 1px solid var(--border-muted);
-  background: rgba(12, 16, 26, 0.94);
+  background: var(--surface-control);
   color: var(--text-stronger);
   border-radius: 8px;
   padding: 6px 8px;
@@ -645,7 +647,7 @@
 
 .worktree-info-confirm {
   border: 1px solid var(--border-muted);
-  background: rgba(12, 16, 26, 0.94);
+  background: var(--surface-control);
   color: var(--text-stronger);
   border-radius: 8px;
   width: 28px;
@@ -654,6 +656,7 @@
 }
 
 .worktree-info-confirm:hover:not(:disabled) {
+  background: var(--surface-control-hover);
   border-color: var(--border-strong);
 }
 

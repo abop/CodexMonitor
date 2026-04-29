@@ -43,7 +43,7 @@ import { useWindowLabel } from "@/features/layout/hooks/useWindowLabel";
 import MainApp from "@app/components/MainApp";
 import {
   readRuntimeConfig,
-  subscribeRuntimeBackendBaseUrl,
+  subscribeRuntimeConfig,
   upsertRuntimeWebBackend,
 } from "@services/runtime";
 
@@ -239,10 +239,18 @@ export default function App() {
   const [runtimeConfig, setRuntimeConfig] = useState(() => readRuntimeConfig());
 
   useEffect(() => {
-    return subscribeRuntimeBackendBaseUrl(() => {
+    return subscribeRuntimeConfig(() => {
       setRuntimeConfig(readRuntimeConfig());
     });
   }, []);
+
+  useEffect(() => {
+    const backendName = runtimeConfig.activeBackend?.name?.trim();
+    document.title =
+      runtimeConfig.runtime === "web" && backendName
+        ? `CodexMonitor · ${backendName}`
+        : "CodexMonitor";
+  }, [runtimeConfig.activeBackend?.name, runtimeConfig.runtime]);
 
   if (windowLabel === "about") {
     return (
