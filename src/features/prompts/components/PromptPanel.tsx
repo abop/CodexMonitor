@@ -13,9 +13,9 @@ import {
   PanelMeta,
   PanelSearchField,
 } from "../../design-system/components/panel/PanelPrimitives";
-import { Menu, MenuItem } from "@tauri-apps/api/menu";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  useRuntimeContextMenu,
+} from "../../design-system/components/popover/useRuntimeContextMenu";
 import MoreHorizontal from "lucide-react/dist/esm/icons/more-horizontal";
 import Plus from "lucide-react/dist/esm/icons/plus";
 import ScrollText from "lucide-react/dist/esm/icons/scroll-text";
@@ -93,6 +93,9 @@ export function PromptPanel({
   const [pendingDeletePath, setPendingDeletePath] = useState<string | null>(null);
   const [highlightKey, setHighlightKey] = useState<string | null>(null);
   const highlightTimer = useRef<number | null>(null);
+  const { showContextMenu, menuNode: promptContextMenu } = useRuntimeContextMenu({
+    className: "prompt-context-menu",
+  });
   const normalizedQuery = query.trim().toLowerCase();
 
   const showError = (error: unknown) => {
@@ -295,25 +298,23 @@ export function PromptPanel({
     event.stopPropagation();
     const scope = isWorkspacePrompt(prompt) ? "workspace" : "global";
     const nextScope = scope === "workspace" ? "global" : "workspace";
-    const menu = await Menu.new({
-      items: [
-        await MenuItem.new({
-          text: "Edit",
-          action: () => startEdit(prompt),
-        }),
-        await MenuItem.new({
-          text: `Move to ${nextScope === "workspace" ? "workspace" : "general"}`,
-          action: () => void handleMove(prompt, nextScope),
-        }),
-        await MenuItem.new({
-          text: "Delete",
-          action: () => handleDeleteRequest(prompt),
-        }),
-      ],
-    });
-    const position = new LogicalPosition(event.clientX, event.clientY);
-    const window = getCurrentWindow();
-    await menu.popup(position, window);
+    await showContextMenu(event, [
+      {
+        id: "edit",
+        text: "Edit",
+        action: () => startEdit(prompt),
+      },
+      {
+        id: "move",
+        text: `Move to ${nextScope === "workspace" ? "workspace" : "general"}`,
+        action: () => void handleMove(prompt, nextScope),
+      },
+      {
+        id: "delete",
+        text: "Delete",
+        action: () => handleDeleteRequest(prompt),
+      },
+    ]);
   };
 
   const renderPromptRow = (prompt: CustomPromptOption) => {
@@ -598,6 +599,7 @@ export function PromptPanel({
           )}
         </div>
       </div>
+      {promptContextMenu}
     </PanelShell>
   );
 }

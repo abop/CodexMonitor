@@ -4,8 +4,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { expectOpenedFileTarget } from "../test/fileLinkAssertions";
 import { Markdown } from "./Markdown";
 
+const openUrlMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openUrl: openUrlMock,
+}));
+
 describe("Markdown file-like href behavior", () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
+    openUrlMock.mockReset();
     cleanup();
   });
 
@@ -69,6 +77,32 @@ describe("Markdown file-like href behavior", () => {
     fireEvent(link as Element, clickEvent);
     expect(clickEvent.defaultPrevented).toBe(true);
     expect(onOpenFileLink).not.toHaveBeenCalled();
+  });
+
+  it("opens external links through the browser in web runtime", () => {
+    const windowOpen = vi.fn();
+    vi.stubGlobal("open", windowOpen);
+    render(
+      <Markdown
+        value="Read [the docs](https://example.com/docs)"
+        className="markdown"
+      />,
+    );
+
+    const link = screen.getByText("the docs").closest("a");
+    const clickEvent = createEvent.click(link as Element, {
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(link as Element, clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(true);
+    expect(windowOpen).toHaveBeenCalledWith(
+      "https://example.com/docs",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(openUrlMock).not.toHaveBeenCalled();
   });
 
   it("still intercepts explicit workspace file hrefs when a file opener is provided", () => {

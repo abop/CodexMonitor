@@ -241,18 +241,23 @@ export const Sidebar = memo(function Sidebar({
     COLLAPSED_GROUPS_STORAGE_KEY,
   );
   const { getThreadRows } = useThreadRows(threadParentById);
-  const { showThreadMenu, showWorkspaceMenu, showWorktreeMenu, showCloneMenu } =
-    useSidebarMenus({
-      onDeleteThread,
-      onSyncThread,
-      onPinThread: pinThread,
-      onUnpinThread: unpinThread,
-      isThreadPinned,
-      onRenameThread,
-      onReloadWorkspaceThreads,
-      onDeleteWorkspace,
-      onDeleteWorktree,
-    });
+  const {
+    showThreadMenu,
+    showWorkspaceMenu,
+    showWorktreeMenu,
+    showCloneMenu,
+    sidebarContextMenu,
+  } = useSidebarMenus({
+    onDeleteThread,
+    onSyncThread,
+    onPinThread: pinThread,
+    onUnpinThread: unpinThread,
+    isThreadPinned,
+    onRenameThread,
+    onReloadWorkspaceThreads,
+    onDeleteWorkspace,
+    onDeleteWorktree,
+  });
   const {
     sessionPercent,
     weeklyPercent,
@@ -1046,6 +1051,7 @@ export const Sidebar = memo(function Sidebar({
         onSwitchAccount={onSwitchAccount}
         onCancelSwitchAccount={onCancelSwitchAccount}
       />
+      {sidebarContextMenu}
     </aside>
   );
 });

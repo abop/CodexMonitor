@@ -4,6 +4,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import * as notification from "@tauri-apps/plugin-notification";
 import { backendRpc } from "./backend/http";
 import { pickBrowserImageFiles } from "./browserFiles";
+import { WEB_LOCAL_PATH_UNSUPPORTED_MESSAGE } from "./runtimeErrors";
 import { isWebRuntime, readRuntimeConfig } from "./runtime";
 import {
   exportMarkdownFile,
@@ -586,6 +587,36 @@ describe("tauri invoke wrappers", () => {
       line: 33,
       column: 7,
     });
+  });
+
+  it("does not route local path opens through backend rpc in web runtime", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.mocked(readRuntimeConfig).mockReturnValue({
+      runtime: "web",
+      backendBaseUrl: "https://daemon.example.com",
+      backendToken: "secret-token",
+      activeBackend: {
+        id: "backend-1",
+        name: "Remote Office",
+        baseUrl: "https://daemon.example.com",
+        token: "secret-token",
+      },
+    });
+
+    await expect(
+      openWorkspaceIn("/tmp/project/src/App.tsx", {
+        command: "code",
+        args: ["--reuse-window"],
+        line: 33,
+        column: 7,
+      }),
+    ).rejects.toThrow(WEB_LOCAL_PATH_UNSUPPORTED_MESSAGE);
+
+    expect(backendRpc).not.toHaveBeenCalled();
+    expect(vi.mocked(invoke)).not.toHaveBeenCalledWith(
+      "open_workspace_in",
+      expect.anything(),
+    );
   });
 
   it("invokes get_open_app_icon", async () => {
