@@ -1,8 +1,6 @@
 import { memo, useMemo } from "react";
 import {
-  parsePatchFiles,
   type AnnotationSide,
-  type FileDiffMetadata,
   type SelectedLineRange,
 } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
@@ -17,10 +15,10 @@ import {
   DIFF_VIEWER_SCROLL_CSS,
 } from "../../design-system/diff/diffViewerTheme";
 import { splitPath } from "./GitDiffPanel.utils";
+import { buildFileDiffMetadata } from "./diffMetadata";
 import type { GitDiffViewerItem } from "./GitDiffViewer.types";
 import {
   isFallbackRawDiffLineHighlightable,
-  normalizePatchName,
   parseRawDiffLines,
 } from "./GitDiffViewer.utils";
 
@@ -128,26 +126,12 @@ export const DiffCard = memo(function DiffCard({
   );
 
   const fileDiff = useMemo(() => {
-    if (!entry.diff.trim()) {
-      return null;
-    }
-    const patch = parsePatchFiles(entry.diff);
-    const parsed = patch[0]?.files[0];
-    if (!parsed) {
-      return null;
-    }
-    const normalizedName = normalizePatchName(parsed.name || displayPath);
-    const normalizedPrevName = parsed.prevName
-      ? normalizePatchName(parsed.prevName)
-      : undefined;
-    return {
-      ...parsed,
-      name: normalizedName,
-      prevName: normalizedPrevName,
-      deletionLines: entry.oldLines ?? parsed.deletionLines,
-      additionLines: entry.newLines ?? parsed.additionLines,
-      isPartial: entry.oldLines || entry.newLines ? false : parsed.isPartial,
-    } satisfies FileDiffMetadata;
+    return buildFileDiffMetadata({
+      diff: entry.diff,
+      displayPath,
+      oldLines: entry.oldLines,
+      newLines: entry.newLines,
+    });
   }, [displayPath, entry.diff, entry.newLines, entry.oldLines]);
 
   const placeholder = useMemo(() => {
