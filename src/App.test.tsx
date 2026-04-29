@@ -19,6 +19,7 @@ vi.mock("@services/runtime", () => ({
     runtime: "desktop",
     backendBaseUrl: null,
     backendToken: null,
+    defaultBackendId: null,
     activeBackend: null,
   })),
   setRuntimeBackendBaseUrl: vi.fn(),
@@ -37,6 +38,7 @@ describe("App runtime boot", () => {
       runtime: "desktop",
       backendBaseUrl: null,
       backendToken: null,
+      defaultBackendId: null,
       activeBackend: null,
     });
     vi.mocked(runtime.subscribeRuntimeBackendBaseUrl).mockReturnValue(() => {});
@@ -53,6 +55,7 @@ describe("App runtime boot", () => {
       runtime: "web",
       backendBaseUrl: null,
       backendToken: null,
+      defaultBackendId: null,
       activeBackend: null,
     });
 
@@ -67,6 +70,7 @@ describe("App runtime boot", () => {
       runtime: "web",
       backendBaseUrl: null,
       backendToken: null,
+      defaultBackendId: null,
       activeBackend: null,
     });
 
@@ -82,6 +86,7 @@ describe("App runtime boot", () => {
       runtime: "web",
       backendBaseUrl: null,
       backendToken: null,
+      defaultBackendId: null,
       activeBackend: null,
     });
 

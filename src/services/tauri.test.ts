@@ -90,6 +90,7 @@ vi.mock("./runtime", () => ({
     runtime: "desktop",
     backendBaseUrl: null,
     backendToken: null,
+    defaultBackendId: null,
     activeBackend: null,
   })),
 }));
@@ -102,6 +103,7 @@ describe("tauri invoke wrappers", () => {
       runtime: "desktop",
       backendBaseUrl: null,
       backendToken: null,
+      defaultBackendId: null,
       activeBackend: null,
     });
     vi.mocked(backendRpc).mockReset();
@@ -190,6 +192,7 @@ describe("tauri invoke wrappers", () => {
       runtime: "web",
       backendBaseUrl: "https://daemon.example.com",
       backendToken: "secret-token",
+      defaultBackendId: "backend-1",
       activeBackend: {
         id: "backend-1",
         name: "Remote Office",
@@ -229,6 +232,7 @@ describe("tauri invoke wrappers", () => {
       runtime: "web",
       backendBaseUrl: "https://daemon.example.com",
       backendToken: "secret-token",
+      defaultBackendId: "backend-1",
       activeBackend: {
         id: "backend-1",
         name: "Remote Office",
@@ -591,6 +595,7 @@ describe("tauri invoke wrappers", () => {
       runtime: "web",
       backendBaseUrl: "https://daemon.example.com",
       backendToken: "secret-token",
+      defaultBackendId: "backend-1",
       activeBackend: {
         id: "backend-1",
         name: "Remote Office",
