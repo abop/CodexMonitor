@@ -12,6 +12,7 @@ vi.mock("@services/runtime", () => ({
     runtime: "desktop",
     backendBaseUrl: null,
     backendToken: null,
+    defaultBackendId: null,
     activeBackend: null,
   })),
   subscribeRuntimeBackendBaseUrl: vi.fn(() => () => {}),
@@ -160,6 +161,37 @@ describe("SidebarBottomRail web backend control", () => {
 
     expect(screen.getByText("Default")).toBeTruthy();
     expect(screen.getByText("Current")).toBeTruthy();
+  });
+
+  it("does not duplicate the default marker when the current backend is also default", () => {
+    vi.mocked(runtime.isWebRuntime).mockReturnValue(true);
+    vi.mocked(runtime.readRuntimeConfig).mockReturnValue({
+      runtime: "web",
+      backendBaseUrl: "https://daemon.example.com",
+      backendToken: null,
+      defaultBackendId: "backend-1",
+      activeBackend: {
+        id: "backend-1",
+        name: "Remote Office",
+        baseUrl: "https://daemon.example.com",
+        token: null,
+      },
+    } as never);
+    vi.mocked((runtime as any).listRuntimeWebBackends).mockReturnValue([
+      {
+        id: "backend-1",
+        name: "Remote Office",
+        baseUrl: "https://daemon.example.com",
+        token: null,
+      },
+    ]);
+
+    render(<SidebarBottomRail {...baseProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Web Backend" }));
+
+    expect(screen.getByText("Current")).toBeTruthy();
+    expect(screen.queryByText("Default")).toBeNull();
   });
 
   it("uses the selected backend for the current window", () => {

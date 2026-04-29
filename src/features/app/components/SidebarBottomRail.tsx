@@ -402,7 +402,7 @@ export function SidebarBottomRail({
                           {isActive && (
                             <span className="sidebar-web-backend-badge">Current</span>
                           )}
-                          {isDefault && (
+                          {isDefault && !isActive && (
                             <span className="sidebar-web-backend-badge">Default</span>
                           )}
                           {!isActive && (
