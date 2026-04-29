@@ -199,6 +199,43 @@ describe("runtime config", () => {
     ).toBe("backend-default");
   });
 
+  it("updates the backend query parameter when switching a url-pinned window", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+    window.localStorage.setItem(
+      "codexmonitor.web-backends",
+      JSON.stringify({
+        version: 1,
+        activeBackendId: "backend-1",
+        backends: [
+          {
+            id: "backend-1",
+            name: "One",
+            baseUrl: "https://one.example.com",
+            token: null,
+          },
+          {
+            id: "backend-2",
+            name: "Two",
+            baseUrl: "https://two.example.com",
+            token: null,
+          },
+        ],
+      }),
+    );
+    window.history.replaceState(null, "", "/agents?pane=threads&backend=backend-1#active");
+
+    setActiveRuntimeWebBackend("backend-2");
+
+    expect(window.location.search).toBe("?pane=threads&backend=backend-2");
+    expect(window.location.hash).toBe("#active");
+    expect(readRuntimeConfig()).toMatchObject({
+      backendBaseUrl: "https://two.example.com",
+      activeBackend: {
+        id: "backend-2",
+      },
+    });
+  });
+
   it("updates the shared default backend separately from the current window backend", () => {
     vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
     window.localStorage.setItem(

@@ -181,6 +181,19 @@ function readUrlBackendId(): string | null {
   );
 }
 
+function writeUrlBackendId(id: string) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(WEB_BACKEND_URL_PARAM)) {
+    return false;
+  }
+  url.searchParams.set(WEB_BACKEND_URL_PARAM, id);
+  window.history.replaceState(window.history.state, "", url.toString());
+  return true;
+}
+
 function findStoredBackend(store: RuntimeWebBackendStore, id: string | null) {
   if (!id) {
     return null;
@@ -298,6 +311,7 @@ export function setActiveRuntimeWebBackend(id: string) {
   }
   runtimeBackendBaseUrlOverride = null;
   writeCurrentWindowBackendId(backendId);
+  writeUrlBackendId(backendId);
   notifyRuntimeConfigListeners();
 }
 
