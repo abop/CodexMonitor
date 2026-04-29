@@ -122,6 +122,9 @@ describe("SidebarBottomRail web backend control", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Web Backend" }));
 
+    expect(
+      screen.getByRole("dialog", { name: "Manage Web Backends" }),
+    ).toBeTruthy();
     expect(screen.getByText("Manage Web Backends")).toBeTruthy();
     expect(screen.getAllByText("Remote Office").length).toBeGreaterThan(0);
   });

@@ -368,9 +368,15 @@ export function SidebarBottomRail({
             </span>
           </MenuTrigger>
           {webBackendMenuOpen && (
-            <PopoverSurface className="sidebar-web-backend-popover" role="dialog">
+            <PopoverSurface
+              className="sidebar-web-backend-popover"
+              role="dialog"
+              aria-labelledby="sidebar-web-backend-title"
+            >
               <div className="sidebar-web-backend-header">
-                <div className="sidebar-account-title">Manage Web Backends</div>
+                <div id="sidebar-web-backend-title" className="sidebar-account-title">
+                  Manage Web Backends
+                </div>
                 <button
                   type="button"
                   className="secondary sidebar-web-backend-add"
