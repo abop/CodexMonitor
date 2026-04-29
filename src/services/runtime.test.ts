@@ -268,6 +268,21 @@ describe("runtime config", () => {
     });
   });
 
+  it("allows omitting the backend name and falls back to the normalized url", () => {
+    const backend = upsertRuntimeWebBackend({
+      baseUrl: "https://unnamed.example.com/",
+    });
+
+    expect(backend.name).toBe("https://unnamed.example.com");
+    expect(readRuntimeConfig()).toMatchObject({
+      defaultBackendId: backend.id,
+      activeBackend: {
+        id: backend.id,
+        name: "https://unnamed.example.com",
+      },
+    });
+  });
+
   it("uses the first saved backend as both shared default and current window selection", () => {
     const firstBackend = upsertRuntimeWebBackend({
       name: "One",

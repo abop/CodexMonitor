@@ -9,7 +9,7 @@ export type RuntimeWebBackend = {
 
 export type RuntimeWebBackendInput = {
   id?: string;
-  name: string;
+  name?: string;
   baseUrl: string;
   token?: string | null;
 };
@@ -22,17 +22,13 @@ export type RuntimeConfig = {
   activeBackend: RuntimeWebBackend | null;
 };
 
-type RuntimeConfigReadResult =
-  | RuntimeConfig
-  | (Omit<RuntimeConfig, "defaultBackendId"> & { defaultBackendId?: never });
-
 type RuntimeWebBackendStore = {
   version: 1;
   activeBackendId: string | null;
   backends: RuntimeWebBackend[];
 };
 
-type RuntimeConfigListener = (config: RuntimeConfigReadResult) => void;
+type RuntimeConfigListener = (config: RuntimeConfig) => void;
 
 const WEB_BACKEND_STORAGE_KEY = "codexmonitor.web-backends";
 const WEB_BACKEND_SESSION_STORAGE_KEY = "codexmonitor.web-backend.current";
@@ -314,6 +310,7 @@ export function setDefaultRuntimeWebBackend(id: string) {
   if (!store.backends.some((backend) => backend.id === backendId)) {
     throw new Error("Backend not found.");
   }
+  runtimeBackendBaseUrlOverride = null;
   writeStoredRuntimeWebBackends({
     ...store,
     activeBackendId: backendId,
@@ -378,7 +375,7 @@ export function resolveAppRuntime(options: {
   return options.hasTauri ? "desktop" : "web";
 }
 
-export function readRuntimeConfig(): RuntimeConfigReadResult {
+export function readRuntimeConfig(): RuntimeConfig {
   const hasTauri =
     typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
   const runtime = resolveAppRuntime({
