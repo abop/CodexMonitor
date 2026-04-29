@@ -9,6 +9,7 @@ import {
   listWorkspaces,
   pickWorkspacePaths,
   removeWorkspace,
+  removeWorktree,
 } from "../../../services/tauri";
 import { isMobilePlatform } from "../../../utils/platformPaths";
 import { isWebRuntime } from "../../../services/runtime";
@@ -62,6 +63,17 @@ const workspaceTwo: WorkspaceInfo = {
   kind: "main",
   parentId: null,
   worktree: null,
+  settings: { sidebarCollapsed: false, groupId: null },
+};
+
+const worktreeOne: WorkspaceInfo = {
+  id: "wt-1",
+  name: "feature/test",
+  path: "/tmp/ws-1-worktree",
+  connected: true,
+  kind: "worktree",
+  parentId: workspaceOne.id,
+  worktree: { branch: "feature/test" },
   settings: { sidebarCollapsed: false, groupId: null },
 };
 
@@ -136,6 +148,35 @@ describe("useWorkspaceController dialogs", () => {
     expect(options).toEqual(
       expect.objectContaining({ title: "Delete workspace failed", kind: "error" }),
     );
+  });
+
+  it("uses browser confirmation before deleting a worktree in web runtime", async () => {
+    vi.mocked(isWebRuntime).mockReturnValue(true);
+    vi.mocked(listWorkspaces).mockResolvedValue([workspaceOne, worktreeOne]);
+    vi.mocked(removeWorktree).mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    const { result } = renderHook(() =>
+      useWorkspaceController({
+        appSettings: baseAppSettings,
+        addDebugEntry: vi.fn(),
+        queueSaveSettings: vi.fn(async (next) => next),
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await result.current.removeWorktree(worktreeOne.id);
+    });
+
+    expect(ask).not.toHaveBeenCalled();
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("feature/test"));
+    expect(removeWorktree).toHaveBeenCalledWith(worktreeOne.id);
+
+    confirmSpy.mockRestore();
   });
 
   it("opens the in-app remote path prompt on mobile remote mode", async () => {
