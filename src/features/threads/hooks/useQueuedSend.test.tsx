@@ -35,6 +35,9 @@ const makeOptions = (
   startMcp: vi.fn().mockResolvedValue(undefined),
   startFast: vi.fn().mockResolvedValue(undefined),
   startStatus: vi.fn().mockResolvedValue(undefined),
+  startPs: vi.fn().mockResolvedValue(undefined),
+  startStop: vi.fn().mockResolvedValue(undefined),
+  startSide: vi.fn().mockResolvedValue(undefined),
   clearActiveImages: vi.fn(),
   ...overrides,
 });
@@ -377,6 +380,67 @@ describe("useQueuedSend", () => {
     expect(startStatus).toHaveBeenCalledWith("/status now");
     expect(options.sendUserMessage).not.toHaveBeenCalled();
     expect(options.startReview).not.toHaveBeenCalled();
+  });
+
+  it("routes /ps to the background terminal status handler", async () => {
+    const startPs = vi.fn().mockResolvedValue(undefined);
+    const options = makeOptions({ startPs });
+    const { result } = renderHook((props) => useQueuedSend(props), {
+      initialProps: options,
+    });
+
+    await act(async () => {
+      await result.current.handleSend("/ps now", ["img-1"]);
+    });
+
+    expect(startPs).toHaveBeenCalledWith("/ps now");
+    expect(options.sendUserMessage).not.toHaveBeenCalled();
+  });
+
+  it("routes /stop to the background terminal stop handler", async () => {
+    const startStop = vi.fn().mockResolvedValue(undefined);
+    const options = makeOptions({ startStop });
+    const { result } = renderHook((props) => useQueuedSend(props), {
+      initialProps: options,
+    });
+
+    await act(async () => {
+      await result.current.handleSend("/stop", ["img-1"]);
+    });
+
+    expect(startStop).toHaveBeenCalledWith("/stop");
+    expect(options.sendUserMessage).not.toHaveBeenCalled();
+  });
+
+  it("routes /side to the side conversation handler", async () => {
+    const startSide = vi.fn().mockResolvedValue(undefined);
+    const options = makeOptions({ startSide });
+    const { result } = renderHook((props) => useQueuedSend(props), {
+      initialProps: options,
+    });
+
+    await act(async () => {
+      await result.current.handleSend("/side compare options", ["img-1"]);
+    });
+
+    expect(startSide).toHaveBeenCalledWith("/side compare options", ["img-1"], []);
+    expect(options.sendUserMessage).not.toHaveBeenCalled();
+  });
+
+  it("runs task-safe slash commands immediately while processing", async () => {
+    const startSide = vi.fn().mockResolvedValue(undefined);
+    const options = makeOptions({ isProcessing: true, startSide });
+    const { result } = renderHook((props) => useQueuedSend(props), {
+      initialProps: options,
+    });
+
+    await act(async () => {
+      await result.current.handleSend("/side can you inspect this?");
+    });
+
+    expect(startSide).toHaveBeenCalledWith("/side can you inspect this?", [], []);
+    expect(result.current.activeQueue).toHaveLength(0);
+    expect(options.sendUserMessage).not.toHaveBeenCalled();
   });
 
   it("routes /fast to the fast-mode handler", async () => {

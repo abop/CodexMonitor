@@ -38,6 +38,8 @@ const WEB_ALLOWED_RPC_METHODS: &[&str] = &[
     "turn_interrupt",
     "turn_steer",
     "fork_thread",
+    "thread_inject_items",
+    "clean_background_terminals",
     "compact_thread",
     "start_review",
     "list_mcp_server_status",
