@@ -90,7 +90,47 @@ pub(super) async fn try_handle(
                 Ok(value) => value,
                 Err(err) => return Some(Err(err)),
             };
-            Some(state.fork_thread(workspace_id, thread_id).await)
+            let developer_instructions = parse_optional_string(params, "developerInstructions");
+            let ephemeral = parse_optional_bool(params, "ephemeral").unwrap_or(false);
+            Some(
+                state
+                    .fork_thread(workspace_id, thread_id, developer_instructions, ephemeral)
+                    .await,
+            )
+        }
+        "thread_inject_items" => {
+            let workspace_id = match parse_string(params, "workspaceId") {
+                Ok(value) => value,
+                Err(err) => return Some(Err(err)),
+            };
+            let thread_id = match parse_string(params, "threadId") {
+                Ok(value) => value,
+                Err(err) => return Some(Err(err)),
+            };
+            let items = match parse_optional_value(params, "items") {
+                Some(Value::Array(items)) => items,
+                _ => return Some(Err("missing or invalid `items`".to_string())),
+            };
+            Some(
+                state
+                    .thread_inject_items(workspace_id, thread_id, items)
+                    .await,
+            )
+        }
+        "clean_background_terminals" => {
+            let workspace_id = match parse_string(params, "workspaceId") {
+                Ok(value) => value,
+                Err(err) => return Some(Err(err)),
+            };
+            let thread_id = match parse_string(params, "threadId") {
+                Ok(value) => value,
+                Err(err) => return Some(Err(err)),
+            };
+            Some(
+                state
+                    .clean_background_terminals(workspace_id, thread_id)
+                    .await,
+            )
         }
         "list_threads" => {
             let workspace_id = match parse_string(params, "workspaceId") {

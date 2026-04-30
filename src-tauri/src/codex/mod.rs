@@ -210,6 +210,40 @@ pub(crate) async fn thread_live_unsubscribe(
 pub(crate) async fn fork_thread(
     workspace_id: String,
     thread_id: String,
+    developer_instructions: Option<String>,
+    ephemeral: Option<bool>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<Value, String> {
+    let ephemeral = ephemeral.unwrap_or(false);
+    if remote_backend::is_remote_mode(&*state).await {
+        let mut payload = json!({ "workspaceId": workspace_id, "threadId": thread_id });
+        if let Some(developer_instructions) = developer_instructions.clone() {
+            if !developer_instructions.trim().is_empty() {
+                payload["developerInstructions"] = Value::String(developer_instructions);
+            }
+        }
+        if ephemeral {
+            payload["ephemeral"] = Value::Bool(true);
+        }
+        return remote_backend::call_remote(&*state, app, "fork_thread", payload).await;
+    }
+
+    codex_core::fork_thread_core(
+        &state.sessions,
+        workspace_id,
+        thread_id,
+        developer_instructions,
+        ephemeral,
+    )
+    .await
+}
+
+#[tauri::command]
+pub(crate) async fn thread_inject_items(
+    workspace_id: String,
+    thread_id: String,
+    items: Vec<Value>,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<Value, String> {
@@ -217,13 +251,33 @@ pub(crate) async fn fork_thread(
         return remote_backend::call_remote(
             &*state,
             app,
-            "fork_thread",
+            "thread_inject_items",
+            json!({ "workspaceId": workspace_id, "threadId": thread_id, "items": items }),
+        )
+        .await;
+    }
+
+    codex_core::thread_inject_items_core(&state.sessions, workspace_id, thread_id, items).await
+}
+
+#[tauri::command]
+pub(crate) async fn clean_background_terminals(
+    workspace_id: String,
+    thread_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<Value, String> {
+    if remote_backend::is_remote_mode(&*state).await {
+        return remote_backend::call_remote(
+            &*state,
+            app,
+            "clean_background_terminals",
             json!({ "workspaceId": workspace_id, "threadId": thread_id }),
         )
         .await;
     }
 
-    codex_core::fork_thread_core(&state.sessions, workspace_id, thread_id).await
+    codex_core::clean_background_terminals_core(&state.sessions, workspace_id, thread_id).await
 }
 
 #[tauri::command]

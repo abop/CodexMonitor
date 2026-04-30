@@ -759,8 +759,38 @@ impl DaemonState {
         Ok(json!({ "ok": true }))
     }
 
-    async fn fork_thread(&self, workspace_id: String, thread_id: String) -> Result<Value, String> {
-        codex_core::fork_thread_core(&self.sessions, workspace_id, thread_id).await
+    async fn fork_thread(
+        &self,
+        workspace_id: String,
+        thread_id: String,
+        developer_instructions: Option<String>,
+        ephemeral: bool,
+    ) -> Result<Value, String> {
+        codex_core::fork_thread_core(
+            &self.sessions,
+            workspace_id,
+            thread_id,
+            developer_instructions,
+            ephemeral,
+        )
+        .await
+    }
+
+    async fn thread_inject_items(
+        &self,
+        workspace_id: String,
+        thread_id: String,
+        items: Vec<Value>,
+    ) -> Result<Value, String> {
+        codex_core::thread_inject_items_core(&self.sessions, workspace_id, thread_id, items).await
+    }
+
+    async fn clean_background_terminals(
+        &self,
+        workspace_id: String,
+        thread_id: String,
+    ) -> Result<Value, String> {
+        codex_core::clean_background_terminals_core(&self.sessions, workspace_id, thread_id).await
     }
 
     async fn list_threads(

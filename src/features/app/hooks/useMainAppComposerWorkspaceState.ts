@@ -85,6 +85,9 @@ type UseMainAppComposerWorkspaceStateArgs = {
     startApps: Parameters<typeof useComposerController>[0]["startApps"];
     startMcp: Parameters<typeof useComposerController>[0]["startMcp"];
     startFast: Parameters<typeof useComposerController>[0]["startFast"];
+    startPs: Parameters<typeof useComposerController>[0]["startPs"];
+    startStop: Parameters<typeof useComposerController>[0]["startStop"];
+    startSide: Parameters<typeof useComposerController>[0]["startSide"];
     startStatus: Parameters<typeof useComposerController>[0]["startStatus"];
     handleWorktreeCreated?: Parameters<typeof useWorkspaceHome>[0]["onWorktreeCreated"];
     addDebugEntry: (entry: DebugEntry) => void;
@@ -145,6 +148,9 @@ export function useMainAppComposerWorkspaceState({
     startApps,
     startMcp,
     startFast,
+    startPs,
+    startStop,
+    startSide,
     startStatus,
     handleWorktreeCreated,
     addDebugEntry,
@@ -244,6 +250,9 @@ export function useMainAppComposerWorkspaceState({
     startApps,
     startMcp,
     startFast,
+    startPs,
+    startStop,
+    startSide,
     startStatus,
   });
 

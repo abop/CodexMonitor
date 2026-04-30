@@ -166,6 +166,70 @@ describe("useThreadActions", () => {
     expect(loadedThreadsRef.current["thread-fork-1"]).toBe(true);
   });
 
+  it("passes ephemeral fork requests through to the service", async () => {
+    vi.mocked(forkThread).mockResolvedValue({
+      result: { thread: { id: "thread-side-1" } },
+    });
+
+    const { result } = renderActions();
+
+    await act(async () => {
+      await result.current.forkThreadForWorkspace("ws-1", "thread-1", {
+        ephemeral: true,
+        developerInstructions: "side guardrails",
+      });
+    });
+
+    expect(forkThread).toHaveBeenCalledWith("ws-1", "thread-1", {
+      ephemeral: true,
+      developerInstructions: "side guardrails",
+    });
+  });
+
+  it("hydrates ephemeral forks from the fork response without resuming", async () => {
+    const assistantItem: ConversationItem = {
+      id: "assistant-side",
+      kind: "message",
+      role: "assistant",
+      text: "Side ready",
+    };
+    vi.mocked(forkThread).mockResolvedValue({
+      result: {
+        thread: {
+          id: "thread-side-1",
+          name: "Side Thread",
+          preview: "side preview",
+          turns: [{ items: [{ id: "assistant-side", type: "agentMessage" }] }],
+        },
+      },
+    });
+    vi.mocked(buildItemsFromThread).mockReturnValue([assistantItem]);
+    vi.mocked(isReviewingFromThread).mockReturnValue(false);
+    vi.mocked(getThreadTimestamp).mockReturnValue(1234);
+
+    const { result, dispatch, loadedThreadsRef } = renderActions();
+
+    await act(async () => {
+      await result.current.forkThreadForWorkspace("ws-1", "thread-1", {
+        ephemeral: true,
+      });
+    });
+
+    expect(resumeThread).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setThreadItems",
+      threadId: "thread-side-1",
+      items: [assistantItem],
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setThreadName",
+      workspaceId: "ws-1",
+      threadId: "thread-side-1",
+      name: "Side Thread",
+    });
+    expect(loadedThreadsRef.current["thread-side-1"]).toBe(true);
+  });
+
   it("forks a thread without activating when requested", async () => {
     vi.mocked(forkThread).mockResolvedValue({
       result: { thread: { id: "thread-fork-2" } },

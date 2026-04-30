@@ -43,6 +43,13 @@ type UseQueuedSendOptions = {
   startMcp: (text: string) => Promise<void>;
   startFast: (text: string) => Promise<void>;
   startStatus: (text: string) => Promise<void>;
+  startPs: (text: string) => Promise<void>;
+  startStop: (text: string) => Promise<void>;
+  startSide: (
+    text: string,
+    images?: string[],
+    appMentions?: AppMention[],
+  ) => Promise<void>;
   clearActiveImages: () => void;
 };
 
@@ -70,9 +77,12 @@ type SlashCommandKind =
   | "fork"
   | "mcp"
   | "new"
+  | "ps"
   | "resume"
   | "review"
-  | "status";
+  | "side"
+  | "status"
+  | "stop";
 
 function parseSlashCommand(text: string, appsEnabled: boolean): SlashCommandKind | null {
   if (appsEnabled && /^\/apps\b/i.test(text)) {
@@ -96,13 +106,30 @@ function parseSlashCommand(text: string, appsEnabled: boolean): SlashCommandKind
   if (/^\/new\b/i.test(text)) {
     return "new";
   }
+  if (/^\/ps\b/i.test(text)) {
+    return "ps";
+  }
   if (/^\/resume\b/i.test(text)) {
     return "resume";
+  }
+  if (/^\/side\b/i.test(text)) {
+    return "side";
   }
   if (/^\/status\b/i.test(text)) {
     return "status";
   }
+  if (/^\/stop\b/i.test(text)) {
+    return "stop";
+  }
   return null;
+}
+
+function slashCommandKeepsComposerPayload(command: SlashCommandKind | null) {
+  return command === "side";
+}
+
+function slashCommandRunsDuringProcessing(command: SlashCommandKind | null) {
+  return command === "ps" || command === "stop" || command === "side";
 }
 
 export function useQueuedSend({
@@ -127,6 +154,9 @@ export function useQueuedSend({
   startMcp,
   startFast,
   startStatus,
+  startPs,
+  startStop,
+  startSide,
   clearActiveImages,
 }: UseQueuedSendOptions): UseQueuedSendResult {
   const [queuedByThread, setQueuedByThread] = useState<
@@ -182,9 +212,18 @@ export function useQueuedSend({
   );
 
   const runSlashCommand = useCallback(
-    async (command: SlashCommandKind, trimmed: string) => {
+    async (
+      command: SlashCommandKind,
+      trimmed: string,
+      images: string[] = [],
+      appMentions: AppMention[] = [],
+    ) => {
       if (command === "fork") {
         await startFork(trimmed);
+        return;
+      }
+      if (command === "side") {
+        await startSide(trimmed, images, appMentions);
         return;
       }
       if (command === "review") {
@@ -215,6 +254,14 @@ export function useQueuedSend({
         await startStatus(trimmed);
         return;
       }
+      if (command === "ps") {
+        await startPs(trimmed);
+        return;
+      }
+      if (command === "stop") {
+        await startStop(trimmed);
+        return;
+      }
       if (command === "new" && activeWorkspace) {
         const threadId = await startThreadForWorkspace(activeWorkspace.id);
         const rest = trimmed.replace(/^\/new\b/i, "").trim();
@@ -234,6 +281,9 @@ export function useQueuedSend({
       startMcp,
       startFast,
       startStatus,
+      startPs,
+      startStop,
+      startSide,
       startThreadForWorkspace,
     ],
   );
@@ -247,8 +297,9 @@ export function useQueuedSend({
     ) => {
       const trimmed = text.trim();
       const command = parseSlashCommand(trimmed, appsEnabled);
-      const nextImages = command ? [] : images;
-      const nextMentions = command ? [] : appMentions;
+      const commandKeepsPayload = slashCommandKeepsComposerPayload(command);
+      const nextImages = command && !commandKeepsPayload ? [] : images;
+      const nextMentions = command && !commandKeepsPayload ? [] : appMentions;
       const canSteerCurrentTurn =
         isProcessing && steerEnabled && Boolean(activeTurnId);
       const effectiveIntent: ComposerSendIntent = !isProcessing
@@ -268,7 +319,12 @@ export function useQueuedSend({
       if (activeThreadId && isReviewing) {
         return;
       }
-      if (isProcessing && activeThreadId && effectiveIntent === "queue") {
+      if (
+        isProcessing &&
+        activeThreadId &&
+        effectiveIntent === "queue" &&
+        !slashCommandRunsDuringProcessing(command)
+      ) {
         const item = createQueuedItem(trimmed, nextImages, nextMentions);
         enqueueMessage(activeThreadId, item);
         clearActiveImages();
@@ -278,7 +334,7 @@ export function useQueuedSend({
         await connectWorkspace(activeWorkspace);
       }
       if (command) {
-        await runSlashCommand(command, trimmed);
+        await runSlashCommand(command, trimmed, nextImages, nextMentions);
         clearActiveImages();
         return;
       }
@@ -325,8 +381,9 @@ export function useQueuedSend({
     ) => {
       const trimmed = text.trim();
       const command = parseSlashCommand(trimmed, appsEnabled);
-      const nextImages = command ? [] : images;
-      const nextMentions = command ? [] : appMentions;
+      const commandKeepsPayload = slashCommandKeepsComposerPayload(command);
+      const nextImages = command && !commandKeepsPayload ? [] : images;
+      const nextMentions = command && !commandKeepsPayload ? [] : appMentions;
       if (!trimmed && nextImages.length === 0) {
         return;
       }
@@ -403,7 +460,12 @@ export function useQueuedSend({
         const trimmed = nextItem.text.trim();
         const command = parseSlashCommand(trimmed, appsEnabled);
         if (command) {
-          await runSlashCommand(command, trimmed);
+          await runSlashCommand(
+            command,
+            trimmed,
+            nextItem.images ?? [],
+            nextItem.appMentions ?? [],
+          );
         } else {
           const queuedMentions = nextItem.appMentions ?? [];
           if (queuedMentions.length > 0) {

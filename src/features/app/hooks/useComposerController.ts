@@ -32,6 +32,9 @@ export function useComposerController({
   startApps,
   startMcp,
   startFast,
+  startPs,
+  startStop,
+  startSide,
   startStatus,
 }: {
   activeThreadId: string | null;
@@ -68,6 +71,13 @@ export function useComposerController({
   startApps: (text: string) => Promise<void>;
   startMcp: (text: string) => Promise<void>;
   startFast: (text: string) => Promise<void>;
+  startPs: (text: string) => Promise<void>;
+  startStop: (text: string) => Promise<void>;
+  startSide: (
+    text: string,
+    images?: string[],
+    appMentions?: AppMention[],
+  ) => Promise<void>;
   startStatus: (text: string) => Promise<void>;
 }) {
   const [composerDraftsByThread, setComposerDraftsByThread] = useState<
@@ -114,6 +124,9 @@ export function useComposerController({
     startApps,
     startMcp,
     startFast,
+    startPs,
+    startStop,
+    startSide,
     startStatus,
     clearActiveImages,
   });

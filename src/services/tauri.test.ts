@@ -9,10 +9,12 @@ import { isWebRuntime, readRuntimeConfig } from "./runtime";
 import {
   exportMarkdownFile,
   addWorkspace,
+  cleanBackgroundTerminals,
   compactThread,
   createGitHubRepo,
   fetchGit,
   forkThread,
+  injectThreadItems,
   getAppsList,
   getAgentsSettings,
   getExperimentalFeatureList,
@@ -387,6 +389,56 @@ describe("tauri invoke wrappers", () => {
     });
   });
 
+  it("passes ephemeral fork requests to fork_thread", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await forkThread("ws-9", "thread-9", { ephemeral: true });
+
+    expect(invokeMock).toHaveBeenCalledWith("fork_thread", {
+      workspaceId: "ws-9",
+      threadId: "thread-9",
+      ephemeral: true,
+    });
+  });
+
+  it("passes side conversation guardrails to fork_thread", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await forkThread("ws-9", "thread-9", {
+      ephemeral: true,
+      developerInstructions: "side guardrails",
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("fork_thread", {
+      workspaceId: "ws-9",
+      threadId: "thread-9",
+      ephemeral: true,
+      developerInstructions: "side guardrails",
+    });
+  });
+
+  it("maps thread items for thread_inject_items", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+    const items = [
+      {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text: "boundary" }],
+      },
+    ];
+
+    await injectThreadItems("ws-12", "thread-12", items);
+
+    expect(invokeMock).toHaveBeenCalledWith("thread_inject_items", {
+      workspaceId: "ws-12",
+      threadId: "thread-12",
+      items,
+    });
+  });
+
   it("maps workspaceId and threadId for compact_thread", async () => {
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockResolvedValueOnce({});
@@ -396,6 +448,18 @@ describe("tauri invoke wrappers", () => {
     expect(invokeMock).toHaveBeenCalledWith("compact_thread", {
       workspaceId: "ws-10",
       threadId: "thread-10",
+    });
+  });
+
+  it("maps workspaceId and threadId for clean_background_terminals", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await cleanBackgroundTerminals("ws-11", "thread-11");
+
+    expect(invokeMock).toHaveBeenCalledWith("clean_background_terminals", {
+      workspaceId: "ws-11",
+      threadId: "thread-11",
     });
   });
 
