@@ -17,6 +17,12 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
+vi.mock("../../../utils/diffsWorker", () => ({
+  workerFactory: () => {
+    throw new Error("Unexpected workerFactory call in GitDiffViewer unit test");
+  },
+}));
+
 vi.mock("@pierre/diffs", () => ({
   parsePatchFiles: (diff: string) =>
     diff.includes("@@")

@@ -26,6 +26,12 @@ vi.mock("../hooks/useFileLinkOpener", () => ({
   ) => useFileLinkOpenerMock(workspacePath, openTargets, selectedOpenAppId),
 }));
 
+vi.mock("../../../utils/diffsWorker", () => ({
+  workerFactory: () => {
+    throw new Error("Unexpected workerFactory call in Messages unit test");
+  },
+}));
+
 vi.mock("@services/tauri", async () => {
   const actual = await vi.importActual<typeof import("@services/tauri")>(
     "@services/tauri",
