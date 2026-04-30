@@ -9,7 +9,7 @@ export type RuntimeWebBackend = {
 
 export type RuntimeWebBackendInput = {
   id?: string;
-  name: string;
+  name?: string | null;
   baseUrl: string;
   token?: string | null;
 };
@@ -70,14 +70,13 @@ function normalizeRuntimeWebBackend(
     return null;
   }
   const baseUrl = normalizeBackendBaseUrl(value.baseUrl);
-  const name = normalizeBackendName(value.name);
   const id = typeof value.id === "string" ? value.id.trim() : "";
-  if (!baseUrl || !name || !id) {
+  if (!baseUrl || !id) {
     return null;
   }
   return {
     id,
-    name,
+    name: normalizeBackendName(value.name) ?? baseUrl,
     baseUrl,
     token: normalizeBackendToken(value.token),
   };
@@ -206,14 +205,11 @@ export function upsertRuntimeWebBackend(
   input: RuntimeWebBackendInput,
   options?: { activate?: boolean },
 ) {
-  const name = normalizeBackendName(input.name);
   const baseUrl = normalizeBackendBaseUrl(input.baseUrl);
-  if (!name) {
-    throw new Error("Backend name is required.");
-  }
   if (!baseUrl) {
     throw new Error("Backend URL is required.");
   }
+  const name = normalizeBackendName(input.name) ?? baseUrl;
 
   const existing = input.id ? normalizeBackendName(input.id) : null;
   const backend: RuntimeWebBackend = {

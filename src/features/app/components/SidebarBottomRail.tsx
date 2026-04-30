@@ -406,9 +406,9 @@ export function SidebarBottomRail({
                     {webBackendDraft.id ? "Edit Web Backend" : "Add Web Backend"}
                   </div>
                   <label className="sidebar-web-backend-field">
-                    <span>Backend name</span>
+                    <span>Backend name (optional)</span>
                     <input
-                      aria-label="Web backend name"
+                      aria-label="Web backend name (optional)"
                       type="text"
                       value={webBackendDraft.name}
                       onChange={(event) => {
