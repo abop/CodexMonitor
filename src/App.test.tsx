@@ -68,7 +68,7 @@ describe("App runtime boot", () => {
     expect(screen.queryByText("Main App")).toBeNull();
   });
 
-  it("shows backend name and optional token inputs in the web setup form", () => {
+  it("shows optional backend name and token inputs in the web setup form", () => {
     vi.mocked(runtime.readRuntimeConfig).mockReturnValue({
       runtime: "web",
       backendBaseUrl: null,
@@ -79,7 +79,7 @@ describe("App runtime boot", () => {
 
     render(<App />);
 
-    expect(screen.getByLabelText("Backend name")).not.toBeNull();
+    expect(screen.getByLabelText("Backend name (optional)")).not.toBeNull();
     expect(screen.getByLabelText("Backend URL")).not.toBeNull();
     expect(screen.getByLabelText("Access token (optional)")).not.toBeNull();
   });
@@ -95,7 +95,7 @@ describe("App runtime boot", () => {
 
     render(<App />);
 
-    fireEvent.change(screen.getByLabelText("Backend name"), {
+    fireEvent.change(screen.getByLabelText("Backend name (optional)"), {
       target: { value: "Remote Office" },
     });
     fireEvent.change(screen.getByLabelText("Backend URL"), {

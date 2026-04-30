@@ -117,21 +117,22 @@ function WebRuntimeSetupView() {
           </h1>
           <p style={{ margin: 0, color: "#cbd5e1", lineHeight: 1.6 }}>
             This browser runtime talks directly to the unified daemon backend.
-            Save a named backend to continue. Add a token when the daemon requires
-            one.
+            Save a backend URL to continue. Add a name or token when helpful.
           </p>
         </div>
 
         <label style={{ display: "grid", gap: "8px" }}>
-          <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>Backend name</span>
+          <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>
+            Backend name (optional)
+          </span>
           <input
-            aria-label="Backend name"
+            aria-label="Backend name (optional)"
             type="text"
             value={backendName}
             onChange={(event) => {
               setBackendName(event.target.value);
             }}
-            placeholder="Local daemon"
+            placeholder="Defaults to backend URL"
             style={{
               width: "100%",
               padding: "12px 14px",

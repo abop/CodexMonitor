@@ -157,11 +157,11 @@ describe("usePullRequestComposer", () => {
     const { result } = renderHook(() => usePullRequestComposer(options));
 
     await act(async () => {
-      await result.current.handleComposerSend("/apps", []);
+      await result.current.handleComposerSend("/side compare this PR", []);
     });
 
     expect(options.handleSend).toHaveBeenCalledWith(
-      "/apps",
+      "/side compare this PR",
       [],
       undefined,
       undefined,

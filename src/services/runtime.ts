@@ -9,7 +9,7 @@ export type RuntimeWebBackend = {
 
 export type RuntimeWebBackendInput = {
   id?: string;
-  name?: string;
+  name?: string | null;
   baseUrl: string;
   token?: string | null;
 };
@@ -84,14 +84,13 @@ function normalizeRuntimeWebBackend(
     return null;
   }
   const baseUrl = normalizeBackendBaseUrl(value.baseUrl);
-  const name = normalizeBackendName(value.name) ?? baseUrl;
   const id = typeof value.id === "string" ? value.id.trim() : "";
-  if (!baseUrl || !name || !id) {
+  if (!baseUrl || !id) {
     return null;
   }
   return {
     id,
-    name,
+    name: normalizeBackendName(value.name) ?? baseUrl,
     baseUrl,
     token: normalizeBackendToken(value.token),
   };

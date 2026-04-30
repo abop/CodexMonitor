@@ -6,6 +6,7 @@ import {
   deleteRuntimeWebBackend,
   getActiveRuntimeWebBackendId,
   isWebRuntime,
+  listRuntimeWebBackends,
   readRuntimeConfig,
   resetRuntimeBackendBaseUrlForTests,
   resolveAppRuntime,
@@ -107,6 +108,35 @@ describe("runtime config", () => {
       activeBackend: {
         id: "backend-2",
         name: "Remote Office",
+        baseUrl: "https://daemon.example.com",
+        token: "remote-secret",
+      },
+    });
+  });
+
+  it("uses the backend URL as the default name when saving without a custom name", () => {
+    vi.stubEnv("VITE_CODEXMONITOR_RUNTIME", "web");
+
+    const backend = upsertRuntimeWebBackend(
+      {
+        baseUrl: " https://daemon.example.com/ ",
+        token: " remote-secret ",
+      },
+      { activate: true },
+    );
+
+    expect(backend).toMatchObject({
+      name: "https://daemon.example.com",
+      baseUrl: "https://daemon.example.com",
+      token: "remote-secret",
+    });
+    expect(listRuntimeWebBackends()).toHaveLength(1);
+    expect(readRuntimeConfig()).toMatchObject({
+      runtime: "web",
+      backendBaseUrl: "https://daemon.example.com",
+      backendToken: "remote-secret",
+      activeBackend: {
+        name: "https://daemon.example.com",
         baseUrl: "https://daemon.example.com",
         token: "remote-secret",
       },

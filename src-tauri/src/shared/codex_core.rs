@@ -316,11 +316,93 @@ pub(crate) async fn fork_thread_core(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspace_id: String,
     thread_id: String,
+    developer_instructions: Option<String>,
+    ephemeral: bool,
 ) -> Result<Value, String> {
     let session = get_session_clone(sessions, &workspace_id).await?;
-    let params = json!({ "threadId": thread_id });
+    let mut params = json!({ "threadId": thread_id });
+    if let Some(developer_instructions) =
+        append_config_developer_instructions(developer_instructions)
+    {
+        if !developer_instructions.trim().is_empty() {
+            params["developerInstructions"] = Value::String(developer_instructions);
+        }
+    }
+    if ephemeral {
+        params["ephemeral"] = Value::Bool(true);
+    }
     session
         .send_request_for_workspace(&workspace_id, "thread/fork", params)
+        .await
+}
+
+fn append_config_developer_instructions(
+    developer_instructions: Option<String>,
+) -> Option<String> {
+    let requested = developer_instructions
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())?;
+    let config_instructions = codex_config::read_config_developer_instructions(None)
+        .ok()
+        .flatten()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    combine_developer_instructions(config_instructions.as_deref(), Some(requested))
+}
+
+fn combine_developer_instructions(
+    existing: Option<&str>,
+    requested: Option<String>,
+) -> Option<String> {
+    let requested = requested
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())?;
+    let existing = existing.map(str::trim).filter(|value| !value.is_empty());
+    match existing {
+        Some(existing) if !requested.contains(existing) => {
+            Some(format!("{existing}\n\n{requested}"))
+        }
+        _ => Some(requested),
+    }
+}
+
+#[cfg(test)]
+mod developer_instruction_tests {
+    use super::combine_developer_instructions;
+
+    #[test]
+    fn combines_existing_developer_instructions_before_requested_instructions() {
+        assert_eq!(
+            combine_developer_instructions(
+                Some("Keep the repo safe."),
+                Some("Side guardrails.".to_string()),
+            ),
+            Some("Keep the repo safe.\n\nSide guardrails.".to_string())
+        );
+    }
+
+    #[test]
+    fn combine_developer_instructions_avoids_duplicate_existing_text() {
+        assert_eq!(
+            combine_developer_instructions(
+                Some("Keep the repo safe."),
+                Some("Keep the repo safe.\n\nSide guardrails.".to_string()),
+            ),
+            Some("Keep the repo safe.\n\nSide guardrails.".to_string())
+        );
+    }
+}
+
+pub(crate) async fn thread_inject_items_core(
+    sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
+    workspace_id: String,
+    thread_id: String,
+    items: Vec<Value>,
+) -> Result<Value, String> {
+    let session = get_session_clone(sessions, &workspace_id).await?;
+    let params = json!({ "threadId": thread_id, "items": items });
+    session
+        .send_request_for_workspace(&workspace_id, "thread/inject_items", params)
         .await
 }
 
@@ -381,6 +463,18 @@ pub(crate) async fn compact_thread_core(
     let params = json!({ "threadId": thread_id });
     session
         .send_request_for_workspace(&workspace_id, "thread/compact/start", params)
+        .await
+}
+
+pub(crate) async fn clean_background_terminals_core(
+    sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
+    workspace_id: String,
+    thread_id: String,
+) -> Result<Value, String> {
+    let session = get_session_clone(sessions, &workspace_id).await?;
+    let params = json!({ "threadId": thread_id });
+    session
+        .send_request_for_workspace(&workspace_id, "thread/backgroundTerminals/clean", params)
         .await
 }
 

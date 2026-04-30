@@ -519,12 +519,52 @@ export async function startThread(workspaceId: string) {
   return invokeCommand<any>("start_thread", { workspaceId });
 }
 
-export async function forkThread(workspaceId: string, threadId: string) {
-  return invokeCommand<any>("fork_thread", { workspaceId, threadId });
+export type ForkThreadOptions = {
+  developerInstructions?: string;
+  ephemeral?: boolean;
+};
+
+export async function forkThread(
+  workspaceId: string,
+  threadId: string,
+  options: ForkThreadOptions = {},
+) {
+  return invokeCommand<any>("fork_thread", {
+    workspaceId,
+    threadId,
+    ...(options.ephemeral ? { ephemeral: true } : {}),
+    ...(options.developerInstructions
+      ? { developerInstructions: options.developerInstructions }
+      : {}),
+  });
+}
+
+export type ThreadInjectItem = Record<string, unknown>;
+
+export async function injectThreadItems(
+  workspaceId: string,
+  threadId: string,
+  items: ThreadInjectItem[],
+) {
+  return invokeCommand<any>("thread_inject_items", {
+    workspaceId,
+    threadId,
+    items,
+  });
 }
 
 export async function compactThread(workspaceId: string, threadId: string) {
   return invokeCommand<any>("compact_thread", { workspaceId, threadId });
+}
+
+export async function cleanBackgroundTerminals(
+  workspaceId: string,
+  threadId: string,
+) {
+  return invokeCommand<any>("clean_background_terminals", {
+    workspaceId,
+    threadId,
+  });
 }
 
 function isInlineImageUrl(image: string) {

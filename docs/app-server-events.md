@@ -1,4 +1,4 @@
-# App-Server Events Reference (Codex `19702e190ebf16f789617ca5f16bfc373c238fe7`)
+# App-Server Events Reference (Codex `c37f7434badbc50a4bee80148952a98f4dca36b4`)
 
 This document helps agents quickly answer:
 - Which app-server events CodexMonitor supports right now.
@@ -150,10 +150,13 @@ These are v2 request methods CodexMonitor currently sends to Codex app-server:
 
 - `thread/start`
 - `thread/resume`
-- `thread/fork`
+- `thread/read`
+- `thread/fork` (plain forks and `/side` ephemeral forks)
+- `thread/inject_items` (used to add the hidden `/side` boundary)
 - `thread/list`
 - `thread/archive`
 - `thread/compact/start`
+- `thread/backgroundTerminals/clean`
 - `thread/name/set`
 - `turn/start`
 - `turn/steer` (used for explicit steer follow-ups while a turn is active)
@@ -207,12 +210,10 @@ Compared against Codex v2 request methods, CodexMonitor currently does not send:
 - `plugin/read`
 - `plugin/uninstall`
 - `skills/config/write`
-- `thread/backgroundTerminals/clean`
 - `thread/decrement_elicitation`
 - `thread/increment_elicitation`
 - `thread/loaded/list`
 - `thread/metadata/update`
-- `thread/read`
 - `thread/realtime/appendAudio`
 - `thread/realtime/appendText`
 - `thread/realtime/start`

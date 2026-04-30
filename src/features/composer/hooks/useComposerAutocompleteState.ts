@@ -185,6 +185,13 @@ export function useComposerAutocompleteState({
         group: "Slash",
       },
       {
+        id: "ps",
+        label: "ps",
+        description: "list background terminals",
+        insertText: "ps",
+        group: "Slash",
+      },
+      {
         id: "review",
         label: "review",
         description: "start a code review",
@@ -199,10 +206,24 @@ export function useComposerAutocompleteState({
         group: "Slash",
       },
       {
+        id: "side",
+        label: "side",
+        description: "start a side conversation",
+        insertText: "side",
+        group: "Slash",
+      },
+      {
         id: "status",
         label: "status",
         description: "show session status",
         insertText: "status",
+        group: "Slash",
+      },
+      {
+        id: "stop",
+        label: "stop",
+        description: "stop all background terminals",
+        insertText: "stop",
         group: "Slash",
       },
     ];

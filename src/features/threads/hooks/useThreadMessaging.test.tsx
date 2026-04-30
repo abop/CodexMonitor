@@ -10,6 +10,8 @@ import {
   getAppsList as getAppsListService,
   listMcpServerStatus as listMcpServerStatusService,
   compactThread as compactThreadService,
+  cleanBackgroundTerminals as cleanBackgroundTerminalsService,
+  injectThreadItems as injectThreadItemsService,
 } from "@services/tauri";
 import type { WorkspaceInfo } from "@/types";
 import { useThreadMessaging } from "./useThreadMessaging";
@@ -28,6 +30,8 @@ vi.mock("@services/tauri", () => ({
   getAppsList: vi.fn(),
   listMcpServerStatus: vi.fn(),
   compactThread: vi.fn(),
+  cleanBackgroundTerminals: vi.fn(),
+  injectThreadItems: vi.fn(),
 }));
 
 vi.mock("./useReviewPrompt", () => ({
@@ -94,6 +98,12 @@ describe("useThreadMessaging telemetry", () => {
     );
     vi.mocked(compactThreadService).mockResolvedValue(
       {} as Awaited<ReturnType<typeof compactThreadService>>,
+    );
+    vi.mocked(cleanBackgroundTerminalsService).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof cleanBackgroundTerminalsService>>,
+    );
+    vi.mocked(injectThreadItemsService).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof injectThreadItemsService>>,
     );
   });
 
@@ -396,6 +406,275 @@ describe("useThreadMessaging telemetry", () => {
       threadId: "thread-1",
       text: "Fast mode enabled.",
     });
+  });
+
+  it("shows running background terminals for /ps", async () => {
+    const dispatch = vi.fn();
+    const { result } = renderHook(() =>
+      useThreadMessaging({
+        activeWorkspace: workspace,
+        activeThreadId: "thread-1",
+        accessMode: "current",
+        model: null,
+        effort: null,
+        collaborationMode: null,
+        reviewDeliveryMode: "inline",
+        steerEnabled: false,
+        customPrompts: [],
+        threadStatusById: {},
+        activeTurnIdByThread: {},
+        itemsByThread: {
+          "thread-1": [
+            {
+              id: "cmd-1",
+              kind: "tool",
+              toolType: "commandExecution",
+              title: "Command: npm run dev",
+              detail: "npm run dev",
+              status: "inProgress",
+              output: "booting\nready on 5173",
+            },
+          ],
+        },
+        rateLimitsByWorkspace: {},
+        pendingInterruptsRef: { current: new Set<string>() },
+        dispatch,
+        getCustomName: vi.fn(() => undefined),
+        markProcessing: vi.fn(),
+        markReviewing: vi.fn(),
+        setActiveTurnId: vi.fn(),
+        recordThreadActivity: vi.fn(),
+        safeMessageActivity: vi.fn(),
+        onDebug: vi.fn(),
+        pushThreadErrorMessage: vi.fn(),
+        ensureThreadForActiveWorkspace: vi.fn(async () => "thread-1"),
+        ensureThreadForWorkspace: vi.fn(async () => "thread-1"),
+        refreshThread: vi.fn(async () => null),
+        forkThreadForWorkspace: vi.fn(async () => null),
+        updateThreadParent: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await result.current.startPs("/ps");
+    });
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "addAssistantMessage",
+      threadId: "thread-1",
+      text: "Background terminals:\n- npm run dev\n  recent output:\n    booting\n    ready on 5173",
+    });
+  });
+
+  it("cleans background terminals for /stop", async () => {
+    const dispatch = vi.fn();
+    const { result } = renderHook(() =>
+      useThreadMessaging({
+        activeWorkspace: workspace,
+        activeThreadId: "thread-1",
+        accessMode: "current",
+        model: null,
+        effort: null,
+        collaborationMode: null,
+        reviewDeliveryMode: "inline",
+        steerEnabled: false,
+        customPrompts: [],
+        threadStatusById: {},
+        activeTurnIdByThread: {},
+        rateLimitsByWorkspace: {},
+        pendingInterruptsRef: { current: new Set<string>() },
+        dispatch,
+        getCustomName: vi.fn(() => undefined),
+        markProcessing: vi.fn(),
+        markReviewing: vi.fn(),
+        setActiveTurnId: vi.fn(),
+        recordThreadActivity: vi.fn(),
+        safeMessageActivity: vi.fn(),
+        onDebug: vi.fn(),
+        pushThreadErrorMessage: vi.fn(),
+        ensureThreadForActiveWorkspace: vi.fn(async () => "thread-1"),
+        ensureThreadForWorkspace: vi.fn(async () => "thread-1"),
+        refreshThread: vi.fn(async () => null),
+        forkThreadForWorkspace: vi.fn(async () => null),
+        updateThreadParent: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await result.current.startStop("/stop");
+    });
+
+    expect(cleanBackgroundTerminalsService).toHaveBeenCalledWith("ws-1", "thread-1");
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "addAssistantMessage",
+      threadId: "thread-1",
+      text: "Stopping all background terminals.",
+    });
+  });
+
+  it("forks and sends inline prompt for /side", async () => {
+    const forkThreadForWorkspace = vi.fn(async () => "thread-side");
+    const updateThreadParent = vi.fn();
+    const dispatch = vi.fn();
+    const { result } = renderHook(() =>
+      useThreadMessaging({
+        activeWorkspace: workspace,
+        activeThreadId: "thread-1",
+        accessMode: "current",
+        model: null,
+        effort: null,
+        collaborationMode: {
+          mode: "team",
+          settings: { developer_instructions: "Existing developer policy." },
+        },
+        reviewDeliveryMode: "inline",
+        steerEnabled: false,
+        customPrompts: [],
+        threadStatusById: {},
+        activeTurnIdByThread: {},
+        rateLimitsByWorkspace: {},
+        pendingInterruptsRef: { current: new Set<string>() },
+        dispatch,
+        getCustomName: vi.fn(() => undefined),
+        markProcessing: vi.fn(),
+        markReviewing: vi.fn(),
+        setActiveTurnId: vi.fn(),
+        recordThreadActivity: vi.fn(),
+        safeMessageActivity: vi.fn(),
+        onDebug: vi.fn(),
+        pushThreadErrorMessage: vi.fn(),
+        ensureThreadForActiveWorkspace: vi.fn(async () => "thread-1"),
+        ensureThreadForWorkspace: vi.fn(async () => "thread-1"),
+        refreshThread: vi.fn(async () => null),
+        forkThreadForWorkspace,
+        updateThreadParent,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.startSide("/side compare approaches", ["img-1"]);
+    });
+
+    expect(forkThreadForWorkspace).toHaveBeenCalledWith(
+      "ws-1",
+      "thread-1",
+      expect.objectContaining({
+        activate: false,
+        ephemeral: true,
+        developerInstructions: expect.stringContaining(
+          "You are in a side conversation, not the main thread.",
+        ),
+      }),
+    );
+    expect(forkThreadForWorkspace).toHaveBeenCalledWith(
+      "ws-1",
+      "thread-1",
+      expect.objectContaining({
+        developerInstructions: expect.stringContaining(
+          "Existing developer policy.\n\nYou are in a side conversation",
+        ),
+      }),
+    );
+    expect(injectThreadItemsService).toHaveBeenCalledWith(
+      "ws-1",
+      "thread-side",
+      [
+        expect.objectContaining({
+          type: "message",
+          role: "user",
+          content: [
+            expect.objectContaining({
+              type: "input_text",
+              text: expect.stringContaining("Side conversation boundary."),
+            }),
+          ],
+        }),
+      ],
+    );
+    expect(updateThreadParent).toHaveBeenCalledWith("thread-1", ["thread-side"]);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setThreadItems",
+      threadId: "thread-side",
+      items: [],
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setActiveThreadId",
+      workspaceId: "ws-1",
+      threadId: "thread-side",
+    });
+    expect(sendUserMessageService).toHaveBeenCalledWith(
+      "ws-1",
+      "thread-side",
+      "compare approaches",
+      expect.objectContaining({
+        images: ["img-1"],
+      }),
+    );
+  });
+
+  it("keeps the parent active when /side boundary injection fails", async () => {
+    const forkThreadForWorkspace = vi.fn(async () => "thread-side");
+    const updateThreadParent = vi.fn();
+    const dispatch = vi.fn();
+    const pushThreadErrorMessage = vi.fn();
+    vi.mocked(injectThreadItemsService).mockRejectedValueOnce(
+      new Error("inject failed"),
+    );
+    const { result } = renderHook(() =>
+      useThreadMessaging({
+        activeWorkspace: workspace,
+        activeThreadId: "thread-1",
+        accessMode: "current",
+        model: null,
+        effort: null,
+        collaborationMode: null,
+        reviewDeliveryMode: "inline",
+        steerEnabled: false,
+        customPrompts: [],
+        threadStatusById: {},
+        activeTurnIdByThread: {},
+        rateLimitsByWorkspace: {},
+        pendingInterruptsRef: { current: new Set<string>() },
+        dispatch,
+        getCustomName: vi.fn(() => undefined),
+        markProcessing: vi.fn(),
+        markReviewing: vi.fn(),
+        setActiveTurnId: vi.fn(),
+        recordThreadActivity: vi.fn(),
+        safeMessageActivity: vi.fn(),
+        onDebug: vi.fn(),
+        pushThreadErrorMessage,
+        ensureThreadForActiveWorkspace: vi.fn(async () => "thread-1"),
+        ensureThreadForWorkspace: vi.fn(async () => "thread-1"),
+        refreshThread: vi.fn(async () => null),
+        forkThreadForWorkspace,
+        updateThreadParent,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.startSide("/side compare approaches");
+    });
+
+    expect(forkThreadForWorkspace).toHaveBeenCalledWith(
+      "ws-1",
+      "thread-1",
+      expect.objectContaining({ activate: false, ephemeral: true }),
+    );
+    expect(pushThreadErrorMessage).toHaveBeenCalledWith(
+      "thread-1",
+      "inject failed",
+    );
+    expect(updateThreadParent).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "removeThread",
+      workspaceId: "ws-1",
+      threadId: "thread-side",
+    });
+    expect(dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "setActiveThreadId" }),
+    );
+    expect(sendUserMessageService).not.toHaveBeenCalled();
   });
 
   it("uses turn/steer when steer mode is enabled and an active turn is present", async () => {

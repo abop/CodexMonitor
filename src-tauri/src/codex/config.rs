@@ -111,6 +111,17 @@ pub(crate) fn read_config_model(codex_home: Option<PathBuf>) -> Result<Option<St
     Ok(config_toml_core::read_top_level_string(&document, "model"))
 }
 
+pub(crate) fn read_config_developer_instructions(
+    codex_home: Option<PathBuf>,
+) -> Result<Option<String>, String> {
+    let root = codex_home.or_else(resolve_default_codex_home);
+    let Some(root) = root else {
+        return Err("Unable to resolve CODEX_HOME".to_string());
+    };
+    let (_, document) = config_toml_core::load_global_config_document(&root)?;
+    Ok(read_developer_instructions_from_document(&document))
+}
+
 fn resolve_default_codex_home() -> Option<PathBuf> {
     crate::codex::home::resolve_default_codex_home()
 }
@@ -127,6 +138,13 @@ fn read_approvals_reviewer_from_document(document: &toml_edit::Document) -> Opti
         .as_deref()
         .and_then(normalize_approvals_reviewer_value)
         .map(|value| value.to_string())
+}
+
+fn read_developer_instructions_from_document(document: &toml_edit::Document) -> Option<String> {
+    config_toml_core::read_top_level_string(document, "developer_instructions").and_then(|value| {
+        let trimmed = value.trim();
+        (!trimmed.is_empty()).then(|| trimmed.to_string())
+    })
 }
 
 fn normalize_personality_value(value: &str) -> Option<&'static str> {
@@ -149,7 +167,8 @@ fn normalize_approvals_reviewer_value(value: &str) -> Option<&'static str> {
 mod tests {
     use super::{
         normalize_approvals_reviewer_value, normalize_personality_value,
-        read_approvals_reviewer_from_document, read_personality_from_document,
+        read_approvals_reviewer_from_document, read_developer_instructions_from_document,
+        read_personality_from_document,
     };
     use crate::shared::config_toml_core;
 
@@ -171,6 +190,21 @@ mod tests {
             Some("pragmatic".to_string())
         );
         assert_eq!(read_personality_from_document(&unknown), None);
+    }
+
+    #[test]
+    fn parse_developer_instructions_trims_blank_values() {
+        let configured =
+            config_toml_core::parse_document("developer_instructions = \"  stay focused  \"\n")
+                .expect("parse");
+        let blank = config_toml_core::parse_document("developer_instructions = \"   \"\n")
+            .expect("parse");
+
+        assert_eq!(
+            read_developer_instructions_from_document(&configured),
+            Some("stay focused".to_string())
+        );
+        assert_eq!(read_developer_instructions_from_document(&blank), None);
     }
 
     #[test]

@@ -2,6 +2,7 @@ import type {
   AccessMode,
   AppMention,
   ComposerSendIntent,
+  ConversationItem,
   RateLimitSnapshot,
   ReviewTarget,
   ServiceTier,
@@ -356,6 +357,74 @@ export function buildAppsLines(data: Array<Record<string, unknown>>): string[] {
     if (!isAccessible && installUrl) {
       lines.push(`  install: ${installUrl}`);
     }
+  }
+
+  return lines;
+}
+
+function isRunningCommandStatus(status?: string) {
+  const normalized = (status ?? "").toLowerCase();
+  return /(pending|running|processing|started|in[_ -]?progress|inprogress)/.test(
+    normalized,
+  );
+}
+
+const MAX_BACKGROUND_TERMINALS = 16;
+const MAX_BACKGROUND_COMMAND_LENGTH = 80;
+const MAX_BACKGROUND_OUTPUT_LENGTH = 160;
+
+function truncateLine(line: string, maxLength: number) {
+  if (line.length <= maxLength) {
+    return line;
+  }
+  return `${line.slice(0, Math.max(0, maxLength - 6))} [...]`;
+}
+
+function firstDisplayLine(value: string) {
+  const [firstLine = ""] = value.split(/\r?\n/, 1);
+  return firstLine.trimEnd();
+}
+
+function commandDisplayName(item: Extract<ConversationItem, { kind: "tool" }>) {
+  const title = firstDisplayLine(item.title.trim().replace(/^Command:\s*/i, ""));
+  const detail = firstDisplayLine(item.detail.trim());
+  return truncateLine(title || detail || item.id, MAX_BACKGROUND_COMMAND_LENGTH);
+}
+
+function recentOutputLines(output?: string) {
+  return (output ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0)
+    .slice(-3)
+    .map((line) => truncateLine(line, MAX_BACKGROUND_OUTPUT_LENGTH));
+}
+
+export function buildBackgroundTerminalLines(items: ConversationItem[]): string[] {
+  const commandItems = items.filter(
+    (item): item is Extract<ConversationItem, { kind: "tool" }> =>
+      item.kind === "tool" &&
+      item.toolType === "commandExecution" &&
+      isRunningCommandStatus(item.status),
+  );
+  const lines = ["Background terminals:"];
+  if (commandItems.length === 0) {
+    lines.push("- No background terminals running.");
+    return lines;
+  }
+
+  const shownItems = commandItems.slice(0, MAX_BACKGROUND_TERMINALS);
+  for (const item of shownItems) {
+    lines.push(`- ${commandDisplayName(item)}`);
+    const outputLines = recentOutputLines(item.output);
+    if (outputLines.length > 0) {
+      lines.push("  recent output:");
+      lines.push(...outputLines.map((line) => `    ${line}`));
+    }
+  }
+  const remaining = commandItems.length - shownItems.length;
+  if (remaining > 0) {
+    lines.push(`- ... and ${remaining} more running`);
   }
 
   return lines;

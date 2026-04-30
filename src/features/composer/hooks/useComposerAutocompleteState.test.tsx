@@ -105,21 +105,27 @@ describe("useComposerAutocompleteState slash commands", () => {
         "fork",
         "mcp",
         "new",
+        "ps",
         "resume",
         "review",
+        "side",
         "status",
+        "stop",
       ]),
     );
-    expect(labels.slice(0, 9)).toEqual([
+    expect(labels.slice(0, 12)).toEqual([
       "apps",
       "compact",
       "fast",
       "fork",
       "mcp",
       "new",
+      "ps",
       "resume",
       "review",
+      "side",
       "status",
+      "stop",
     ]);
   });
 
@@ -156,9 +162,12 @@ describe("useComposerAutocompleteState slash commands", () => {
       "fork",
       "mcp",
       "new",
+      "ps",
       "resume",
       "review",
+      "side",
       "status",
+      "stop",
     ]);
   });
 });
