@@ -12,6 +12,7 @@ type ItemPayload = Record<string, unknown>;
 
 type SetupOverrides = {
   activeThreadId?: string | null;
+  getActiveTurnId?: (threadId: string) => string | null;
   getCustomName?: (workspaceId: string, threadId: string) => string | undefined;
   onUserMessageCreated?: (workspaceId: string, threadId: string, text: string) => void;
   onReviewExited?: (workspaceId: string, threadId: string) => void;
@@ -31,6 +32,7 @@ const makeOptions = (overrides: SetupOverrides = {}) => {
     useThreadItemEvents({
       activeThreadId: overrides.activeThreadId ?? null,
       dispatch,
+      getActiveTurnId: overrides.getActiveTurnId ?? vi.fn(() => null),
       getCustomName,
       markProcessing,
       markReviewing,
@@ -319,5 +321,48 @@ describe("useThreadItemEvents", () => {
       itemId: "plan-1",
       delta: "- Step 1",
     });
+  });
+
+  it("does not mark processing for command output from a completed turn", () => {
+    const { result, dispatch, markProcessing, safeMessageActivity } = makeOptions({
+      getActiveTurnId: vi.fn(() => null),
+    });
+
+    act(() => {
+      result.current.onCommandOutputDelta(
+        "ws-1",
+        "thread-1",
+        "turn-completed",
+        "cmd-1",
+        "server still running\n",
+      );
+    });
+
+    expect(markProcessing).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "appendToolOutput",
+      threadId: "thread-1",
+      itemId: "cmd-1",
+      delta: "server still running\n",
+    });
+    expect(safeMessageActivity).toHaveBeenCalled();
+  });
+
+  it("marks processing for command output from the active turn", () => {
+    const { result, markProcessing } = makeOptions({
+      getActiveTurnId: vi.fn(() => "turn-active"),
+    });
+
+    act(() => {
+      result.current.onCommandOutputDelta(
+        "ws-1",
+        "thread-1",
+        "turn-active",
+        "cmd-1",
+        "building\n",
+      );
+    });
+
+    expect(markProcessing).toHaveBeenCalledWith("thread-1", true);
   });
 });

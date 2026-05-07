@@ -11,6 +11,7 @@ import type { ThreadAction } from "./useThreadsReducer";
 type UseThreadItemEventsOptions = {
   activeThreadId: string | null;
   dispatch: Dispatch<ThreadAction>;
+  getActiveTurnId: (threadId: string) => string | null;
   getCustomName: (workspaceId: string, threadId: string) => string | undefined;
   markProcessing: (threadId: string, isProcessing: boolean) => void;
   markReviewing: (threadId: string, isReviewing: boolean) => void;
@@ -40,6 +41,7 @@ type UseThreadItemEventsOptions = {
 export function useThreadItemEvents({
   activeThreadId,
   dispatch,
+  getActiveTurnId,
   getCustomName,
   markProcessing,
   markReviewing,
@@ -106,22 +108,41 @@ export function useThreadItemEvents({
   );
 
   const handleToolOutputDelta = useCallback(
-    (threadId: string, itemId: string, delta: string) => {
-      markProcessing(threadId, true);
+    (
+      threadId: string,
+      turnId: string | null | undefined,
+      itemId: string,
+      delta: string,
+    ) => {
+      const eventTurnId = String(turnId ?? "").trim();
+      const activeTurnId = getActiveTurnId(threadId);
+      if (!eventTurnId || (activeTurnId && eventTurnId === activeTurnId)) {
+        markProcessing(threadId, true);
+      }
       dispatch({ type: "appendToolOutput", threadId, itemId, delta });
       safeMessageActivity();
     },
-    [dispatch, markProcessing, safeMessageActivity],
+    [dispatch, getActiveTurnId, markProcessing, safeMessageActivity],
   );
 
   const handleTerminalInteraction = useCallback(
-    (threadId: string, itemId: string, stdin: string) => {
+    (
+      threadId: string,
+      turnId: string | null | undefined,
+      itemId: string,
+      stdin: string,
+    ) => {
       if (!stdin) {
         return;
       }
       const normalized = stdin.replace(/\r\n/g, "\n");
       const suffix = normalized.endsWith("\n") ? "" : "\n";
-      handleToolOutputDelta(threadId, itemId, `\n[stdin]\n${normalized}${suffix}`);
+      handleToolOutputDelta(
+        threadId,
+        turnId,
+        itemId,
+        `\n[stdin]\n${normalized}${suffix}`,
+      );
     },
     [handleToolOutputDelta],
   );
@@ -246,22 +267,40 @@ export function useThreadItemEvents({
   );
 
   const onCommandOutputDelta = useCallback(
-    (_workspaceId: string, threadId: string, itemId: string, delta: string) => {
-      handleToolOutputDelta(threadId, itemId, delta);
+    (
+      _workspaceId: string,
+      threadId: string,
+      turnId: string,
+      itemId: string,
+      delta: string,
+    ) => {
+      handleToolOutputDelta(threadId, turnId, itemId, delta);
     },
     [handleToolOutputDelta],
   );
 
   const onTerminalInteraction = useCallback(
-    (_workspaceId: string, threadId: string, itemId: string, stdin: string) => {
-      handleTerminalInteraction(threadId, itemId, stdin);
+    (
+      _workspaceId: string,
+      threadId: string,
+      turnId: string,
+      itemId: string,
+      stdin: string,
+    ) => {
+      handleTerminalInteraction(threadId, turnId, itemId, stdin);
     },
     [handleTerminalInteraction],
   );
 
   const onFileChangeOutputDelta = useCallback(
-    (_workspaceId: string, threadId: string, itemId: string, delta: string) => {
-      handleToolOutputDelta(threadId, itemId, delta);
+    (
+      _workspaceId: string,
+      threadId: string,
+      turnId: string,
+      itemId: string,
+      delta: string,
+    ) => {
+      handleToolOutputDelta(threadId, turnId, itemId, delta);
     },
     [handleToolOutputDelta],
   );

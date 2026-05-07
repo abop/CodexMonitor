@@ -82,14 +82,27 @@ type AppServerEventHandlers = {
   onReasoningSummaryBoundary?: (workspaceId: string, threadId: string, itemId: string) => void;
   onReasoningTextDelta?: (workspaceId: string, threadId: string, itemId: string, delta: string) => void;
   onPlanDelta?: (workspaceId: string, threadId: string, itemId: string, delta: string) => void;
-  onCommandOutputDelta?: (workspaceId: string, threadId: string, itemId: string, delta: string) => void;
+  onCommandOutputDelta?: (
+    workspaceId: string,
+    threadId: string,
+    turnId: string,
+    itemId: string,
+    delta: string,
+  ) => void;
   onTerminalInteraction?: (
     workspaceId: string,
     threadId: string,
+    turnId: string,
     itemId: string,
     stdin: string,
   ) => void;
-  onFileChangeOutputDelta?: (workspaceId: string, threadId: string, itemId: string, delta: string) => void;
+  onFileChangeOutputDelta?: (
+    workspaceId: string,
+    threadId: string,
+    turnId: string,
+    itemId: string,
+    delta: string,
+  ) => void;
   onTurnDiffUpdated?: (workspaceId: string, threadId: string, diff: string) => void;
   onThreadTokenUsageUpdated?: (
     workspaceId: string,
@@ -535,30 +548,51 @@ export function useAppServerEvents(handlers: AppServerEventHandlers) {
 
       if (method === "item/commandExecution/outputDelta") {
         const threadId = String(params.threadId ?? params.thread_id ?? "");
+        const turnId = String(params.turnId ?? params.turn_id ?? "");
         const itemId = String(params.itemId ?? params.item_id ?? "");
         const delta = String(params.delta ?? "");
         if (threadId && itemId && delta) {
-          currentHandlers.onCommandOutputDelta?.(workspace_id, threadId, itemId, delta);
+          currentHandlers.onCommandOutputDelta?.(
+            workspace_id,
+            threadId,
+            turnId,
+            itemId,
+            delta,
+          );
         }
         return;
       }
 
       if (method === "item/commandExecution/terminalInteraction") {
         const threadId = String(params.threadId ?? params.thread_id ?? "");
+        const turnId = String(params.turnId ?? params.turn_id ?? "");
         const itemId = String(params.itemId ?? params.item_id ?? "");
         const stdin = String(params.stdin ?? "");
         if (threadId && itemId) {
-          currentHandlers.onTerminalInteraction?.(workspace_id, threadId, itemId, stdin);
+          currentHandlers.onTerminalInteraction?.(
+            workspace_id,
+            threadId,
+            turnId,
+            itemId,
+            stdin,
+          );
         }
         return;
       }
 
       if (method === "item/fileChange/outputDelta") {
         const threadId = String(params.threadId ?? params.thread_id ?? "");
+        const turnId = String(params.turnId ?? params.turn_id ?? "");
         const itemId = String(params.itemId ?? params.item_id ?? "");
         const delta = String(params.delta ?? "");
         if (threadId && itemId && delta) {
-          currentHandlers.onFileChangeOutputDelta?.(workspace_id, threadId, itemId, delta);
+          currentHandlers.onFileChangeOutputDelta?.(
+            workspace_id,
+            threadId,
+            turnId,
+            itemId,
+            delta,
+          );
         }
         return;
       }
