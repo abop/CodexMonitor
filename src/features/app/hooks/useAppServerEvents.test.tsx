@@ -59,6 +59,7 @@ describe("useAppServerEvents", () => {
       onAgentMessageDelta: vi.fn(),
       onReasoningSummaryBoundary: vi.fn(),
       onPlanDelta: vi.fn(),
+      onCommandOutputDelta: vi.fn(),
       onApprovalRequest: vi.fn(),
       onRequestUserInput: vi.fn(),
       onItemCompleted: vi.fn(),
@@ -121,6 +122,28 @@ describe("useAppServerEvents", () => {
       "thread-1",
       "plan-1",
       "- Step 1",
+    );
+
+    act(() => {
+      listener?.({
+        workspace_id: "ws-1",
+        message: {
+          method: "item/commandExecution/outputDelta",
+          params: {
+            threadId: "thread-1",
+            turnId: "turn-1",
+            itemId: "cmd-1",
+            delta: "ready\n",
+          },
+        },
+      });
+    });
+    expect(handlers.onCommandOutputDelta).toHaveBeenCalledWith(
+      "ws-1",
+      "thread-1",
+      "turn-1",
+      "cmd-1",
+      "ready\n",
     );
 
     act(() => {

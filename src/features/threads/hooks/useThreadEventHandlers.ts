@@ -143,6 +143,7 @@ export function useThreadEventHandlers({
   } = useThreadItemEvents({
     activeThreadId,
     dispatch,
+    getActiveTurnId,
     getCustomName,
     markProcessing,
     markReviewing,
